@@ -20,8 +20,13 @@ public sealed record ModRules(
     IReadOnlyList<string> AllowedResources,
     IReadOnlyList<string> RequiredExpansions)
 {
+    /// <summary>LMP's rules for even a huge modpack are a few MB; a rules file from a friend can't be bigger than this.</summary>
+    public const long MaxFileBytes = 20 * 1024 * 1024;
+
     public static ModRules Load(string path)
     {
+        if (new FileInfo(path).Length > MaxFileBytes)
+            throw new InvalidDataException("That file is far too big to be LMP mod rules.");
         var file = ConfigFile.Load(path);
         if (file.Root.Name.LocalName != "ModControlStructure")
             throw new InvalidDataException("That isn't an LMP mod control file (LMPModControl.xml).");

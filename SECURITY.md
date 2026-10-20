@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the two security audits (0.4.0 and 0.4.1) found and changed.
+what the three security audits (0.4.0, 0.4.1, 0.8.1) found and changed.
 
 ## Reporting a problem
 
@@ -24,6 +24,8 @@ response time.
 | **Your KSP install** | Join page: "Launch KSP and join" or "Add to LMP's server list" | Starts `KSP_x64.exe` and edits LMP's own `settings.xml` server list (backed up first, and never while KSP is running). "Check my mods" only reads your GameData. |
 | **Discord** (`discord.com`) | Only if you save a webhook (Settings → Notifications) | HTTPS posts of the notifications. The URL is stored encrypted for your Windows account (DPAPI) and never shown again; posts can't mention anyone. |
 | **Windows notifications** | Settings → Notifications (on by default) | Shown on this PC only. |
+| **Windows startup list** (`HKCU\...\Run`) | Only while Home server mode is on | One entry, "LUNA EVO Config Manager", for your user only; removed when you switch the mode off. |
+| **Crafts from friends** | Crafts page → Import | Read as data with size limits; written only into a KSP save's Ships folder or the server's craft library, never overwriting. |
 
 LUNA EVO has no telemetry, no accounts and no server of its own.
 
@@ -54,6 +56,30 @@ addresses**, even though LMP's own log lines contain them. It stays next to your
 - **Craft files from friends** (`.lunacraft`, 0.7) are opened as data: only `craft.craft`, `manifest.json` and
   `thumbnail.png` are accepted (nothing else is ever unpacked), 20 MB at most, and the craft must parse. Imports go
   only into a KSP save's Ships folder or the server's craft library, and never overwrite.
+
+## Audit 3 (0.8.1, October 2026)
+
+Everything added since audit 2: player history and bans, the mod check, Windows and Discord notifications, the
+self-updater, craft sharing, home server mode, chat announcements and settings search. Also re-checked, now that the
+repository is public: NuGet packages (no known vulnerabilities) and **the whole git history** (no passwords, IP
+addresses, player names or user paths; commits do carry the maintainers' contact email as author).
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| C1 | Medium | **`.lunacraft` files from friends were read up to the size each entry *claims*.** A zip's sizes are written by whoever made it, so a crafted file could claim a small craft and unpack to gigabytes (a "zip bomb"), filling memory. | Each entry is now read with a hard 20 MB limit, whatever it claims; a test opens a real bomb (under 1 MB on disk) and is refused. |
+| C2 | Low | **Mod rules files from a host had no size limit.** | 20 MB cap before parsing (they're a few MB even for big modpacks). |
+| C3 | Low | **The post-update clean-up read the exe path when it ran, 15 s later**, not when it was scheduled. Harmless in normal use (one window per process), but a second window could delete another's `.old` file. | The path is captured when the clean-up is scheduled. |
+
+Reviewed and fine as designed: Discord webhook (encrypted, never shown, no mentions, escaped); the updater (GitHub only,
+SHA-256 twice, `MZ` and version checks, rename with rollback, never unverified); home server mode (a per-user Windows
+startup entry with the exe path quoted, removed when switched off; keep-awake only while the server runs; no admin);
+chat announcements (your own text, one line each, sent through the same path that strips line breaks); player
+history (LMP's own messages only, names checked, never IPs); craft import (only into a KSP save's Ships folder or the
+server's library, never overwriting, file names cleaned).
+
+Known and accepted: a modified game client can fake a log line inside a chat message (worst case: a wrong history
+entry or a false alert); craft files are KSP's own format and are passed to KSP as they are, so a hostile craft can
+only do what KSP lets a craft file do.
 
 ## Audit 2 (0.4.1, October 2026)
 

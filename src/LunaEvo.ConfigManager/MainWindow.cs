@@ -175,8 +175,9 @@ public sealed class MainWindow : Window
         _craftsPage = new CraftsPage(this);
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
-        AppUpdater.CleanUp(CurrentExe);
-        _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => AppUpdater.CleanUp(CurrentExe), TaskScheduler.Default);
+        var exe = CurrentExe; // this window's exe, not whatever CurrentExe is in 15 seconds
+        AppUpdater.CleanUp(exe);
+        _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => AppUpdater.CleanUp(exe), TaskScheduler.Default);
         _appUpdateText.IsVisible = false;
         _appUpdateText.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
         _appUpdateText.PointerPressed += (_, _) =>

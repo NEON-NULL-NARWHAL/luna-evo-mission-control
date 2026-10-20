@@ -89,15 +89,10 @@ public static partial class CraftShare
             switch (entry.FullName)
             {
                 case "craft.craft":
-                    using (var reader = new StreamReader(entry.Open()))
-                        text = reader.ReadToEnd();
+                    text = System.Text.Encoding.UTF8.GetString(ReadBounded(entry));
                     break;
                 case "thumbnail.png":
-                    using (var memory = new MemoryStream())
-                    {
-                        entry.Open().CopyTo(memory);
-                        thumbnail = memory.ToArray();
-                    }
+                    thumbnail = ReadBounded(entry);
                     break;
                 case "manifest.json":
                     break; // informational; the craft itself is the truth
@@ -108,6 +103,25 @@ public static partial class CraftShare
         if (text == null)
             throw new InvalidDataException("That isn't a LUNA EVO craft file (no craft in it).");
         return new SharedCraft(Parse(text, path, "Shared file"), text, thumbnail);
+    }
+
+    /// <summary>
+    /// Reads an entry, stopping at <see cref="MaxFileBytes"/> however big it really unpacks to: a zip entry's size is
+    /// only what the file claims, so a "zip bomb" could otherwise fill memory.
+    /// </summary>
+    private static byte[] ReadBounded(ZipArchiveEntry entry)
+    {
+        using var source = entry.Open();
+        using var memory = new MemoryStream();
+        var buffer = new byte[81920];
+        int read;
+        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            if (memory.Length + read > MaxFileBytes)
+                throw new InvalidDataException("That file unpacks to far more than a craft ever is. Not opening it.");
+            memory.Write(buffer, 0, read);
+        }
+        return memory.ToArray();
     }
 
     /// <summary>The craft's parts that this KSP install doesn't have (from a GameData scan).</summary>

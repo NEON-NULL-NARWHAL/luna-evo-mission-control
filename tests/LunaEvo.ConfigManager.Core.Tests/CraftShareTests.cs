@@ -79,5 +79,17 @@ public class CraftShareTests
         File.WriteAllText(notZip, "not a zip");
         Assert.ThrowsAny<InvalidDataException>(() => CraftShare.Open(notZip));
         Assert.Equal("Bad-Name", CraftShare.SafeName("Bad/Name"));
+
+        // A zip bomb: tiny file, but the craft unpacks to more than the limit.
+        var bomb = Path.Combine(dir, "bomb.lunacraft");
+        using (var zip = ZipFile.Open(bomb, ZipArchiveMode.Create))
+        using (var entry = zip.CreateEntry("craft.craft", CompressionLevel.SmallestSize).Open())
+        {
+            var zeros = new byte[1024 * 1024];
+            for (var i = 0; i <= CraftShare.MaxFileBytes / zeros.Length; i++)
+                entry.Write(zeros);
+        }
+        Assert.True(new FileInfo(bomb).Length < 1024 * 1024);
+        Assert.Throws<InvalidDataException>(() => CraftShare.Open(bomb));
     }
 }

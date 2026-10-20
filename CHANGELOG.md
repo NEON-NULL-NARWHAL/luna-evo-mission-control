@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.1 (2026-10-20)
+
+Third security audit; details in `SECURITY.md`.
+
+### Security
+- `.lunacraft` files are read with a hard size limit per entry, so a "zip bomb" craft can't fill memory.
+- Mod rules files from a host are size-limited before parsing.
+
+### Fixed
+- The clean-up after a self-update could act on the wrong exe path if more than one window had been open.
+
 ## 0.8.0 (2026-10-20)
 
 ### Added
