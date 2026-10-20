@@ -16,8 +16,12 @@ $changelog = Get-Content CHANGELOG.md -Raw
 $section = [regex]::Match($changelog, "(?ms)^## $([regex]::Escape($version))\b.*?(?=^## |\z)").Value.Trim()
 if (-not $section) { throw "CHANGELOG.md has no '## $version' section. Write one first." }
 if (git status --porcelain) { throw "There are uncommitted changes. Commit and push them first, so the release matches the code." }
-& $gh release view $tag 2>$null | Out-Null
-if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists. Bump the version first." }
+# "release not found" on stderr is the answer we want; Windows PowerShell would treat it as an error under "Stop".
+$ErrorActionPreference = "Continue"
+& $gh release view $tag 2>&1 | Out-Null
+$exists = $LASTEXITCODE -eq 0
+$ErrorActionPreference = "Stop"
+if ($exists) { throw "Release $tag already exists. Bump the version first." }
 
 if (-not $SkipTests) {
     dotnet test
