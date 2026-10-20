@@ -3,7 +3,7 @@
 [← Meat and Potatoes](README.md) · Code: `tests/` 🧪
 
 ```powershell
-dotnet test                                             # everything (171 tests, ~40 s)
+dotnet test                                             # everything (183 tests, ~40 s)
 dotnet test tests/LunaEvo.ConfigManager.Core.Tests      # logic only (~3 s)
 dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 ```
@@ -26,6 +26,10 @@ backup).
 LMP's client server list), `JoinPageTests` (the Join page end to end, the host's Share flow, `Ui.CanOpen`), and
 security tests in `SetupTests` (tampered, oversized, wrong-host and unverified downloads; a zip swapped before
 install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, `netsh` path, webhook scrub).
+
+0.4.1 added `SecurityRound2Tests`: oversized live info, long text cut, Universe restores that escape the folder or are
+damaged (the current Universe must survive), DTDs refused, Windows device names as profile names, weak-password
+warnings, and a hand-edited settings file full of nulls.
 
 ## No network in tests
 

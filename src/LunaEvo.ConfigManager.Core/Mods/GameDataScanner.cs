@@ -97,7 +97,11 @@ public static partial class GameDataScanner
     }
 
     /// <summary>LMP's hash format: BitConverter.ToString(SHA256(file)), e.g. "3F-A0-...".</summary>
-    public static string Sha256(string path) => BitConverter.ToString(SHA256.HashData(File.ReadAllBytes(path)));
+    public static string Sha256(string path)
+    {
+        using var stream = File.OpenRead(path); // streamed: mod DLLs can be big
+        return BitConverter.ToString(SHA256.HashData(stream));
+    }
 
     /// <summary>Looks for KSP's GameData in the Steam libraries on this PC. Null if not found.</summary>
     public static string? FindKspGameData()

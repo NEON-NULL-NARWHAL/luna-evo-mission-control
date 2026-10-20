@@ -31,7 +31,10 @@ public sealed class ConfigFile
         _encoding = encoding;
         _crlf = text.Contains("\r\n");
 
-        var document = XDocument.Parse(text, LoadOptions.PreserveWhitespace);
+        // LMP's files never have a DTD; refusing one rules out entity-expansion tricks in a planted file.
+        using var reader = System.Xml.XmlReader.Create(new StringReader(text),
+            new System.Xml.XmlReaderSettings { DtdProcessing = System.Xml.DtdProcessing.Prohibit, XmlResolver = null });
+        var document = XDocument.Load(reader, LoadOptions.PreserveWhitespace);
         Root = document.Root ?? throw new InvalidDataException($"{path} has no root element.");
 
         // Keep the declaration and anything around the root exactly as written.

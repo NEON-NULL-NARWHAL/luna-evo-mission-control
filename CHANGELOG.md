@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.1 (2026-10-20)
+
+Second security audit; details in `SECURITY.md`.
+
+### Security
+- Live info (Join and Players pages) is read with a 4 MB cap, a 15-second limit and no redirects to another host;
+  long names and descriptions are cut to 256 characters.
+- Restoring a Universe backup unpacks into a staging folder first (with size, file-count and stay-inside checks), so
+  a damaged or hostile zip can't leave a half-restored Universe.
+- Config files with a DTD are refused.
+- Profile names can't become Windows device names (`CON`, `NUL`...).
+- Warnings for short server (< 6) and admin (< 10) passwords: LMP doesn't limit guesses, and the admin password can
+  ban players, clear the KSC and restart the server.
+- A hand-edited LUNA EVO settings file with `null`s no longer causes errors.
+- Plugin hashing streams files instead of loading them whole.
+
 ## 0.4.0 (2026-10-20)
 
 ### Added

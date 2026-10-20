@@ -84,17 +84,30 @@ public static class AppSettingsStore
             if (!File.Exists(path))
                 return new();
             var text = File.ReadAllText(path);
-            var settings = JsonSerializer.Deserialize<AppSettings>(text, Json) ?? new();
+            var settings = Normalize(JsonSerializer.Deserialize<AppSettings>(text, Json) ?? new());
             // 0.3.0 stored a Discord webhook URL here in plain text. Discord support is gone; rewrite the file so
             // that secret doesn't linger on disk.
             if (text.Contains("\"DiscordWebhookUrl\"", StringComparison.Ordinal))
                 Save(settings, path);
             return settings;
         }
-        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or NotSupportedException)
         {
             return new();
         }
+    }
+
+    /// <summary>A hand-edited file can say "null" for anything; put defaults back so nothing downstream sees null.</summary>
+    private static AppSettings Normalize(AppSettings s)
+    {
+        var defaults = new AppSettings();
+        return s with
+        {
+            AccentColor = s.AccentColor ?? defaults.AccentColor,
+            Theme = s.Theme ?? defaults.Theme,
+            DailyRestartTime = s.DailyRestartTime ?? "",
+            SavedServers = (s.SavedServers ?? []).Where(x => x is { Name: not null, Host: not null }).Take(200).ToList(),
+        };
     }
 
     /// <summary>Writes the settings as indented JSON, creating the folder if needed.</summary>

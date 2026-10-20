@@ -29,7 +29,7 @@ Every source file starts with a short header pointing back here, like this:
 | 11 | [Live players](11-Live-Players.md) | work on the Players page or LMP's website JSON |
 | 12 | [Mod control from GameData](12-Mod-Control-From-GameData.md) | change the GameData scan, the KSP `.cfg` parser or the plugin-list editors |
 | 13 | [Automation, Connect, Profiles](13-Automation.md) | change auto/daily restarts, Universe backups, profiles, the Connect page, or review-before-save |
-| 14 | [Security](14-Security.md) | download, parse, launch or store anything. The rules from the 0.4.0 audit. |
+| 14 | [Security](14-Security.md) | download, parse, launch or store anything. The rules from the 0.4.0 and 0.4.1 audits. |
 | 15 | [Joining servers](15-Joining-Servers.md) | work on the player side: the Join page, ping and live info, launching KSP, LMP's server list |
 
 ## 🔣 Legend
@@ -57,7 +57,7 @@ Symbols used in the map below and throughout these chapters:
 | 📦 | `publish.ps1` | Builds the single self-contained exe into `dist/`. See [06](06-Build-and-Release.md). |
 | | `README.md` | The front page. |
 | | `CHANGELOG.md` | What changed in each version. |
-| | `SECURITY.md` | What the app touches, the 0.4.0 audit, how to report a problem. |
+| | `SECURITY.md` | What the app touches, both audits, how to report a problem. |
 | | `LICENSE` | GPL-3.0. |
 | ⚠️ | `.gitattributes` | Keeps `tests/Fixtures` byte-for-byte (CRLF, no BOM); the round-trip tests depend on it. |
 | | `.gitignore` | Build output, `dist/`, backups, and dev settings. |
@@ -136,7 +136,7 @@ Symbols used in the map below and throughout these chapters:
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (113 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (125 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
 | 🧪🖥️ | `LunaEvo.ConfigManager.Tests/` | Headless UI tests: the real window, clicked through like a user (58 tests). |
 | ⭐🧪 | `LunaEvo.ConfigManager.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |

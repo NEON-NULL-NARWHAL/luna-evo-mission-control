@@ -46,6 +46,8 @@ Real mistakes, all made by the AI and caught by the process, not by luck:
 | Security audit | Website JSON parsed with throwing `TryGet*` calls could crash the app; `netsh` found via PATH; no zip-bomb limits; scans followed junctions; `Ui.Open` would run anything. | Tolerant parsing, absolute paths, limits, skip reparse points, `Ui.CanOpen`. |
 | Hardening test | A website response with a string where a number belonged threw inside `TryGetInt32`. | `ValueKind` checks everywhere. |
 | Reading LMP's client | `-lmp lmp://host:port` can't work (index bug), and there's no password option. | Auto-connect only on 8800 without a password; LMP's server list otherwise. |
+| Second audit | Live info read with no size limit; Universe restore deleted the old Universe before unpacking; DTDs allowed; `CON` as a profile name; real passwords of 3-4 digits while LMP has no guess limit. | Capped reads, staged restore, DTDs refused, device names cleaned, weak-password warnings. |
+| Second audit (privacy) | Checked the whole git history and the release exe for real passwords, IPs, player names and user paths. | None found (two short numeric passwords matched unrelated numbers in test data, checked by hand). |
 | Screenshot review | A demo check on port 8900 hit the owner's real server and showed real players. | Demo moved to 8810/8910; those screenshots were deleted, never committed. |
 
 ## Guidelines we followed (keep following them)

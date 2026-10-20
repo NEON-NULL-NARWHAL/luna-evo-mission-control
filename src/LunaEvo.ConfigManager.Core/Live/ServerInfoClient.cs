@@ -52,12 +52,35 @@ public sealed class ServerInfoClient(HttpClient http)
         return Uri.TryCreate($"http://{host}:{port}/", UriKind.Absolute, out var uri) ? uri : null;
     }
 
+    /// <summary>LMP's real answer is a few KB per player and vessel; anything far bigger isn't LMP.</summary>
+    public const int MaxResponseBytes = 4 * 1024 * 1024;
+
     public async Task<ServerSnapshot> GetAsync(Uri endpoint, CancellationToken cancel = default)
     {
-        using var response = await http.GetAsync(endpoint, cancel);
+        // Whatever answers decides the size and speed of the response, so read headers first, cap the body, and
+        // never wait longer than 15 seconds (the shared client's own timeout is minutes, for downloads).
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+        limit.CancelAfter(TimeSpan.FromSeconds(15));
+        using var response = await http.GetAsync(endpoint, HttpCompletionOption.ResponseHeadersRead, limit.Token);
         response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancel);
-        using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancel);
+        // A redirect to somewhere else isn't the LMP server we asked.
+        if (response.RequestMessage?.RequestUri is { } final && (final.Host != endpoint.Host || final.Port != endpoint.Port))
+            throw new JsonException("That isn't LMP's server information (it redirected elsewhere).");
+        if (response.Content.Headers.ContentLength > MaxResponseBytes)
+            throw new JsonException("That isn't LMP's server information (far too big).");
+
+        await using var stream = await response.Content.ReadAsStreamAsync(limit.Token);
+        using var body = new MemoryStream();
+        var buffer = new byte[81920];
+        int read;
+        while ((read = await stream.ReadAsync(buffer, limit.Token)) > 0)
+        {
+            if (body.Length + read > MaxResponseBytes)
+                throw new JsonException("That isn't LMP's server information (far too big).");
+            body.Write(buffer, 0, read);
+        }
+        body.Position = 0;
+        using var json = await JsonDocument.ParseAsync(body, cancellationToken: limit.Token);
         return Parse(json.RootElement);
     }
 
@@ -71,7 +94,7 @@ public sealed class ServerInfoClient(HttpClient http)
 
         DateTime? start = state.TryGetProperty("StartTime", out var s) && s.ValueKind == JsonValueKind.String && s.TryGetDateTime(out var t) ? t : null;
         var players = Array(state, "CurrentPlayers")
-            .Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString() ?? "").Where(x => x.Length > 0)
+            .Where(x => x.ValueKind == JsonValueKind.String).Select(x => Cap(x.GetString())).Where(x => x.Length > 0)
             .Take(1000).ToList();
         var vessels = Array(state, "CurrentVessels").Where(x => x.ValueKind == JsonValueKind.Object).Take(10_000)
             .Select(x => new VesselSummary(
@@ -129,5 +152,10 @@ public sealed class ServerInfoClient(HttpClient http)
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Array ? value.EnumerateArray() : [];
 
     private static string Str(JsonElement element, string property) =>
-        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? Cap(value.GetString()) : "";
+
+    /// <summary>LMP's own limits are 30-200 characters; longer text from outside is cut so it can't swamp the UI or LMP's server list.</summary>
+    public const int MaxTextLength = 256;
+
+    private static string Cap(string? text) => text is null ? "" : text.Length > MaxTextLength ? text[..MaxTextLength] : text;
 }

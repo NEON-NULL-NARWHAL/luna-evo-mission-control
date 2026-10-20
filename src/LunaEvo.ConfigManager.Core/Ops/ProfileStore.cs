@@ -58,6 +58,19 @@ public sealed class ProfileStore(string serverDirectory)
     {
         var invalid = Path.GetInvalidFileNameChars();
         var safe = new string(name.Trim().Select(c => invalid.Contains(c) ? '-' : c).ToArray()).Trim('.', ' ');
-        return safe.Length == 0 ? "Profile" : safe;
+        if (safe.Length > 80)
+            safe = safe[..80].TrimEnd('.', ' ');
+        if (safe.Length == 0)
+            return "Profile";
+        // Windows treats these as devices, not folders, even with an extension ("NUL.txt").
+        var stem = safe.Split('.')[0].TrimEnd(' ');
+        return ReservedNames.Contains(stem) ? safe + "-profile" : safe;
     }
+
+    private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    };
 }

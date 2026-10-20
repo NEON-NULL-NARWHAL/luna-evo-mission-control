@@ -77,10 +77,52 @@ public sealed class UniverseBackups(string serverDirectory)
             throw new FileNotFoundException("That backup no longer exists.", snapshotPath);
 
         var safety = Directory.Exists(UniverseFolder) ? Create("beforerestore").Snapshot : null;
-        if (Directory.Exists(UniverseFolder))
-            Directory.Delete(UniverseFolder, recursive: true);
-        ZipFile.ExtractToDirectory(snapshotPath, UniverseFolder);
+
+        // Unpack next to the Universe first and only swap once that worked, so a damaged or hostile zip can never
+        // leave a half-restored Universe behind.
+        var staging = UniverseFolder + ".restoring-" + Guid.NewGuid().ToString("N")[..8];
+        try
+        {
+            Extract(snapshotPath, staging);
+            if (Directory.Exists(UniverseFolder))
+                Directory.Delete(UniverseFolder, recursive: true);
+            Directory.Move(staging, UniverseFolder);
+        }
+        finally
+        {
+            if (Directory.Exists(staging))
+                Directory.Delete(staging, recursive: true);
+        }
         return safety;
+    }
+
+    public const int MaxEntries = 200_000;
+    public const long MaxUnpackedBytes = 8L * 1024 * 1024 * 1024;
+
+    /// <summary>Unpacks a snapshot with limits, and refuses entries that would land outside the folder.</summary>
+    private static void Extract(string zipPath, string target)
+    {
+        using var zip = ZipFile.OpenRead(zipPath);
+        if (zip.Entries.Count > MaxEntries)
+            throw new InvalidDataException($"That backup has {zip.Entries.Count:N0} files, more than a Universe ever has. Not restoring it.");
+        if (zip.Entries.Sum(e => e.Length) > MaxUnpackedBytes)
+            throw new InvalidDataException("That backup would unpack to more than 8 GB. Not restoring it.");
+
+        var root = Path.GetFullPath(target) + Path.DirectorySeparatorChar;
+        Directory.CreateDirectory(root);
+        foreach (var entry in zip.Entries)
+        {
+            var destination = Path.GetFullPath(Path.Combine(root, entry.FullName));
+            if (!destination.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"That backup contains a file outside the Universe folder ({entry.FullName}). Not restoring it.");
+            if (entry.FullName.EndsWith('/'))
+            {
+                Directory.CreateDirectory(destination);
+                continue;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            entry.ExtractToFile(destination, overwrite: false);
+        }
     }
 
     /// <summary>Deletes the oldest snapshots so only <paramref name="keep"/> remain. 0 keeps everything.</summary>

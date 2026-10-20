@@ -55,6 +55,7 @@ Things about LMP (0.29.2, and master at commit `b3b9efce`) that are surprising a
 | 29 | `JsonElement.TryGetInt32` / `TryGetDouble` / `TryGetInt64` **throw** if the value isn't a number. | One string where a number was expected crashed the poller. | Check `ValueKind` first ([14](14-Security.md)). |
 | 30 | LMP's website listens on `127.0.0.1` by default; `ListenAddress` empty means every address. | Players get no live info until the host shares it. | Connect → Share with players. |
 | 31 | GitHub release assets carry `"digest": "sha256:<hex>"`; old assets may have none. | No digest means nothing to verify against. | `LmpReleases.Digest`; the UI asks. |
+| 32 | LMP compares the server and admin passwords with **no limit on attempts** (`Server/Message/AdminMsgReader.cs`). The admin can ban, kick, clear the KSC (`nukeksc`) and restart. | A short admin password can be guessed by any connected player. | `LmpRules` warns below 10 (admin) / 6 (server) characters. Rate-limit it in the fork. |
 
 ## Our server
 

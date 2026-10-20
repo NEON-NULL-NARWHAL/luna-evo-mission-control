@@ -21,6 +21,11 @@ the rules the code follows now, so new code doesn't undo them.
 | **File walks skip reparse points** (`AttributesToSkip = ReparsePoint`, `IgnoreInaccessible`). | Junction loops hang scans. | `GameDataScanner`, `UniverseBackups` |
 | **`Ui.Open` only opens `http(s)` URLs and existing, fully-qualified folders** (`Ui.CanOpen`). | `Process.Start` with `UseShellExecute` runs anything. | `Ui.cs` |
 | **No secrets in LUNA EVO's settings file.** Passwords typed on the Join page go to LMP's list only. | `settings.json` is plaintext in `%APPDATA%`. | `JoinPage`, `AppSettings` |
+| **Network reads are capped**: headers first, `MaxResponseBytes` (4 MB), 15-second limit, no redirect to another host, text cut to `MaxTextLength`. | Whatever answers on a "friend's server" picks the size and speed of the reply. | `ServerInfoClient.GetAsync` |
+| **Unpack into a staging folder, then swap.** Check entry count, total size and that every entry stays inside. | A damaged or hostile zip must never leave half a Universe behind. | `UniverseBackups.Restore` |
+| **No DTDs in XML.** `DtdProcessing.Prohibit`, no resolver. | Entity expansion in a planted file. | `ConfigFile` |
+| **Names that become folders**: no invalid characters, no Windows device names (`CON`, `NUL`, `COM1`...), at most 80 characters. | `CON` isn't a folder on Windows. | `ProfileStore.SafeName` |
+| **Settings from disk are normalised** (`null` → defaults). | Hand-edited files. | `AppSettingsStore.Load` |
 | **Tests never touch the network or KSP.** `Http.Override` = `FakeHttp`; `JoinPage.StartKsp` throws unless a test replaces it. | A test must never start a real game or hit a real server. | `UiHarness` |
 
 ## Things that look like holes but are design
@@ -44,4 +49,6 @@ player names (`@everyone`, Markdown).
 - Anything parsed from the network: no throwing reads, capped sizes, errors as values.
 - Anything started as a process: absolute path, arguments as a list (`ArgumentList`), never a shell string.
 - Anything stored: no secrets in `AppSettings`.
+- Anything unpacked: limits, stay-inside check, staging folder.
+- Anything turned into a file or folder name: `SafeName`-style cleaning.
 - A test for each of the above.

@@ -68,7 +68,21 @@ public static class LmpRules
                     $"{changed.Count} value(s) differ from the {difficulty} preset ({string.Join(", ", changed.Take(3))}{(changed.Count > 3 ? ", ..." : "")}). " +
                     "On startup the server will switch GameDifficulty to Custom.");
         }
+
+        // LMP checks passwords with no limit on attempts (Server/Message/AdminMsgReader.cs), so a short one can be
+        // guessed by any connected player, and the admin password can ban players, clear the KSC and restart the server.
+        var admin = session.GetValue(General, "AdminPassword") ?? "";
+        if (admin.Length is > 0 and < MinAdminPassword)
+            yield return new Issue(General, "AdminPassword", Severity.Warning,
+                $"Short admin passwords can be guessed: LMP doesn't limit attempts, and the admin can ban, clear the KSC and restart. Use {MinAdminPassword}+ characters.");
+        var password = session.GetValue(General, "Password") ?? "";
+        if (password.Length is > 0 and < MinPassword)
+            yield return new Issue(General, "Password", Severity.Warning,
+                $"Short passwords are easy to guess, and LMP doesn't limit attempts. Use {MinPassword}+ characters.");
     }
+
+    public const int MinAdminPassword = 10;
+    public const int MinPassword = 6;
 
     private static bool IsTrue(string? value) => bool.TryParse(value, out var b) && b;
 

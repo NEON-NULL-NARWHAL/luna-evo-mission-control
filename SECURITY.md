@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the 0.4.0 security audit found and changed.
+what the two security audits (0.4.0 and 0.4.1) found and changed.
 
 ## Reporting a problem
 
@@ -24,7 +24,25 @@ response time.
 
 LUNA EVO has no telemetry, no accounts and no server of its own.
 
-## Audit (0.4.0, October 2026)
+## Audit 2 (0.4.1, October 2026)
+
+A second pass over the whole codebase, focused on the 0.4.0 Join code and on areas the first audit only skimmed:
+files LUNA EVO unpacks or names, XML parsing, text sent to the server console, and the release itself. Also checked:
+NuGet packages (no known vulnerabilities), console commands (line breaks are already stripped, so a kick reason
+can't smuggle in a second command), the published exe (no build paths or user names inside), and **the whole git
+history** (no real passwords, IP addresses, player names or user paths).
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| A1 | Medium | **LMP itself doesn't limit password guesses.** The admin password is compared on every admin message with no rate limit, and the admin can ban, kick, clear the KSC and restart the server. A short admin password can be guessed by any connected player in seconds. | LUNA EVO now warns when the admin password is under 10 characters and the server password under 6 (saving still works). The real fix, rate limiting, belongs in our LMP fork. **If your passwords are short numbers, change them.** |
+| A2 | Medium | **Live info had no size limit.** The Join page reads from any address you type; whatever answers could send a reply of up to 2 GB (memory) or follow a redirect to another host. | Headers first, a 4 MB cap, a 15-second limit, no redirect to another host, text cut to 256 characters. |
+| A3 | Medium | **Universe restore deleted the current Universe before unpacking.** A damaged or hostile backup zip would leave a half-restored Universe (the safety snapshot made it recoverable, but by hand). No size limits on unpacking. | Unpacks into a staging folder with file-count, size and stay-inside checks, and only then swaps it in. |
+| A4 | Low | **XML files could contain a DTD**, allowing entity expansion (bounded by .NET to 10 million characters). | DTDs are refused; LMP's files never have one. |
+| A5 | Low | **A profile named `CON`, `NUL`, `COM1`...** maps to a Windows device, not a folder. | Such names get a suffix; names are capped at 80 characters. |
+| A6 | Low | **A hand-edited LUNA EVO settings file with `null` values** could cause errors later. | Values are normalised on load. |
+| A7 | Low | **Plugin hashing read whole DLLs into memory.** | Streamed. |
+
+## Audit 1 (0.4.0, October 2026)
 
 The whole codebase was reviewed (downloads, archive handling, every JSON and XML parser, process launching, file
 system walks, stored settings, and the network calls). The two findings marked *reported* were raised by the project
@@ -62,7 +80,9 @@ weakened anywhere.
 
 ### How the fixes were checked
 
-Each fix has automated tests (171 in total): tampered, oversized, wrong-host, redirected and unverified downloads; a
+Each fix has automated tests (183 in total after audit 2): tampered, oversized, wrong-host, redirected and unverified downloads; a
 zip changed between download and install; a zip with too many entries; hostile and malformed website, GitHub and
 runtimeconfig JSON; the absolute `netsh` path; the webhook scrub; `Ui.Open` refusing programs and `file:` links. The
-checksum check was also run against the real LMP 0.29.2 release, whose published digest matched.
+checksum check was also run against the real LMP 0.29.2 release, whose published digest matched. Audit 2's fixes
+are covered by `SecurityRound2Tests`: oversized and long-text live info, escaping and damaged Universe zips (the
+current Universe survives), DTDs, device names, password warnings and null settings.

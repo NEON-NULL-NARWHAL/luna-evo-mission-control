@@ -6,7 +6,7 @@
 
 **Set up, configure, run and watch a [Luna Multiplayer](https://github.com/LunaMultiplayer/LunaMultiplayer) (LMP) server for Kerbal Space Program, without touching a config file or a console window.**
 
-Version 0.4.0 · Windows · .NET 10 · Avalonia 12 · GPL-3.0
+Version 0.4.1 · Windows · .NET 10 · Avalonia 12 · GPL-3.0
 
 </div>
 
@@ -16,7 +16,7 @@ Version 0.4.0 · Windows · .NET 10 · Avalonia 12 · GPL-3.0
 > the LMP quirks we discovered, and step-by-step recipes for common changes.
 
 > [!NOTE]
-> **Security:** downloads are checked against GitHub's SHA-256, and the 0.4.0 audit and its fixes are in [`SECURITY.md`](SECURITY.md).
+> **Security:** downloads are checked against GitHub's SHA-256, and both security audits (0.4.0 and 0.4.1) and their fixes are in [`SECURITY.md`](SECURITY.md).
 
 > [!NOTE]
 > **This app was written with AI.** The code, tests and docs were written by Claude (Anthropic's AI model) through
@@ -65,7 +65,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 |---|---|
 | ⚙️ **Every setting, in a GUI** | Each of LMP's 13 config files gets a page; every setting gets the right control and LMP's own description. |
 | 🔍 **Always matches your server** | The settings list is read **from your server's own `Server.dll`**, so new or renamed LMP settings appear automatically. |
-| ✅ **Validation** | Limits from LMP's descriptions plus the rules it only mentions in passing (heartbeat < timeout, port clashes, case-sensitive values). Problems show inline and block saving. |
+| ✅ **Validation** | Limits from LMP's descriptions plus the rules it only mentions in passing (heartbeat < timeout, port clashes, case-sensitive values). Problems show inline and block saving. Short server and admin passwords get a warning, because LMP doesn't limit guesses. |
 | 🧾 **Review before saving** | See every change with old → new values before anything is written. Every save makes a timestamped backup. |
 | 🌗 **Greys out what doesn't apply** | Rainbow colours, Career-only funds/reputation, Career-and-Science science settings. |
 | 🎯 **Knows LMP's hidden behaviour** | Gameplay defaults follow your difficulty preset, with a warning before LMP silently switches you to *Custom*. |
@@ -220,7 +220,7 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 171 tests: core logic and the real UI, headless; no network, no real server
+dotnet test                      # 183 tests: core logic and the real UI, headless; no network, no real server
 .\publish.ps1                    # -> dist\LunaEvo-ConfigManager-<version>-win-x64\LunaEvo.ConfigManager.exe
 ```
 
@@ -243,7 +243,7 @@ ConfigManager/
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, joining
 │   └── LunaEvo.ConfigManager/        🖥️ the Avalonia desktop app
 ├── tests/
-│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (113)
+│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (125)
 │   ├── LunaEvo.ConfigManager.Tests/        🧪 UI tests: the real window, driven headlessly (58)
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
@@ -265,7 +265,7 @@ We want to be completely clear about this.
 |---|---|
 | Set the goals: a GUI config manager, then server control, theming, this repo, the 0.3 feature set (wizard, players, mod import, automation...), and 0.4 (a security audit, the Join page, removing Discord). Found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API and mod checks really work. |
 | Made the decisions: desktop app, Avalonia, .NET 10, private repo, GPL-3.0, the look (inspired by [NOMM](https://github.com/Combat787/NOMM)). | Wrote all of the code: the C#, XAML and build scripts. |
-| Supplied the real server, its configs and the requirements. | Wrote all 171 automated tests, a fake LMP server, and fakes for every network call. |
+| Supplied the real server, its configs and the requirements. | Wrote all 183 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP (below), took the screenshots, and wrote these docs. |
 
 - **Model and tool:** Claude Opus 5.5 by Anthropic, working in Claude Code (an AI coding agent that can read files, run commands and build/test the code) inside VS Code.
@@ -276,7 +276,7 @@ We want to be completely clear about this.
 
 AI-written code can look right and still be wrong, so nothing here is trusted on looks:
 
-- **171 automated tests.** Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
+- **183 automated tests.** Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
 - **Against the real thing:**
   - The wizard downloaded the real LMP 0.29.2 from GitHub, and the real server started on the generated config **with no errors**.
   - The Players page read the real server's live JSON. A Universe backup was taken while it ran, and it stopped cleanly.
