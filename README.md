@@ -90,7 +90,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | | |
 |---|---|
 | 🔄 **Auto-restart** | Restarts the server after a crash (and gives up if it keeps crashing), plus an optional daily restart with an in-game one-minute warning. |
-| 🌌 **Universe backups** | Dated snapshots of the game state, on demand or every few hours, with one-click restore (which backs up first, so it's undoable). |
+| 🌌 **Universe backups** | Dated snapshots of the game state: on demand, every few hours, **every time the server stops**, and before every LMP update. One-click restore (which backs up first, so it's undoable). |
 | 🗂️ **Config profiles** | Save the whole setup as "Career campaign" or "Sandbox chaos night" and switch in one click. |
 | 🎨 **Make it yours** | RGB colour wheel and KSP-themed presets regenerate the whole theme; dark, light or follow Windows. |
 | 📦 **One file** | A single self-contained `.exe`. Drop it next to `Server.exe` and it finds the server by itself. |
@@ -284,7 +284,7 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 223 tests: core logic and the real UI, headless; no network, no real server
+dotnet test                      # 224 tests: core logic and the real UI, headless; no network, no real server
 .\publish.ps1                    # -> dist\LunaEvo-ConfigManager-<version>-win-x64\LunaEvo.ConfigManager.exe
 .\release.ps1                    # tests, build, and a GitHub release with the exe: every copy then offers the update
 ```
@@ -308,7 +308,7 @@ ConfigManager/
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, joining
 │   └── LunaEvo.ConfigManager/        🖥️ the Avalonia desktop app
 ├── tests/
-│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (152)
+│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (153)
 │   ├── LunaEvo.ConfigManager.Tests/        🧪 UI tests: the real window, driven headlessly (71)
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
@@ -331,7 +331,7 @@ We want to be completely clear about this.
 |---|---|
 | Set the goals: a GUI config manager, then server control, theming, this repo, the 0.3 feature set (wizard, players, mod import, automation...), 0.4 (a security audit, the Join page, removing Discord), 0.5 (player history, alerts, bans, mod check, notifications), and 0.6 (self-update, a tidier layout). Found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API and mod checks really work. |
 | Made the decisions: desktop app, Avalonia, .NET 10, GPL-3.0 (the repo started private and is now public), the look (inspired by [NOMM](https://github.com/Combat787/NOMM)). | Wrote all of the code: the C#, XAML and build scripts. |
-| Supplied the real server, its configs and the requirements. | Wrote all 223 automated tests, a fake LMP server, and fakes for every network call. |
+| Supplied the real server, its configs and the requirements. | Wrote all 224 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP (below), took the screenshots, and wrote these docs. |
 
 - **Model and tool:** Claude Opus 5.5 by Anthropic, working in Claude Code (an AI coding agent that can read files, run commands and build/test the code) inside VS Code.
@@ -342,7 +342,7 @@ We want to be completely clear about this.
 
 AI-written code can look right and still be wrong, so nothing here is trusted on looks:
 
-- **223 automated tests.** They also run on GitHub on every push. Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
+- **224 automated tests.** They also run on GitHub on every push. Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
 - **Against the real thing:**
   - The wizard downloaded the real LMP 0.29.2 from GitHub, and the real server started on the generated config **with no errors**.
   - The Players page read the real server's live JSON. A Universe backup was taken while it ran, and it stopped cleanly.

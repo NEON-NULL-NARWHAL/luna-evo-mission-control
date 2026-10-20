@@ -26,8 +26,7 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 2. **Settings search.** A TextBox in the Server settings header (`MainWindow.BuildPages`, `settingsHeader`). Match setting
    names and descriptions across `session.Schema.Files`; on pick, `Navigate(fileName)` and bring the row into view
    (`SettingRow.View.BringIntoView()`). Rows are in `_rows`.
-3. **Universe backup on every stop and before an LMP update.** `ServerPage.StopAsync` after a clean stop →
-   `new UniverseBackups(dir).Create("onstop")` (+ `Prune`); `MainWindow.UpdateServerAsync` before `Install` → `Create("beforeupdate")`.
+3. ~~Universe backup on every stop and before an LMP update~~ (done in 0.7.1: `UniverseBackups.Safety`).
 4. **Scheduled chat announcements.** `AppSettings`: list of (minutes, text). `ServerPage.Tick` sends `/say <text>` via
    `TrySend` when due (LMP takes one command per 500 ms). Settings → Automation tab gets an editor.
 5. **Copy invite** (Connect page): one button copying "Server: <name>, address <addr>:<port>, LMP <version>, password: yes/no".
