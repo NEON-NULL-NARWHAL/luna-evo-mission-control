@@ -19,14 +19,19 @@ Version 0.4.0 · Windows · .NET 10 · Avalonia 12 · GPL-3.0
 > **Security:** downloads are checked against GitHub's SHA-256, and the 0.4.0 audit and its fixes are in [`SECURITY.md`](SECURITY.md).
 
 > [!NOTE]
-> **Security:** downloads are checked against GitHub's SHA-256, and the 0.4.0 audit and its fixes are in [`SECURITY.md`](SECURITY.md).
-
-> [!NOTE]
 > **This app was written with AI.** The code, tests and docs were written by Claude (Anthropic's AI model) through
 > Claude Code, directed and reviewed by the project owner. See [How this app was made](#how-this-app-was-made-ai-disclosure)
 > for exactly who did what and how it was checked.
 
 ![Welcome](docs/screenshots/welcome.png)
+
+## Download
+
+**[⬇️ Download the latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest)**:
+`LunaEvo.ConfigManager.exe`, one file for Windows 10/11 (x64), nothing to install. Put it next to your LMP
+`Server.exe`, or anywhere if you're setting up a new server or just joining one. The exe isn't code-signed yet, so
+Windows SmartScreen may ask you to confirm the first time (**More info → Run anyway**). Each release lists the exe's
+SHA-256 so you can check your download.
 
 ## What it does
 
@@ -46,7 +51,7 @@ console window open. This app does all of that for you, and adds what a server h
 
 ### Join a server (for players)
 
-You don't have to host anything to use LUNA EVO.
+You don't have to host anything to use LUNA EVO. Choose **Join a friend's server** on the welcome page.
 
 | | |
 |---|---|
@@ -76,6 +81,16 @@ You don't have to host anything to use LUNA EVO.
 | 🎨 **Make it yours** | RGB colour wheel and KSP-themed presets regenerate the whole theme; dark, light or follow Windows. |
 | 📦 **One file** | A single self-contained `.exe`. Drop it next to `Server.exe` and it finds the server by itself. |
 
+### Safe by default
+
+| | |
+|---|---|
+| 🔒 **Verified downloads** | LMP is only downloaded from GitHub over HTTPS and checked against the SHA-256 GitHub publishes, before it's installed. |
+| 💾 **Backups everywhere** | A timestamped config backup before every save, the old server kept on every update, the Universe snapshotted before every restore, LMP's server list backed up before every change. |
+| 🏠 **Private until you say so** | New servers aren't on the public list, don't touch your router, and keep live info on this PC. The Connect page explains each step before you open anything up. |
+| 🤫 **No secrets kept** | LUNA EVO never stores passwords or webhooks in its own settings, and has no telemetry or account. See [`SECURITY.md`](SECURITY.md). |
+| ⚠️ **Warns before it matters** | Saving while the server runs, stopping it (players get disconnected), closing with unsaved changes, settings LMP would reject. |
+
 ## Screenshots
 
 | | |
@@ -92,20 +107,21 @@ You don't have to host anything to use LUNA EVO.
 | **Log files:** every `lmpserver_*.log`, colour-coded. | **Automation:** auto-restart, daily restart, Universe backups, updates. |
 | ![Join a server](docs/screenshots/join.png) | ![Join: play](docs/screenshots/join-play.png) |
 | **Join a server:** network, ping and live server info for players. | **Launch KSP and join:** straight into the server, or via LMP's list. |
+| ![Connect](docs/screenshots/connect.png) | ![First start](docs/screenshots/first-start.png) |
+| **Connect:** what to tell your friends, and what might block them. | **First start:** LMP's own startup, inside the app. |
 | ![Settings](docs/screenshots/settings.png) | ![Light theme](docs/screenshots/light.png) |
 | **LUNA EVO Settings:** colour wheel, presets, theme. | **Light theme.** |
 
-<sub>Screenshots are from sandbox copies of a real LMP 0.29.2 server with personal details removed (network addresses are replaced with examples). The setup wizard and Connect page are shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
+<sub>All screenshots are LUNA EVO 0.4.0 running a sandbox copy of a real LMP 0.29.2 server, with personal details removed (network addresses are replaced with examples). The setup wizard is shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
 
 ## Getting started
 
-Get `LunaEvo.ConfigManager.exe` from a release, or build it with `publish.ps1` (see [Build it](#build-it)). It's a
-single file with nothing to install.
+Get `LunaEvo.ConfigManager.exe` from the [latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest),
+or build it with `publish.ps1` (see [Build it](#build-it)). It's a single file with nothing to install.
 
 - **No server yet?** Follow [Set up a new server](#set-up-a-new-server-step-by-step) below. It takes about two minutes.
 - **Already have an LMP server?** Put the exe in your server folder, next to `Server.exe`, and double-click it.
   Edit, **Save** (Ctrl+S), then **Server Console → Start**.
-- **Just playing?** Choose **Join a friend's server** on the welcome page. See [Join a friend's server](#join-a-friends-server).
 - **Just playing?** Choose **Join a friend's server** on the welcome page. See [Join a friend's server](#join-a-friends-server).
 
 ### Set up a new server, step by step
@@ -171,19 +187,6 @@ server for changes to take effect.
 
 **What your players need:** KSP 1.12 with the **LMP client mod of the same version** as your server. It's on the same
 [LMP releases page](https://github.com/LunaMultiplayer/LunaMultiplayer/releases) (`LunaMultiplayer-Client-Release.zip`).
-
-### Join a friend's server
-
-1. Start LUNA EVO and choose **Join a friend's server** (or **Play → Join a server** in the rail).
-2. Type the address your host gave you (e.g. `192.168.1.20` or `100.101.102.103:8800`) and press **Check server**.
-   You see where it is and your ping. Server info, players and vessels appear if the host pressed **Share with
-   players** on their Connect page.
-3. Check the **Kerbal Space Program** folder (found automatically for Steam) and that your LMP version matches the server's.
-4. Type the password if there is one, and press **Launch KSP and join**.
-   - Default port (8800), no password: KSP starts and LMP connects by itself.
-   - Otherwise: the server is at the top of LMP's server list with your password filled in. Click it and connect.
-     (LMP's own command-line option can't handle a port or a password; we plan to fix that in the LUNA EVO fork.)
-5. **Save to my servers** to skip typing next time.
 
 ### Join a friend's server
 
@@ -277,8 +280,6 @@ AI-written code can look right and still be wrong, so nothing here is trusted on
 - **Against the real thing:**
   - The wizard downloaded the real LMP 0.29.2 from GitHub, and the real server started on the generated config **with no errors**.
   - The Players page read the real server's live JSON. A Universe backup was taken while it ran, and it stopped cleanly.
-  - The Join page checked a real running server (resolve, ping, live info) and found a real KSP install with LMP 0.29.2.
-  - The download checksum was checked against the real LMP 0.29.2 release's published SHA-256.
   - The Join page checked a real running server (resolve, ping, live info) and found a real KSP install with LMP 0.29.2.
   - The download checksum was checked against the real LMP 0.29.2 release's published SHA-256.
   - The GameData import scanned a real modded KSP install (4,382 `.cfg` files): 1,527 parts, 132 plugins with hashes, and every stock part that still exists in the game.
