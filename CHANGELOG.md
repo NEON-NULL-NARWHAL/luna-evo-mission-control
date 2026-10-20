@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.0 (2026-10-20)
+
+### Added
+- **LUNA EVO updates itself.** On startup it checks its GitHub releases; Settings → Updates → **Update and restart**
+  downloads the new exe (GitHub only, SHA-256 verified, checked again before installing, version checked), swaps it
+  for the running one, and restarts. Unsaved changes and a running server are asked about first. Development builds
+  point to the release page instead.
+- `release.ps1`: tests, builds and publishes a GitHub release (with the CHANGELOG section and SHA-256 as notes) in one
+  command.
+
+### Changed
+- **Tidier layout.** The rail has just the main pages: Server Console, Players, Connect, **Server settings**, Mod
+  Control, Profiles & Backups, Join a server, Settings. LMP's config files are tabs on the Server settings page,
+  grouped Game / Network / Advanced, with error badges on the tabs and on the rail entry.
+- Tabs on the busier pages: Players (Online now / History / Bans, alerts above), LUNA EVO Settings (Appearance /
+  Behaviour / Automation & alerts / Updates / About), Join (Server / My servers / Check my mods, Play always shown).
+
 ## 0.5.0 (2026-10-20)
 
 ### Added

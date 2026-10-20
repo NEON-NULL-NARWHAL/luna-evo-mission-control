@@ -6,7 +6,7 @@
 
 **Set up, configure, run and watch a [Luna Multiplayer](https://github.com/LunaMultiplayer/LunaMultiplayer) (LMP) server for Kerbal Space Program, without touching a config file or a console window.**
 
-Version 0.5.0 · Windows · .NET 10 · Avalonia 12 · GPL-3.0
+Version 0.6.0 · Windows · .NET 10 · Avalonia 12 · GPL-3.0
 
 </div>
 
@@ -32,6 +32,9 @@ Version 0.5.0 · Windows · .NET 10 · Avalonia 12 · GPL-3.0
 `Server.exe`, or anywhere if you're setting up a new server or just joining one. The exe isn't code-signed yet, so
 Windows SmartScreen may ask you to confirm the first time (**More info → Run anyway**). Each release lists the exe's
 SHA-256 so you can check your download.
+
+**You only download it once.** From 0.6, LUNA EVO tells you when there's a new version and updates itself with one
+click (Settings → Updates): it checks the download against GitHub's SHA-256, swaps the exe and restarts.
 
 ## What it does
 
@@ -85,6 +88,8 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | 🗂️ **Config profiles** | Save the whole setup as "Career campaign" or "Sandbox chaos night" and switch in one click. |
 | 🎨 **Make it yours** | RGB colour wheel and KSP-themed presets regenerate the whole theme; dark, light or follow Windows. |
 | 📦 **One file** | A single self-contained `.exe`. Drop it next to `Server.exe` and it finds the server by itself. |
+| ⬆️ **Updates itself** | Checks LUNA EVO's GitHub releases on startup; **Update and restart** downloads the new version, verifies it, swaps the exe and restarts, keeping your server running if you want. |
+| 🗂️ **Tidy layout** | The rail shows the main pages only (Server Console, Players, Connect, Server settings, Mod Control, Profiles & Backups, Join, Settings). LMP's config files are tabs on one **Server settings** page, grouped Game / Network / Advanced, and the busier pages have tabs too. |
 
 ### Safe by default
 
@@ -104,16 +109,16 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | **Setup wizard:** a few questions, then LUNA EVO downloads and configures LMP. | **Server Console:** the real LMP server running inside the app. |
 | ![Players](docs/screenshots/players.png) | ![Player history and bans](docs/screenshots/players-history.png) |
 | **Players:** live from LMP's own data, with alerts for admin-password guessing and banned players. | **Player history and bans:** sessions, time played, notes; unban by name. |
-| ![Check my mods](docs/screenshots/join-mods.png) | ![Notifications](docs/screenshots/notifications.png) |
-| **Check my mods:** what LMP will refuse, before you join. | **Notifications:** Windows and Discord (webhook stored encrypted). |
+| ![Check my mods](docs/screenshots/join-mods.png) | ![Updates](docs/screenshots/settings-updates.png) |
+| **Check my mods:** what LMP will refuse, before you join. | **Updates:** LUNA EVO updates itself from its GitHub releases (this copy can't see them while the repository is private). |
 | ![Profiles and backups](docs/screenshots/profiles.png) | ![A Windows notification](docs/screenshots/notification-toast.png) |
 | **Profiles & Backups:** switch whole configs; snapshot and restore the Universe. | **A Windows notification** from LUNA EVO. |
 | ![Import from GameData](docs/screenshots/mod-import.png) | ![Plugin lists](docs/screenshots/mod-lists.png) |
 | **Import from GameData:** fill mod control from a KSP install. | **Plugin lists:** LMP's DllFile entries, editable. |
 | ![Validation](docs/screenshots/validation.png) | ![Gameplay](docs/screenshots/gameplay.png) |
-| **Validation:** errors inline, a badge on the page, the count in the status area. | **Gameplay:** Career-only settings greyed out in Sandbox, with the reason. |
+| **Validation:** errors inline, a badge on the tab and on Server settings, the count in the status area. | **Server settings:** one page, a tab per LMP config file. Career-only settings greyed out in Sandbox, with the reason. |
 | ![Log files](docs/screenshots/logfiles.png) | ![Automation settings](docs/screenshots/settings-automation.png) |
-| **Log files:** every `lmpserver_*.log`, colour-coded. | **Automation:** auto-restart, daily restart, Universe backups, updates. |
+| **Log files:** every `lmpserver_*.log`, colour-coded. | **Automation & alerts:** auto-restart, daily restart, Universe backups, Windows and Discord notifications. |
 | ![Join a server](docs/screenshots/join.png) | ![Join: play](docs/screenshots/join-play.png) |
 | **Join a server:** network, ping and live server info for players. | **Launch KSP and join:** straight into the server, or via LMP's list. |
 | ![Connect](docs/screenshots/connect.png) | ![First start](docs/screenshots/first-start.png) |
@@ -121,7 +126,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | ![Settings](docs/screenshots/settings.png) | ![Light theme](docs/screenshots/light.png) |
 | **LUNA EVO Settings:** colour wheel, presets, theme. | **Light theme.** |
 
-<sub>Screenshots are LUNA EVO 0.4-0.5 running a sandbox copy of a real LMP 0.29.2 server, with personal details removed (network addresses are replaced with examples; the players are made-up Kerbals). The setup wizard is shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
+<sub>Screenshots are LUNA EVO 0.6 running a sandbox copy of a real LMP 0.29.2 server, with personal details removed (network addresses are replaced with examples; the players are made-up Kerbals). The setup wizard is shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
 
 ## Getting started
 
@@ -189,9 +194,9 @@ in-game server list and enter that address and port.
 <sub>The address shown is an example; your own is filled in automatically. Your internet address stays hidden until you press Show.</sub>
 
 **7. Make it yours (optional).**
-Everything else is on the pages in the rail: **General** and **Gameplay** for the rules, **Mod Control** to import your
-mods, **Profiles & Backups** to save setups and snapshot the universe, and **LUNA EVO → Settings** for automatic
-restarts, scheduled backups and the app's colours. Remember to **Save**, then restart the
+Everything else is in the rail: **Server settings** (tabs for General, Gameplay and every other LMP file) for the
+rules, **Mod Control** to import your mods, **Profiles & Backups** to save setups and snapshot the universe, and
+**LUNA EVO → Settings** for automatic restarts, scheduled backups, notifications, updates and the app's colours. Remember to **Save**, then restart the
 server for changes to take effect.
 
 **What your players need:** KSP 1.12 with the **LMP client mod of the same version** as your server. It's on the same
@@ -232,8 +237,9 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 204 tests: core logic and the real UI, headless; no network, no real server
+dotnet test                      # 214 tests: core logic and the real UI, headless; no network, no real server
 .\publish.ps1                    # -> dist\LunaEvo-ConfigManager-<version>-win-x64\LunaEvo.ConfigManager.exe
+.\release.ps1                    # tests, build, and a GitHub release with the exe: every copy then offers the update
 ```
 
 Run from source against the copies in `tests/Fixtures` (no real server needed):
@@ -255,12 +261,13 @@ ConfigManager/
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, joining
 │   └── LunaEvo.ConfigManager/        🖥️ the Avalonia desktop app
 ├── tests/
-│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (139)
-│   ├── LunaEvo.ConfigManager.Tests/        🧪 UI tests: the real window, driven headlessly (65)
+│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (145)
+│   ├── LunaEvo.ConfigManager.Tests/        🧪 UI tests: the real window, driven headlessly (69)
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
 ├── docs/screenshots/
 ├── publish.ps1               📦 builds the single-file exe
+├── release.ps1               📦 ships a version: tests, exe, GitHub release (the in-app updater picks it up)
 ├── SECURITY.md               🔒 what LUNA EVO touches, the audit, how to report a problem
 └── CHANGELOG.md
 ```
@@ -275,9 +282,9 @@ We want to be completely clear about this.
 
 | The project owner (human) | Claude (AI), via Claude Code in VS Code |
 |---|---|
-| Set the goals: a GUI config manager, then server control, theming, this repo, the 0.3 feature set (wizard, players, mod import, automation...), 0.4 (a security audit, the Join page, removing Discord), and 0.5 (player history, alerts, bans, mod check, notifications). Found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API and mod checks really work. |
+| Set the goals: a GUI config manager, then server control, theming, this repo, the 0.3 feature set (wizard, players, mod import, automation...), 0.4 (a security audit, the Join page, removing Discord), 0.5 (player history, alerts, bans, mod check, notifications), and 0.6 (self-update, a tidier layout). Found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API and mod checks really work. |
 | Made the decisions: desktop app, Avalonia, .NET 10, private repo, GPL-3.0, the look (inspired by [NOMM](https://github.com/Combat787/NOMM)). | Wrote all of the code: the C#, XAML and build scripts. |
-| Supplied the real server, its configs and the requirements. | Wrote all 204 automated tests, a fake LMP server, and fakes for every network call. |
+| Supplied the real server, its configs and the requirements. | Wrote all 214 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP (below), took the screenshots, and wrote these docs. |
 
 - **Model and tool:** Claude Opus 5.5 by Anthropic, working in Claude Code (an AI coding agent that can read files, run commands and build/test the code) inside VS Code.
@@ -288,7 +295,7 @@ We want to be completely clear about this.
 
 AI-written code can look right and still be wrong, so nothing here is trusted on looks:
 
-- **204 automated tests.** Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
+- **214 automated tests.** Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
 - **Against the real thing:**
   - The wizard downloaded the real LMP 0.29.2 from GitHub, and the real server started on the generated config **with no errors**.
   - The Players page read the real server's live JSON. A Universe backup was taken while it ran, and it stopped cleanly.

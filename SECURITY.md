@@ -16,6 +16,7 @@ response time.
 | | When | Notes |
 |---|---|---|
 | **GitHub** (`api.github.com`, `github.com`, `*.githubusercontent.com`) | Setup wizard, LMP update check and update | HTTPS only. Downloads are checked against GitHub's SHA-256 (see H1). The update check can be turned off. |
+| **LUNA EVO's own GitHub releases** | On startup (can be turned off) and "Check now"; "Update and restart" | The same verified download as LMP's: HTTPS from GitHub only, SHA-256 checked while downloading and again before installing, the exe's version checked. Releases without a checksum are never offered. |
 | **LMP's website on your server** (default TCP 8900) | Players page; Join page | Plain HTTP, read-only. Only what LMP itself publishes there. |
 | **A friend's server** | Join page, when you press Check | DNS lookup, 4 pings (ICMP) and one HTTP request to the address you typed. Nothing else. |
 | **Windows Firewall** (`netsh`, as administrator) | Only when you press "Allow through firewall" | Windows asks for permission each time. The exact command is in the button's tooltip. |
@@ -29,6 +30,16 @@ LUNA EVO has no telemetry, no accounts and no server of its own.
 **What it keeps about players** (0.5): `<server>/LunaEvo/players.json` holds player names, LMP's ids for them (needed
 to unban), when they played, their LMP/KSP versions, wrong admin passwords, ban reasons and your notes. **Never IP
 addresses**, even though LMP's own log lines contain them. It stays next to your server; delete it to forget everyone.
+
+## Security notes on self-update (0.6)
+
+- LUNA EVO only installs an update that GitHub publishes a **SHA-256** for, downloaded over HTTPS from GitHub's own
+  hosts. The copy placed next to the exe is hashed **again**, must be a Windows program (`MZ`) and must carry the
+  release's version number, before the running exe is renamed aside. Any failure leaves the current version as it was.
+- What this protects against: a tampered or corrupted download, a redirect elsewhere, a file swapped after downloading.
+  What it doesn't: someone who can publish releases on this repository (a GitHub account takeover). Protect the
+  maintainers' GitHub accounts with two-factor authentication; code signing (not done yet) would add a second check.
+- Development builds never replace themselves.
 
 ## Security notes on the 0.5 features
 

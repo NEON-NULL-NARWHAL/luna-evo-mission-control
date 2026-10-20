@@ -47,6 +47,7 @@ internal sealed class JoinPage : IDisposable
     private readonly TextBlock _modSummary = Ui.Text("", "sublabel").WithId("join/modSummary");
     private readonly StackPanel _modResults = new() { Spacing = 2 };
     private string? _autoModRules;
+    private readonly TabSet _tabs = new("join/tab");
     private ServerAddress? _server;
     private LiveInfoResult? _live;
     private bool _checking;
@@ -154,11 +155,17 @@ internal sealed class JoinPage : IDisposable
         modsBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 8, Children =
         {
             rulesRow,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { _modCheck, _modSummary } },
+            _modCheck,
+            _modSummary,
         } });
-        _modSummary.VerticalAlignment = VerticalAlignment.Center;
+        _modCheck.HorizontalAlignment = HorizontalAlignment.Left;
+        _modSummary.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
         modsBody.Children.Add(_modResults);
 
+        // Play stays below the tabs, so launching is always one click away.
+        _tabs.Add("server", "Server", new StackPanel { Children = { serverGroup, _results } });
+        _tabs.Add("saved", "My servers", savedGroup);
+        _tabs.Add("mods", "Check my mods", modsGroup);
         View = new ScrollViewer
         {
             Content = new StackPanel
@@ -169,7 +176,7 @@ internal sealed class JoinPage : IDisposable
                     Ui.Text("Join a server", "headline"),
                     Ui.Text("For players: check a friend's server before you join, then launch KSP straight into it. You don't need to host anything.", "sublabel"),
                     new Border { Height = 16 },
-                    _banner, serverGroup, savedGroup, _results, modsGroup, playGroup,
+                    _banner, _tabs.Strip, _tabs.Content, playGroup,
                 },
             },
         };
@@ -476,6 +483,7 @@ internal sealed class JoinPage : IDisposable
             var check = Ui.Button("Check", "text").WithId("join/saved/check/" + key);
             check.Click += async (_, _) =>
             {
+                _tabs.Select("server");
                 _address.Text = new ServerAddress(saved.Host, saved.Port).ToString();
                 _websitePort.Value = saved.WebsitePort;
                 await CheckAsync();

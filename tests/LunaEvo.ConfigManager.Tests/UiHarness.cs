@@ -41,6 +41,8 @@ internal sealed class UiHarness : IDisposable
         JoinPage.StartKsp = (_, _) => throw new InvalidOperationException("A test tried to start KSP without faking it.");
         ModImportPanel.PickSharePath = _ => throw new InvalidOperationException("A test opened a save dialog without faking it.");
         MainWindow.ShowDesktopNotification = (title, message, alert) => Notifications.Add((title, message, alert));
+        MainWindow.CurrentExe = null; // the test host must never be "updated"
+        MainWindow.StartNewVersion = (_, _) => throw new InvalidOperationException("A test tried to restart the app without faking it.");
         Dialogs.Responder = (title, _, buttons) =>
         {
             DialogsShown.Add(title);
@@ -101,8 +103,23 @@ internal sealed class UiHarness : IDisposable
         task.GetAwaiter().GetResult(); // rethrows if it failed
     }
 
+    /// <summary>Waits for an async app method and returns its result.</summary>
+    public T Await<T>(Task<T> task, string what = "task", int seconds = 30)
+    {
+        WaitFor(() => task.IsCompleted, what, seconds);
+        return task.GetAwaiter().GetResult();
+    }
+
     /// <summary>Clicks a page in the navigation rail.</summary>
-    public void OpenTab(string key) => Click(Find<Button>("nav/" + key));
+    /// <summary>Opens a page or a Server settings tab: clicks its button if it's on screen, else navigates as the rail would.</summary>
+    public void OpenTab(string key)
+    {
+        if (TryFind<Button>("nav/" + key) is { } button)
+            Click(button);
+        else
+            Window.Navigate(key);
+        Pump();
+    }
 
     public T Find<T>(string automationId) where T : Control =>
         TryFind<T>(automationId) ?? throw new InvalidOperationException($"No {typeof(T).Name} with id '{automationId}' on the current page.");

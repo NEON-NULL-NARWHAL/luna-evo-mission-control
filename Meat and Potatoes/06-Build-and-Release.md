@@ -40,11 +40,11 @@ Each version gets its own folder, so an older exe that's still running doesn't b
 ## Releasing a version
 
 1. Bump `<Version>` in `src/LunaEvo.ConfigManager/LunaEvo.ConfigManager.csproj` (shown in Settings → About).
-2. Add an entry to `CHANGELOG.md`.
-3. `dotnet test` must be green.
-4. `.\publish.ps1`, and smoke-test the exe in a **copy** of a server folder.
-5. Commit, tag (`git tag v0.3.0`), push, and attach the exe to a GitHub release:
-   `gh release create v0.3.0 "dist\LunaEvo-ConfigManager-0.3.0-win-x64\LunaEvo.ConfigManager.exe" --notes-file CHANGELOG.md`
+2. Add a `## <version> (date)` section to `CHANGELOG.md`.
+3. Smoke-test `.\publish.ps1`'s exe in a **copy** of a server folder.
+4. Commit and push.
+5. `.\release.ps1` runs the tests, builds the exe and creates the GitHub release with it. Every copy of LUNA EVO 0.6+
+   then offers the update by itself. See [18](18-Updating-LUNA-EVO.md).
 
 ## Things not done yet
 

@@ -13,28 +13,33 @@ is on), else the welcome page.
 ## The window
 
 ```text
-┌ rail (260 px) ─────────┬┬ page ──────────────────────────────────┐
-│ LUNA EVO               ││ Headline                               │
-│ Control                ││ path                                   │
-│   Server Console   ●   ││ [banner: file-level warnings]          │
-│   Players / Connect    ││                                        │
-│   Profiles & Backups   ││                                        │
-│ Game / Network / ...   ││ ┌ group: FileName.xml ────────────────┐ │
-│   General      ② ●     ││ │ Label            [editor]   ↺       │ │
-│   ...                  ││ │ description                         │ │
-│ LUNA EVO               ││ │ error / reason line                 │ │
-│   Settings             ││ └─────────────────────────────────────┘ │
+┌ rail (260 px) ─────────┬┬ page: Server settings ─────────────────┐
+│ LUNA EVO               ││ Server settings                        │
+│ Server                 ││ Game     [General ②●] Gameplay Warp... │
+│   Server Console   ●   ││ Network  Connection Website ...        │
+│   Players              ││ Advanced Interval Log Debug            │
+│   Connect              ││ General                                │
+│   Server settings ② ●  ││ path                                   │
+│   Mod Control          ││ ┌ group: FileName.xml ────────────────┐ │
+│   Profiles & Backups   ││ │ Label            [editor]   ↺       │ │
+│ Play                   ││ │ description                         │ │
+│   Join a server        ││ │ error / reason line                 │ │
+│ LUNA EVO               ││ └─────────────────────────────────────┘ │
+│   Settings             ││                                        │
 │ ● Server running · 5m  ││                                        │
-│ No problems found      ││                                        │
-│ [Open server]          ││                                        │
-│ [ Save ]               ││                                        │
+│ [Open server] [ Save ] ││                                        │
 └────────────────────────┴┴────────────────────────────────────────┘
 ```
 
-- **Pages** are registered with `AddNav(key, navContent, page)`. The key is a file name, `MainWindow.ConsolePage` or
-  `MainWindow.SettingsKey`; `Navigate(key)` switches pages.
-- **Nav badges**: red count = errors in that file; green dot = unsaved changes. The Server Console item shows a dot
-  while the server runs.
+- **Pages** are registered with `AddNav(key, navContent, page)`. `Navigate(key)` switches pages; a config file name
+  opens **Server settings** with that file's tab selected (`_settingsTabs`), and `LMPModControl.xml` is its own rail
+  entry ("Mod Control"). Tab buttons keep the old ids (`nav/GeneralSettings.xml`), so automation and tests still find them.
+- **Badges**: red count = errors in that file (on the tab, and the total on "Server settings"); green dot = unsaved
+  changes. The Server Console item shows a dot while the server runs.
+- **`TabSet`** gives a page tabs: `Strip` (the buttons; `AddLabel` starts a labelled row) and `Content` (the pages).
+  Every page stays in the visual tree with `IsVisible` toggled, so state survives switching and UI tests can find
+  controls on any tab. Note: a hidden tab isn't laid out, so its text isn't in the visual tree until it's shown; open
+  the tab before reading text from it. Used by Server settings, Players, Join and LUNA EVO Settings.
 - `Refresh()` is the single place that re-validates and updates every row, badge, banner and the status area. Call it
   after any edit. Rows and list editors take it as their `changed` callback.
 

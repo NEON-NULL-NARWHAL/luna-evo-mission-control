@@ -1,6 +1,6 @@
 // LUNA EVO · LunaEvo.ConfigManager.Core/Setup/LmpReleases.cs
-// [Core] Reads LMP's releases from GitHub and picks the right server download; parses LMP version numbers.
-// Used by: SetupWizard, SettingsPage (update check), ServerInstaller
+// [Core] Reads GitHub releases (LMP's, and LUNA EVO's own for AppUpdater), picks the server download; parses versions.
+// Used by: SetupWizard, SettingsPage (update check), ServerInstaller, AppUpdater
 // Guide:   Meat and Potatoes/10-Setup-and-Updates.md
 
 using System.Diagnostics;
@@ -12,7 +12,8 @@ namespace LunaEvo.ConfigManager.Core.Setup;
 /// <param name="Sha256">The SHA-256 GitHub publishes for the file (lowercase hex), or null if it has none.</param>
 public sealed record LmpAsset(string Name, string DownloadUrl, long Size, string? Sha256 = null);
 
-public sealed record LmpRelease(string Tag, Version? Version, bool Prerelease, DateTimeOffset PublishedAt, string PageUrl, IReadOnlyList<LmpAsset> Assets)
+/// <param name="Notes">The release's description (Markdown), cut to a few thousand characters.</param>
+public sealed record LmpRelease(string Tag, Version? Version, bool Prerelease, DateTimeOffset PublishedAt, string PageUrl, IReadOnlyList<LmpAsset> Assets, string Notes = "")
 {
     /// <summary>
     /// The server zip for this platform. Up to 0.29 LMP shipped one "LunaMultiplayer-Server-Release.zip"
@@ -31,9 +32,13 @@ public sealed class LmpReleaseFeed(HttpClient http)
     public const string ReleasesUrl = "https://api.github.com/repos/LunaMultiplayer/LunaMultiplayer/releases?per_page=30";
 
     /// <summary>Releases that have a server download, newest first. Drafts are never included.</summary>
-    public async Task<IReadOnlyList<LmpRelease>> GetAsync(bool includePrereleases, CancellationToken cancel = default)
+    public async Task<IReadOnlyList<LmpRelease>> GetAsync(bool includePrereleases, CancellationToken cancel = default) =>
+        (await GetAllAsync(http, ReleasesUrl, includePrereleases, cancel)).Where(r => r.ServerAsset() != null).ToList();
+
+    /// <summary>Every non-draft release at a GitHub releases API URL, newest first.</summary>
+    public static async Task<IReadOnlyList<LmpRelease>> GetAllAsync(HttpClient http, string url, bool includePrereleases, CancellationToken cancel = default)
     {
-        using var response = await http.GetAsync(ReleasesUrl, cancel);
+        using var response = await http.GetAsync(url, cancel);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancel);
         using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancel);
@@ -62,9 +67,9 @@ public sealed class LmpReleaseFeed(HttpClient http)
             var release = new LmpRelease(tag, LmpVersion.Parse(tag), prerelease,
                 item.TryGetProperty("published_at", out var published) && published.ValueKind == JsonValueKind.String && published.TryGetDateTimeOffset(out var when) ? when : DateTimeOffset.MinValue,
                 Str(item, "html_url"),
-                assets);
-            if (release.ServerAsset() != null)
-                releases.Add(release);
+                assets,
+                Str(item, "body") is { Length: > 4000 } body ? body[..4000] + "…" : Str(item, "body"));
+            releases.Add(release);
         }
         return releases.OrderByDescending(r => r.PublishedAt).ToList();
     }

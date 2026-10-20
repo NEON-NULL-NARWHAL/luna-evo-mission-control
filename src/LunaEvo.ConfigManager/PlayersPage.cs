@@ -29,6 +29,7 @@ internal sealed class PlayersPage : IDisposable
     private readonly StackPanel _history = new() { Spacing = 2 };
     private readonly TextBox _historySearch = new TextBox { PlaceholderText = "Search players...", Width = 260 }.WithId("players/historySearch");
     private readonly StackPanel _bans = new() { Spacing = 2 };
+    private readonly TabSet _tabs = new("players/tab");
     private ServerSnapshot? _last;
     private bool _polling;
 
@@ -61,7 +62,11 @@ internal sealed class PlayersPage : IDisposable
         var (bans, bansBody, _) = Ui.Group("Bans");
         bansBody.Children.Add(_bans);
 
-        var page = new StackPanel { Margin = new Thickness(28, 20, 28, 28), Children = { header, _cards, _banner, alerts, players, vessels, history, bans } };
+        // Alerts stay above the tabs: they matter whichever tab is open.
+        _tabs.Add("online", "Online now", new StackPanel { Children = { players, vessels } });
+        _tabs.Add("history", "History", history);
+        _tabs.Add("bans", "Bans", bans);
+        var page = new StackPanel { Margin = new Thickness(28, 20, 28, 28), Children = { header, _cards, _banner, alerts, _tabs.Strip, _tabs.Content } };
         View = new ScrollViewer { Content = page };
 
         _poll.Tick += async (_, _) => await PollAsync();

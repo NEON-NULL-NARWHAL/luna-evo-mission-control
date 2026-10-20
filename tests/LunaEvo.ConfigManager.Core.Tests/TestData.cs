@@ -104,4 +104,27 @@ internal static class TestData
 
     public static string RuleDll(string path, string sha = "", string element = "DllFile") =>
         $"<{element}><Text>{Path.GetFileNameWithoutExtension(path)}</Text><FilePath>{path}</FilePath>{(element == "DllFile" ? $"<Sha>{sha}</Sha>" : "")}</{element}>";
+
+    public const string AppExeUrl = "https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/download/v9.9.9/LunaEvo.ConfigManager.exe";
+
+    /// <summary>"An exe": just enough to pass the MZ check (no version info, so the version check is skipped).</summary>
+    public static byte[] FakeExe(string text) => System.Text.Encoding.ASCII.GetBytes("MZ" + text);
+
+    /// <summary>LUNA EVO's own GitHub releases: an older one, a newer one with the exe and its digest, and a newer one without a digest.</summary>
+    public static string AppReleasesJson(byte[] exe, bool withDigest = true)
+    {
+        var sha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(exe));
+        object Release(string tag, bool prerelease, object[] assets) => new
+        {
+            tag_name = tag, prerelease, draft = false, html_url = "https://github.com/x", published_at = "2026-10-20T12:00:00Z",
+            body = $"## {tag}" + "\n" + "New things.", assets,
+        };
+        object Asset(string url, int size, string? digest) => new { name = "LunaEvo.ConfigManager.exe", browser_download_url = url, size, digest };
+        return System.Text.Json.JsonSerializer.Serialize(new[]
+        {
+            Release("v10.0.0", true, [Asset(AppExeUrl.Replace("v9.9.9", "v10.0.0"), exe.Length, "sha256:" + sha)]), // pre-release: skipped
+            Release("v9.9.9", false, [Asset(AppExeUrl, exe.Length, withDigest ? "sha256:" + sha : null)]),
+            Release("v0.1.0", false, [Asset(AppExeUrl.Replace("v9.9.9", "v0.1.0"), exe.Length, "sha256:" + sha)]),
+        });
+    }
 }

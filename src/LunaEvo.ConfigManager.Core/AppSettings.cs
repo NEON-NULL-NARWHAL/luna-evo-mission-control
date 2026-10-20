@@ -70,6 +70,9 @@ public sealed record AppSettings
 
     // Updates
 
+    /// <summary>Look for a newer LUNA EVO on GitHub when the app starts.</summary>
+    public bool CheckForAppUpdates { get; init; } = true;
+
     /// <summary>Look for a newer LMP server on GitHub when a server is opened.</summary>
     public bool CheckForLmpUpdates { get; init; } = true;
 

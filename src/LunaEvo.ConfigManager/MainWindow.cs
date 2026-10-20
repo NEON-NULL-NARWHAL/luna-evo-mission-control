@@ -22,8 +22,9 @@ using LunaEvo.ConfigManager.Core.Validation;
 namespace LunaEvo.ConfigManager;
 
 /// <summary>
-/// NOMM-style shell: navigation rail on the left (server console, config files grouped by area, LUNA EVO settings,
-/// with status and the save button at the bottom), page on the right.
+/// NOMM-style shell: navigation rail on the left (Server: console, players, connect, server settings, mod control,
+/// profiles; Play; LUNA EVO), with status and the save button at the bottom, page on the right. The config files
+/// share one "Server settings" page with a tab per file.
 /// </summary>
 public sealed class MainWindow : Window
 {
@@ -33,14 +34,15 @@ public sealed class MainWindow : Window
     internal const string ProfilesKey = "profiles";
     internal const string SettingsKey = "settings";
     internal const string JoinKey = "join";
+    internal const string ServerSettingsKey = "serverSettings";
+    internal const string ModControlFile = "LMPModControl.xml";
 
-    // Rail sections for config files; files a newer LMP adds land in "Other".
+    // Tab groups on the Server settings page; files a newer LMP adds land in "Other". Mod control has its own rail entry.
     private static readonly (string Title, string[] Files)[] Sections =
     [
         ("Game", ["GeneralSettings.xml", "GameplaySettings.xml", "WarpSettings.xml", "CraftSettings.xml", "ScreenshotSettings.xml"]),
         ("Network", ["ConnectionSettings.xml", "WebsiteSettings.xml", "MasterServerSettings.xml", "DedicatedServerSettings.xml"]),
         ("Advanced", ["IntervalSettings.xml", "LogSettings.xml", "DebugSettings.xml"]),
-        ("Mods", ["LMPModControl.xml"]),
     ];
 
     private readonly StackPanel _nav = new() { Spacing = 1, Margin = new Thickness(0, 0, 10, 0) };
@@ -55,6 +57,7 @@ public sealed class MainWindow : Window
     private readonly List<ListEditor> _lists = [];
     private readonly List<ObjectListEditor> _objectLists = [];
     private readonly TextBlock _updateText = Ui.Text("", "sublabel", "modified").WithId("status/update");
+    private readonly TextBlock _appUpdateText = Ui.Text("", "sublabel", "modified").WithId("status/appUpdate");
     private readonly Dictionary<string, FileView> _files = [];
     private readonly Dictionary<string, (Button Nav, Control Page)> _pages = [];
     private readonly SettingsPage _settingsPage;
@@ -67,6 +70,8 @@ public sealed class MainWindow : Window
     private ProfilesPage? _profilesPage;
     private ModImportPanel? _modImport;
     private string? _current;
+    private TabSet? _settingsTabs;
+    private (Border Badge, TextBlock Text, Ellipse Dirty)? _settingsNav;
     private bool _closeConfirmed;
 
     private sealed record FileView(Border Badge, TextBlock BadgeText, Ellipse Dirty, Border Banner, TextBlock BannerText);
@@ -109,6 +114,7 @@ public sealed class MainWindow : Window
                 new Border { Margin = new Thickness(8, 0), Child = _issuesText },
                 new Border { Margin = new Thickness(8, 0), Child = _saveText },
                 new Border { Margin = new Thickness(8, 0), Child = _updateText },
+                new Border { Margin = new Thickness(8, 0), Child = _appUpdateText },
                 open,
                 _save,
             },
@@ -158,6 +164,18 @@ public sealed class MainWindow : Window
         _settingsPage = new SettingsPage(this);
         _joinPage = new JoinPage(this);
 
+        // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
+        AppUpdater.CleanUp(CurrentExe);
+        _ = Task.Delay(TimeSpan.FromSeconds(15)).ContinueWith(_ => AppUpdater.CleanUp(CurrentExe), TaskScheduler.Default);
+        _appUpdateText.IsVisible = false;
+        _appUpdateText.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
+        _appUpdateText.PointerPressed += (_, _) =>
+        {
+            Navigate(SettingsKey);
+            _settingsPage.ShowTab("updates");
+        };
+        _ = CheckForAppUpdateAsync();
+
         var serverDirectory = options.ServerDirectory;
         if (serverDirectory == null && Settings.OpenLastServer && Settings.LastServerDirectory is { } last &&
             File.Exists(System.IO.Path.Combine(last, "Server.dll")))
@@ -180,6 +198,102 @@ public sealed class MainWindow : Window
     internal ModImportPanel? ModImport => _modImport;
     internal SetupWizard? Wizard { get; private set; }
     internal JoinPage Join => _joinPage;
+
+    /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>
+    internal AppUpdate? AvailableAppUpdate { get; private set; }
+
+    /// <summary>Why the last LUNA EVO update check couldn't tell (offline, private repository...), or null.</summary>
+    internal string? AppUpdateProblem { get; private set; }
+
+    /// <summary>The exe that updates replace. Tests point it at a throwaway file.</summary>
+    internal static string? CurrentExe { get; set; } = Environment.ProcessPath;
+
+    /// <summary>Starts the updated exe with the same options. Tests replace it so nothing is started.</summary>
+    internal static Func<string, IReadOnlyList<string>, bool> StartNewVersion { get; set; } = (exe, arguments) =>
+    {
+        var info = new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = System.IO.Path.GetDirectoryName(exe)! };
+        foreach (var argument in arguments)
+            info.ArgumentList.Add(argument);
+        return System.Diagnostics.Process.Start(info) != null;
+    };
+
+    /// <summary>Asks GitHub for a newer LUNA EVO (if enabled, or <paramref name="force"/>), and shows a note in the rail.</summary>
+    internal async Task CheckForAppUpdateAsync(bool force = false)
+    {
+        if (!force && !Settings.CheckForAppUpdates)
+            return;
+        AppUpdateProblem = null;
+        try
+        {
+            AvailableAppUpdate = await new AppUpdater(Http.Client).CheckAsync(Version.Parse(SettingsPage.AppVersion));
+        }
+        catch (AppUpdateUnavailableException e)
+        {
+            AppUpdateProblem = e.Message;
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            AppUpdateProblem = "Couldn't reach GitHub to check for updates.";
+        }
+        _appUpdateText.Text = AvailableAppUpdate is { } update ? $"LUNA EVO {update.Version} is available" : "";
+        _appUpdateText.IsVisible = AvailableAppUpdate != null;
+        _settingsPage.Refresh();
+    }
+
+    /// <summary>
+    /// Downloads and installs the newer LUNA EVO, then restarts into it. Asks first about unsaved changes and a running
+    /// server. Returns a message if it didn't restart.
+    /// </summary>
+    internal async Task<string> UpdateAppAsync(IProgress<double>? progress = null)
+    {
+        if (AvailableAppUpdate is not { } update)
+            return "There's no update to install.";
+        if (!AppUpdater.CanUpdateItself(CurrentExe))
+            return $"This copy of LUNA EVO can't replace itself (it's a development build). Download {update.Release.Tag} from {AppUpdater.ReleasesPage}.";
+
+        if (_session is { IsDirty: true })
+        {
+            var choice = await Dialogs.ChooseAsync(this, "Unsaved changes", "LUNA EVO restarts to update.", "Save and update", "Update without saving", "Cancel");
+            if (choice == 0 && !await SaveAsync())
+                return "Update cancelled.";
+            if (choice is not (0 or 1))
+                return "Update cancelled.";
+        }
+        var stopServer = false;
+        if (_server?.IsOwnedActive == true)
+        {
+            var choice = await Dialogs.ChooseAsync(this, "The server is running",
+                "LUNA EVO restarts to update. The server can keep running: the new version follows its log, and console commands " +
+                "work again after the server's next restart. Or stop it first (players are disconnected).",
+                "Keep it running", "Stop the server first", "Cancel");
+            if (choice is not (0 or 1))
+                return "Update cancelled.";
+            stopServer = choice == 1;
+        }
+
+        try
+        {
+            var downloaded = await new AppUpdater(Http.Client).DownloadAsync(update, progress);
+            await Task.Run(() => AppUpdater.Install(downloaded, CurrentExe!, update));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return $"LUNA EVO can't write to {System.IO.Path.GetDirectoryName(CurrentExe)}. Move it to a folder you can write to, or download {update.Release.Tag} from {AppUpdater.ReleasesPage}.";
+        }
+        catch (Exception e) when (e is DownloadVerificationException or HttpRequestException or IOException or TaskCanceledException)
+        {
+            return $"Update failed: {e.Message} LUNA EVO {SettingsPage.AppVersion} is still installed.";
+        }
+
+        if (stopServer)
+            await _server!.StopAsync(confirm: false);
+        if (!StartNewVersion(CurrentExe!, Environment.GetCommandLineArgs().Skip(1).ToList()))
+            return $"Updated to {update.Release.Tag}, but it didn't start. Start LUNA EVO again.";
+        _tracker?.Save();
+        _closeConfirmed = true;
+        Close();
+        return $"Updated to {update.Release.Tag}. Restarting...";
+    }
 
     /// <summary>The newest LMP release found by the update check, if it's newer than the open server.</summary>
     internal LmpRelease? AvailableUpdate { get; private set; }
@@ -363,6 +477,12 @@ public sealed class MainWindow : Window
     /// <summary>Shows a page, as clicking it in the rail does: a file name, <see cref="ConsolePage"/> or <see cref="SettingsKey"/>.</summary>
     internal void Navigate(string key)
     {
+        // A config file on the Server settings page: select its tab, then show that page.
+        if (_settingsTabs?.Has(key) == true)
+        {
+            _settingsTabs.Select(key);
+            key = ServerSettingsKey;
+        }
         if (!_pages.TryGetValue(key, out var page))
             return;
         if (_current != null && _pages.TryGetValue(_current, out var previous))
@@ -417,6 +537,8 @@ public sealed class MainWindow : Window
         _pages.Clear();
         _files.Clear();
         _current = null;
+        _settingsTabs = null;
+        _settingsNav = null;
         _save.IsEnabled = false;
         _serverText.Text = "No server open";
         _issuesText.Text = "";
@@ -473,7 +595,7 @@ public sealed class MainWindow : Window
         _pages.Clear();
         _current = null;
 
-        AddHeading("Control");
+        AddHeading("Server");
         var consoleContent = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         consoleContent.Children.Add(new TextBlock { Text = "Server Console", VerticalAlignment = VerticalAlignment.Center });
         if (_consoleDot.Parent is Panel oldParent)
@@ -483,24 +605,66 @@ public sealed class MainWindow : Window
         AddNav(ConsolePage, consoleContent, _server!.View);
         AddNav(PlayersKey, new TextBlock { Text = "Players" }, _players!.View);
         AddNav(ConnectKey, new TextBlock { Text = "Connect" }, _connect!.View);
-        AddNav(ProfilesKey, new TextBlock { Text = "Profiles & Backups" }, _profilesPage!.View);
 
-        var known = Sections.SelectMany(s => s.Files).ToHashSet();
+
+        // One "Server settings" page, a tab per config file, grouped Game / Network / Advanced.
+        var previousTab = _settingsTabs?.Selected;
+        _settingsTabs = new TabSet("nav");
+        var known = Sections.SelectMany(s => s.Files).Append(ModControlFile).ToHashSet();
         var sections = Sections
             .Select(s => (s.Title, Files: s.Files.Select(session.Schema.Find).OfType<SettingsFileSchema>().ToList()))
             .Append((Title: "Other", Files: session.Schema.Files.Where(f => !known.Contains(f.FileName)).ToList()))
             .Where(s => s.Files.Count > 0);
-
         foreach (var (title, files) in sections)
         {
-            AddHeading(title);
+            _settingsTabs.AddLabel(title);
             foreach (var file in files)
-                BuildFile(session, file);
+                BuildFile(session, file, inTabs: true);
         }
+        var settingsHeader = new StackPanel
+        {
+            Margin = new Thickness(28, 20, 28, 0),
+            Children =
+            {
+                Ui.Text("Server settings", "headline"),
+                Ui.Text($"LMP's config files in {session.ConfigDirectory}. Changes are saved together with Save.", "sublabel"),
+                new Border { Height = 14 },
+                _settingsTabs.Strip,
+            },
+        };
+        var settingsView = new DockPanel();
+        DockPanel.SetDock(settingsHeader, Dock.Top);
+        settingsView.Children.Add(settingsHeader);
+        settingsView.Children.Add(_settingsTabs.Content);
+        AddNav(ServerSettingsKey, NavWithBadge("Server settings", out var badge, out var badgeText, out var dirty), settingsView);
+        _settingsNav = (badge, badgeText, dirty);
+        if (previousTab != null)
+            _settingsTabs.Select(previousTab);
+
+        if (session.Schema.Find(ModControlFile) is { } modControl)
+            BuildFile(session, modControl, inTabs: false);
+        AddNav(ProfilesKey, new TextBlock { Text = "Profiles & Backups" }, _profilesPage!.View);
 
         AddPlaySection();
         AddLunaEvoSection();
         Navigate(Sections[0].Files[0]);
+    }
+
+    /// <summary>A rail or tab label with an error-count badge and an unsaved-changes dot.</summary>
+    private static Grid NavWithBadge(string text, out Border badge, out TextBlock badgeText, out Ellipse dirty)
+    {
+        badgeText = new TextBlock();
+        badge = new Border { Child = badgeText, IsVisible = false, Margin = new Thickness(6, 0, 0, 0) };
+        badge.Classes.Add("badge");
+        dirty = new Ellipse { IsVisible = false, Margin = new Thickness(8, 0, 0, 0) };
+        dirty.Classes.Add("dirtyDot");
+        var content = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto") };
+        content.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
+        Grid.SetColumn(badge, 1);
+        content.Children.Add(badge);
+        Grid.SetColumn(dirty, 2);
+        content.Children.Add(dirty);
+        return content;
     }
 
     private void AddPlaySection()
@@ -531,27 +695,19 @@ public sealed class MainWindow : Window
         _pages[key] = (nav, page);
     }
 
-    private void BuildFile(ConfigSession session, SettingsFileSchema file)
+    /// <param name="inTabs">True: a tab on the Server settings page. False: its own rail entry (Mod Control).</param>
+    private void BuildFile(ConfigSession session, SettingsFileSchema file, bool inTabs)
     {
-        var badgeText = new TextBlock();
-        var badge = new Border { Child = badgeText, IsVisible = false };
-        badge.Classes.Add("badge");
-        var dirty = new Ellipse { IsVisible = false, Margin = new Thickness(8, 0, 0, 0) };
-        dirty.Classes.Add("dirtyDot");
-
-        var navContent = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto") };
-        navContent.Children.Add(new TextBlock { Text = Ui.Humanize(file.DisplayName), VerticalAlignment = VerticalAlignment.Center });
-        Grid.SetColumn(badge, 1);
-        navContent.Children.Add(badge);
-        Grid.SetColumn(dirty, 2);
-        navContent.Children.Add(dirty);
+        var title = file.FileName == ModControlFile ? "Mod Control" : Ui.Humanize(file.DisplayName);
+        var navContent = NavWithBadge(title, out var badge, out var badgeText, out var dirty);
 
         var bannerText = new TextBlock();
         var banner = new Border { Child = bannerText, IsVisible = false, Margin = new Thickness(0, 0, 0, 16) }.WithId($"{file.FileName}/banner");
         banner.Classes.Add("banner");
 
-        var page = new StackPanel { Margin = new Thickness(28, 20, 28, 28) };
-        page.Children.Add(Ui.Text(Ui.Humanize(file.DisplayName), "headline"));
+        // In tabs the page header already says where the files are; only the file name is repeated.
+        var page = new StackPanel { Margin = new Thickness(28, inTabs ? 4 : 20, 28, 28) };
+        page.Children.Add(Ui.Text(inTabs ? Ui.Humanize(file.DisplayName) : "LMP Mod Control", inTabs ? "title" : "headline"));
         var path = Ui.Text(System.IO.Path.Combine(session.ConfigDirectory, file.FileName), "sublabel");
         path.Margin = new Thickness(0, 2, 0, 20);
         page.Children.Add(path);
@@ -594,7 +750,16 @@ public sealed class MainWindow : Window
             }
         }
 
-        AddNav(file.FileName, navContent, new ScrollViewer { Content = page });
+        var view = new ScrollViewer { Content = page };
+        if (inTabs)
+        {
+            var tab = _settingsTabs!.Add(file.FileName, navContent, view);
+            _pages[file.FileName] = (tab, view);
+        }
+        else
+        {
+            AddNav(file.FileName, navContent, view);
+        }
         _files[file.FileName] = new FileView(badge, badgeText, dirty, banner, bannerText);
     }
 
@@ -621,6 +786,15 @@ public sealed class MainWindow : Window
             var fileIssues = issues.Where(i => i.FileName == fileName && i.Setting == null).Select(i => i.Message).ToList();
             view.BannerText.Text = string.Join("\n", fileIssues);
             view.Banner.IsVisible = fileIssues.Count > 0;
+        }
+
+        if (_settingsNav is var (navBadge, navText, navDirty) && _settingsTabs != null)
+        {
+            var tabbed = _settingsTabs.Keys;
+            var errors = issues.Count(i => tabbed.Contains(i.FileName) && i.Severity == Severity.Error);
+            navText.Text = errors.ToString();
+            navBadge.IsVisible = errors > 0;
+            navDirty.IsVisible = _session.DirtyFiles.Any(tabbed.Contains);
         }
 
         _save.IsEnabled = _session.IsDirty;

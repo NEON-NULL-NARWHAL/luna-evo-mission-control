@@ -14,6 +14,7 @@ using LunaEvo.ConfigManager.Core;
 using LunaEvo.ConfigManager.Core.Files;
 using LunaEvo.ConfigManager.Core.Ops;
 using LunaEvo.ConfigManager.Core.Server;
+using LunaEvo.ConfigManager.Core.Setup;
 
 namespace LunaEvo.ConfigManager;
 
@@ -33,6 +34,13 @@ internal sealed class SettingsPage
     private readonly StackPanel _about = new() { Spacing = 2 };
     private readonly StackPanel _folders = new() { Spacing = 2 };
     private readonly StackPanel _updates = new() { Spacing = 2 };
+    private readonly StackPanel _appUpdates = new() { Spacing = 2 };
+    private readonly TextBlock _appStatus = Ui.Text("", "sublabel").WithId("settings/appUpdateStatus");
+    private readonly TabSet _tabs = new("settings/tab");
+    private readonly Dictionary<string, StackPanel> _tabPages = new()
+    {
+        ["look"] = new(), ["behaviour"] = new(), ["automation"] = new(), ["updates"] = new(), ["about"] = new(),
+    };
     private readonly TextBlock _dailyResult = Ui.Text("", "sublabel").WithId("settings/dailyResult");
     private readonly TextBox _webhook = new TextBox { Width = 420, PasswordChar = '•' }.WithId("settings/discordWebhook");
     private readonly TextBlock _discordResult = Ui.Text("", "sublabel").WithId("settings/discordResult");
@@ -99,6 +107,14 @@ internal sealed class SettingsPage
         var stored = Ui.Text($"Preferences for this app, saved to {host.SettingsPath}", "sublabel");
         stored.Margin = new Thickness(0, 2, 0, 20);
         page.Children.Add(stored);
+        page.Children.Add(new Border { Height = 14 });
+        _tabs.Add("look", "Appearance", _tabPages["look"]);
+        _tabs.Add("behaviour", "Behaviour", _tabPages["behaviour"]);
+        _tabs.Add("automation", "Automation & alerts", _tabPages["automation"]);
+        _tabs.Add("updates", "Updates", _tabPages["updates"]);
+        _tabs.Add("about", "About", _tabPages["about"]);
+        page.Children.Add(_tabs.Strip);
+        page.Children.Add(_tabs.Content);
 
         // Appearance
         var (appearance, look, _) = Ui.Group("Appearance");
@@ -115,7 +131,7 @@ internal sealed class SettingsPage
         wheelRow.Children.Add(presets);
         look.Children.Add(wheelRow);
         look.Children.Add(Ui.Row("Theme", "Dark like NOMM, light, or follow Windows.", _theme));
-        page.Children.Add(appearance);
+        _tabPages["look"].Children.Add(appearance);
 
         // Behaviour
         var (behaviour, rows, _) = Ui.Group("Behaviour");
@@ -131,7 +147,7 @@ internal sealed class SettingsPage
             Toggle("settings/confirmStop", s => s.ConfirmStop, (s, v) => s with { ConfirmStop = v })));
         rows.Children.Add(Ui.Row("Review changes before saving", "Shows a list of what's about to change, with old and new values.",
             Toggle("settings/reviewChanges", s => s.ReviewChangesBeforeSave, (s, v) => s with { ReviewChangesBeforeSave = v })));
-        page.Children.Add(behaviour);
+        _tabPages["behaviour"].Children.Add(behaviour);
 
         // Server automation
         var (automation, auto, _) = Ui.Group("Server automation");
@@ -149,7 +165,7 @@ internal sealed class SettingsPage
             Number("settings/universeHours", 0, 168, s => s.UniverseBackupHours, (s, v) => s with { UniverseBackupHours = v })));
         auto.Children.Add(Ui.Row("Universe backups to keep", "Older ones are deleted. 0 keeps them all.",
             Number("settings/universeKeep", 0, 1000, s => s.UniverseBackupsToKeep, (s, v) => s with { UniverseBackupsToKeep = v })));
-        page.Children.Add(automation);
+        _tabPages["automation"].Children.Add(automation);
 
         // Notifications
         var (notify, notifyBody, _) = Ui.Group("Notifications");
@@ -189,7 +205,7 @@ internal sealed class SettingsPage
                 new StackPanel { Orientation = Orientation.Horizontal, Children = { saveWebhook, removeWebhook, test } },
                 _discordResult,
             } }));
-        page.Children.Add(notify);
+        _tabPages["automation"].Children.Add(notify);
         ShowWebhookState();
 
         // Updates
@@ -199,15 +215,22 @@ internal sealed class SettingsPage
         updatesBody.Children.Add(Ui.Row("Include pre-releases", "Newer, less tested versions. Players need the matching LMP mod version.",
             Toggle("settings/prereleases", s => s.IncludeLmpPrereleases, (s, v) => s with { IncludeLmpPrereleases = v })));
         updatesBody.Children.Add(_updates);
-        page.Children.Add(updates);
+        var (appUpdates, appUpdatesBody, _) = Ui.Group("LUNA EVO updates");
+        appUpdatesBody.Children.Add(Ui.Row("Check for new LUNA EVO versions",
+            "When LUNA EVO starts, look for a newer release on GitHub. Updating downloads it, checks it against GitHub's SHA-256, and restarts.",
+            Toggle("settings/checkAppUpdates", s => s.CheckForAppUpdates, (s, v) => s with { CheckForAppUpdates = v })));
+        appUpdatesBody.Children.Add(_appUpdates);
+        appUpdatesBody.Children.Add(new Border { Padding = new Thickness(12, 0, 12, 10), Child = _appStatus });
+        _tabPages["updates"].Children.Add(appUpdates);
+        _tabPages["updates"].Children.Add(updates);
 
         // About and folders are filled in by Refresh, since they depend on the open server.
         var (about, aboutBody, _) = Ui.Group("About");
         aboutBody.Children.Add(_about);
-        page.Children.Add(about);
+        _tabPages["about"].Children.Add(about);
         var (folders, foldersBody, _) = Ui.Group("Folders");
         foldersBody.Children.Add(_folders);
-        page.Children.Add(folders);
+        _tabPages["about"].Children.Add(folders);
 
         var (links, linksBody, _) = Ui.Group("Links");
         linksBody.Children.Add(Ui.Row("Luna Multiplayer on GitHub", LmpRepository, LinkButton("Open", LmpRepository)));
@@ -215,7 +238,7 @@ internal sealed class SettingsPage
         linksBody.Children.Add(Ui.Row("Credits",
             "Font: JetBrains Mono (SIL OFL 1.1). Icons: Material Symbols (Apache 2.0). Look inspired by NOMM, the Nuclear Option Mod Manager.",
             LinkButton("NOMM", Nomm)));
-        page.Children.Add(links);
+        _tabPages["about"].Children.Add(links);
 
         View = new ScrollViewer { Content = page };
         Refresh();
@@ -223,9 +246,48 @@ internal sealed class SettingsPage
 
     public Control View { get; }
 
+    /// <summary>Switches to a tab: "look", "behaviour", "automation", "updates" or "about".</summary>
+    internal void ShowTab(string key) => _tabs.Select(key);
+
+    /// <summary>The "LUNA EVO updates" rows: up to date, or the new version with Update and restart.</summary>
+    private void RefreshAppUpdates()
+    {
+        _appUpdates.Children.Clear();
+        var check = Ui.Button("Check now", "text").WithId("settings/appCheckNow");
+        check.Click += async (_, _) =>
+        {
+            _appStatus.Text = "Checking GitHub...";
+            await _host.CheckForAppUpdateAsync(force: true);
+            // A problem is already shown in the row; only say "up to date" here.
+            _appStatus.Text = _host.AppUpdateProblem == null && _host.AvailableAppUpdate == null ? $"You have the newest LUNA EVO ({AppVersion})." : "";
+        };
+        if (_host.AvailableAppUpdate is { } update)
+        {
+            var install = Ui.Button($"Update to {update.Release.Tag} and restart", "fab", "IconRestart").WithId("settings/appUpdate");
+            install.Click += async (_, _) =>
+            {
+                install.IsEnabled = false;
+                _appStatus.Text = "Downloading...";
+                var progress = new Progress<double>(p => _appStatus.Text = $"Downloading... {p:P0}");
+                _appStatus.Text = await _host.UpdateAppAsync(progress);
+                install.IsEnabled = true;
+            };
+            var notes = update.Release.Notes.Trim();
+            var summary = notes.Length == 0 ? "" : " " + (notes.Length > 280 ? notes[..280] + "…" : notes).Replace("\r", "").Replace("\n\n", " · ").Replace("\n", " ");
+            _appUpdates.Children.Add(Ui.Row($"LUNA EVO {update.Version} is available", $"You have {AppVersion}.{summary}",
+                new StackPanel { Spacing = 4, Children = { install, check } }).WithId("settings/appUpdateRow"));
+        }
+        else
+        {
+            _appUpdates.Children.Add(Ui.Row("LUNA EVO version", _host.AppUpdateProblem ?? $"You have {AppVersion}.", check).WithId("settings/appUpdateRow"));
+        }
+        _appUpdates.Children.Add(Ui.Row("Release history", AppUpdater.ReleasesPage, LinkButton("Open", AppUpdater.ReleasesPage)));
+    }
+
     /// <summary>Re-reads settings and the open server (versions, folders).</summary>
     public void Refresh()
     {
+        RefreshAppUpdates();
         var settings = _host.Settings;
         var session = _host.Session;
         _updating = true;

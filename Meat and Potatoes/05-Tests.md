@@ -3,7 +3,7 @@
 [← Meat and Potatoes](README.md) · Code: `tests/` 🧪
 
 ```powershell
-dotnet test                                             # everything (204 tests, ~45 s)
+dotnet test                                             # everything (214 tests, ~50 s)
 dotnet test tests/LunaEvo.ConfigManager.Core.Tests      # logic only (~3 s)
 dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 ```
@@ -37,6 +37,11 @@ admin-password alerts, bans and the ban list, the mod check against LMP's client
 notifications, unban, notes, the encrypted webhook, Check my mods, sharing rules). The fake server's `/fakejoin`,
 `/fakeguess` and `/fakeleave` print LMP's real lines. `UiHarness` now copies the fixture server to a temp folder,
 and collects Windows notifications in `ui.Notifications`.
+
+0.6 added `AppUpdaterTests` (release choice, private repo, verified download and exe swap, tampering, not an exe,
+dev builds) and `NavigationAndUpdateTests` (the rail, Server settings tabs and badges, page tabs, Update and restart,
+the dev-build message). `ui.OpenTab(key)` clicks the button if it's on screen and otherwise navigates, so file tabs
+work from any page. `MainWindow.CurrentExe` is null and `StartNewVersion` throws in every harness.
 
 ## No network in tests
 
