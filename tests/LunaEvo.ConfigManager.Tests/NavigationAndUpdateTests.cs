@@ -40,6 +40,25 @@ public class NavigationAndUpdateTests
     }
 
     [AvaloniaFact]
+    public void Password_fields_can_generate_a_strong_password_and_exposure_is_flagged()
+    {
+        using var ui = new UiHarness();
+        ui.OpenTab(LmpRules.General);
+        ui.Click(ui.Find<Button>($"{LmpRules.General}/AdminPassword/generate"));
+        Assert.Equal(20, ui.Session.GetValue(LmpRules.General, "AdminPassword")!.Length);
+        Assert.DoesNotContain(ui.Session.Validate(), i => i.Setting == "AdminPassword");
+
+        ui.Session.SetValue(LmpRules.Connection, "Upnp", "true");
+        ui.Window.RefreshAll();
+        ui.OpenTab(MainWindow.ConsolePage);
+        Assert.True(ui.Find<Border>("console/exposure").IsVisible);
+        ui.Session.SetValue(LmpRules.Connection, "Upnp", "false");
+        ui.Session.SetValue("MasterServerSettings.xml", "RegisterWithMasterServer", "false");
+        ui.Window.RefreshAll();
+        Assert.False(ui.Find<Border>("console/exposure").IsVisible);
+    }
+
+    [AvaloniaFact]
     public void Players_settings_and_join_pages_have_tabs()
     {
         using var ui = new UiHarness();

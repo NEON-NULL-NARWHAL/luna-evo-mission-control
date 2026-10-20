@@ -81,6 +81,27 @@ public static class LmpRules
                 $"Short passwords are easy to guess, and LMP doesn't limit attempts. Use {MinPassword}+ characters.");
     }
 
+    /// <summary>
+    /// How the server can be reached from the internet, in plain words (empty if it can't by LUNA EVO's reading of the
+    /// config). UPnP makes LMP open the game port, and the website port too when the website is on, on the router.
+    /// </summary>
+    public static IReadOnlyList<string> InternetExposure(ConfigSession session)
+    {
+        var reasons = new List<string>();
+        if (IsTrue(session.GetValue(Connection, "Upnp")))
+        {
+            var website = IsTrue(session.GetValue(Website, "EnableWebsite")) ? $" and TCP {session.GetValue(Website, "Port")} (live info)" : "";
+            reasons.Add($"UPnP is on: LMP asks your router to open UDP {session.GetValue(Connection, "Port")}{website} to the internet.");
+        }
+        if (IsTrue(session.GetValue("MasterServerSettings.xml", "RegisterWithMasterServer")))
+            reasons.Add("It's on LMP's public server list, so anyone can find it.");
+        return reasons;
+    }
+
+    /// <summary>A random password LMP accepts (letters and digits, no look-alikes like 0/O or 1/l), 20 characters by default.</summary>
+    public static string GeneratePassword(int length = 20) =>
+        System.Security.Cryptography.RandomNumberGenerator.GetString("ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789", length);
+
     public const int MinAdminPassword = 10;
     public const int MinPassword = 6;
 

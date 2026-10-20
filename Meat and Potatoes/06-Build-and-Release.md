@@ -49,5 +49,5 @@ Each version gets its own folder, so an older exe that's still running doesn't b
 ## Things not done yet
 
 - The exe isn't code-signed (SmartScreen warns on first run).
-- No CI yet. A GitHub Actions workflow running `dotnet test` on `windows-latest` would be the next step.
+- CI: `.github/workflows/tests.yml` runs `dotnet test` on `windows-latest` for every push and pull request.
 - Linux/macOS builds should work (Avalonia is cross-platform; `kill -INT` replaces the Ctrl+C helper) but haven't been tried.

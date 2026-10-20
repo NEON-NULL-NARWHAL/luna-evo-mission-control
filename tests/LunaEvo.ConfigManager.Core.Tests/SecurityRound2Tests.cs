@@ -112,6 +112,32 @@ public class SecurityRound2Tests
     }
 
     [Fact]
+    public void Says_when_the_server_is_reachable_from_the_internet()
+    {
+        var session = ConfigSession.Open(TestPaths.LmpServer, TestPaths.CopyConfigs());
+        session.SetValue(LmpRules.Connection, "Upnp", "false");
+        session.SetValue("MasterServerSettings.xml", "RegisterWithMasterServer", "false");
+        Assert.Empty(LmpRules.InternetExposure(session));
+
+        session.SetValue(LmpRules.Connection, "Upnp", "true");
+        session.SetValue(LmpRules.Website, "EnableWebsite", "true");
+        session.SetValue("MasterServerSettings.xml", "RegisterWithMasterServer", "true");
+        var reasons = LmpRules.InternetExposure(session);
+        Assert.Equal(2, reasons.Count);
+        Assert.Contains("TCP", reasons[0]); // UPnP opens the website port too
+    }
+
+    [Fact]
+    public void Generated_passwords_are_long_random_and_pass_the_warning()
+    {
+        var a = LmpRules.GeneratePassword();
+        Assert.Equal(20, a.Length);
+        Assert.NotEqual(a, LmpRules.GeneratePassword());
+        Assert.All(a, c => Assert.True(char.IsAsciiLetterOrDigit(c)));
+        Assert.True(a.Length >= LmpRules.MinAdminPassword);
+    }
+
+    [Fact]
     public void A_hand_edited_settings_file_with_nulls_still_loads()
     {
         var path = Path.Combine(Temp("settings"), "settings.json");

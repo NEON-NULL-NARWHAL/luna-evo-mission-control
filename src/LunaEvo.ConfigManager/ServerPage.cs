@@ -89,6 +89,8 @@ internal sealed class ServerPage : IDisposable
     private readonly WrapPanel _cards = new() { Margin = new Thickness(0, 16, 0, 8) };
     private readonly Border _banner = new() { IsVisible = false, Margin = new Thickness(0, 0, 0, 12) };
     private readonly TextBlock _bannerText = new();
+    private readonly Border _exposure = new Border { IsVisible = false, Margin = new Thickness(0, 0, 0, 12) }.WithId("console/exposure");
+    private readonly TextBlock _exposureText = new() { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly ListBox _console = new ListBox { SelectionMode = SelectionMode.Multiple }.WithId("console/lines");
     private readonly TextBox _search = new TextBox { PlaceholderText = "Search the console...", Width = 220 }.WithId("console/search");
     private readonly ToggleSwitch _follow = new ToggleSwitch { OnContent = "Follow", OffContent = "Follow", IsChecked = true }.WithId("console/follow");
@@ -189,6 +191,13 @@ internal sealed class ServerPage : IDisposable
         Card("Mode", $"{Get(LmpRules.General, "GameMode")} · {Get(LmpRules.General, "GameDifficulty")}");
         Card("Max players", Get(LmpRules.General, "MaxPlayers"));
         Card("Server list", Get("MasterServerSettings.xml", "RegisterWithMasterServer") == "true" ? "Listed" : "Hidden");
+
+        // Make it obvious when the server is reachable from the internet (UPnP opens router ports without asking).
+        var exposure = LmpRules.InternetExposure(session);
+        _exposureText.Text = exposure.Count == 0 ? "" :
+            "This server is reachable from the internet. " + string.Join(" ", exposure) +
+            " Fine if you mean it; for friends on your network or a VPN/mesh, turn these off (Connection: Upnp, Master Server).";
+        _exposure.IsVisible = exposure.Count > 0;
     }
 
     /// <summary>Start button: offers to save unsaved changes, warns about config errors, checks the .NET runtime, then starts the server.</summary>
@@ -500,7 +509,9 @@ internal sealed class ServerPage : IDisposable
         tabs.Children.Add(openLogs);
         tabs.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { _liveTab, _filesTab } });
 
-        var top = new StackPanel { Children = { header, _cards, _banner, tabs } };
+        _exposure.Classes.Add("banner");
+        _exposure.Child = _exposureText;
+        var top = new StackPanel { Children = { header, _cards, _exposure, _banner, tabs } };
         var page = new DockPanel { Margin = new Thickness(28, 20, 28, 20) };
         DockPanel.SetDock(top, Dock.Top);
         page.Children.Add(top);

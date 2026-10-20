@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 (2026-10-20)
+
+### Added
+- **Generate a strong password** under the server and admin password settings (20 random letters and digits). LMP
+  doesn't limit password guesses, so this pairs with the short-password warning.
+- **"This server is reachable from the internet"** banner on the Server Console when UPnP is on (LMP opens the game
+  port, and the website port too, on your router) or the server is on the public list.
+- GitHub Actions runs every test on each push and pull request.
+
 ## 0.6.0 (2026-10-20)
 
 ### Added

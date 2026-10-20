@@ -1,0 +1,18 @@
+# Runs every test on each push and pull request, on Windows (the app and its tests use Windows features).
+# Guide: Meat and Potatoes/06-Build-and-Release.md
+name: tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test --configuration Release

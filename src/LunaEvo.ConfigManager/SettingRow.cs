@@ -55,6 +55,19 @@ internal sealed class SettingRow
         if (!string.IsNullOrWhiteSpace(setting.Description) && Squash(setting.Description) != Squash(setting.Name))
             text.Children.Add(Ui.Text(setting.Description, "sublabel"));
         text.Children.Add(_message);
+        if (_editor is TextBox passwordBox && passwordBox.PasswordChar != default)
+        {
+            // LMP doesn't limit password guesses, so make a long random one easy.
+            var generate = Ui.Button("Generate a strong password", "text").WithId($"{fileName}/{setting.Name}/generate");
+            generate.HorizontalAlignment = HorizontalAlignment.Left;
+            generate.Padding = new Thickness(0, 4);
+            generate.Click += (_, _) =>
+            {
+                passwordBox.Text = LmpRules.GeneratePassword();
+                passwordBox.RevealPassword = true; // so it can be read out to friends
+            };
+            text.Children.Add(generate);
+        }
 
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,32") };
         grid.Children.Add(text);
