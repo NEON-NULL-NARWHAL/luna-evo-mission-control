@@ -79,9 +79,16 @@ public class ServerSupportTests
         var path = Path.Combine(Path.GetTempPath(), "LunaEvoTests", Guid.NewGuid().ToString("N"), "settings.json");
         Assert.Equal(new AppSettings(), AppSettingsStore.Load(path));
 
-        var settings = new AppSettings { AccentColor = "#FF8800", Theme = "Light", BackupsToKeep = 3, LastServerDirectory = @"C:\LMP" };
+        var settings = new AppSettings
+        {
+            AccentColor = "#FF8800", Theme = "Light", BackupsToKeep = 3, LastServerDirectory = @"C:\LMP",
+            SavedServers = [new SavedServer("Kerbin Space Agency", "kerbin.example.com", 9000)],
+        };
         AppSettingsStore.Save(settings, path);
-        Assert.Equal(settings, AppSettingsStore.Load(path));
+        var saved = File.ReadAllText(path);
+        AppSettingsStore.Save(AppSettingsStore.Load(path), path);
+        Assert.Equal(saved, File.ReadAllText(path)); // records compare lists by reference, so compare what's stored
+        Assert.Equal(9000, AppSettingsStore.Load(path).SavedServers.Single().Port);
 
         File.WriteAllText(path, "{ not json");
         Assert.Equal(new AppSettings(), AppSettingsStore.Load(path));

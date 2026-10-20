@@ -9,7 +9,8 @@ using System.Text.RegularExpressions;
 
 namespace LunaEvo.ConfigManager.Core.Setup;
 
-public sealed record LmpAsset(string Name, string DownloadUrl, long Size);
+/// <param name="Sha256">The SHA-256 GitHub publishes for the file (lowercase hex), or null if it has none.</param>
+public sealed record LmpAsset(string Name, string DownloadUrl, long Size, string? Sha256 = null);
 
 public sealed record LmpRelease(string Tag, Version? Version, bool Prerelease, DateTimeOffset PublishedAt, string PageUrl, IReadOnlyList<LmpAsset> Assets)
 {
@@ -37,28 +38,48 @@ public sealed class LmpReleaseFeed(HttpClient http)
         await using var stream = await response.Content.ReadAsStreamAsync(cancel);
         using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancel);
 
+        // GitHub's JSON is outside our control: read it defensively, skipping anything that doesn't look right.
+        if (json.RootElement.ValueKind != JsonValueKind.Array)
+            throw new JsonException("GitHub didn't return a list of releases.");
         var releases = new List<LmpRelease>();
         foreach (var item in json.RootElement.EnumerateArray())
         {
-            if (item.GetProperty("draft").GetBoolean())
+            if (item.ValueKind != JsonValueKind.Object || Bool(item, "draft"))
                 continue;
-            var prerelease = item.GetProperty("prerelease").GetBoolean();
+            var prerelease = Bool(item, "prerelease");
             if (prerelease && !includePrereleases)
                 continue;
 
-            var tag = item.GetProperty("tag_name").GetString() ?? "";
-            var assets = item.GetProperty("assets").EnumerateArray()
-                .Select(a => new LmpAsset(a.GetProperty("name").GetString() ?? "", a.GetProperty("browser_download_url").GetString() ?? "", a.GetProperty("size").GetInt64()))
-                .ToList();
+            var tag = Str(item, "tag_name");
+            var assets = item.TryGetProperty("assets", out var list) && list.ValueKind == JsonValueKind.Array
+                ? list.EnumerateArray()
+                    .Where(a => a.ValueKind == JsonValueKind.Object)
+                    .Select(a => new LmpAsset(Str(a, "name"), Str(a, "browser_download_url"),
+                        a.TryGetProperty("size", out var size) && size.ValueKind == JsonValueKind.Number && size.TryGetInt64(out var n) ? n : 0,
+                        Digest(Str(a, "digest"))))
+                    .ToList()
+                : [];
             var release = new LmpRelease(tag, LmpVersion.Parse(tag), prerelease,
-                item.TryGetProperty("published_at", out var published) && published.ValueKind == JsonValueKind.String ? published.GetDateTimeOffset() : DateTimeOffset.MinValue,
-                item.TryGetProperty("html_url", out var page) ? page.GetString() ?? "" : "",
+                item.TryGetProperty("published_at", out var published) && published.ValueKind == JsonValueKind.String && published.TryGetDateTimeOffset(out var when) ? when : DateTimeOffset.MinValue,
+                Str(item, "html_url"),
                 assets);
             if (release.ServerAsset() != null)
                 releases.Add(release);
         }
         return releases.OrderByDescending(r => r.PublishedAt).ToList();
     }
+
+    /// <summary>GitHub publishes "sha256:&lt;64 hex&gt;" per asset. Anything else counts as "no checksum".</summary>
+    public static string? Digest(string text) =>
+        text.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) && text.Length == 71 && text[7..].All(Uri.IsHexDigit)
+            ? text[7..].ToLowerInvariant()
+            : null;
+
+    private static string Str(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
+
+    private static bool Bool(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.True;
 
     /// <summary>The newest release, or null if GitHub returned none.</summary>
     public async Task<LmpRelease?> LatestAsync(bool includePrereleases, CancellationToken cancel = default) =>

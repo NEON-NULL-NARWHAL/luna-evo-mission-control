@@ -17,6 +17,12 @@ public sealed record LocalAddress(string Address, string Adapter, bool IsPrivate
 public static partial class NetworkHelper
 {
     /// <summary>
+    /// netsh from System32, never from PATH: adding the firewall rule runs it as administrator, so a planted
+    /// "netsh.exe" earlier on the PATH (or in the current folder) must not be the one that gets elevated.
+    /// </summary>
+    public static string NetshPath { get; } = Path.Combine(Environment.SystemDirectory, "netsh.exe");
+
+    /// <summary>
     /// IPv4 addresses of this PC's active network adapters (Ethernet, Wi-Fi, and VPN/mesh adapters such as
     /// Tailscale or ZeroTier), without loopback. Friends on the same network or mesh connect to one of these.
     /// </summary>
@@ -59,19 +65,23 @@ public static partial class NetworkHelper
         IPGlobalProperties.GetIPGlobalProperties().GetActiveUdpListeners().Any(e => e.Port == port);
 
     /// <summary>The name LUNA EVO gives its firewall rule, so it can find it again.</summary>
-    public static string FirewallRuleName(int port) => $"LUNA EVO - LMP server (UDP {port})";
+    public static string FirewallRuleName(int port, string protocol = "UDP") =>
+        protocol == "UDP" ? $"LUNA EVO - LMP server (UDP {port})" : $"LUNA EVO - LMP live info ({protocol} {port})";
 
     /// <summary>Arguments for netsh to add an inbound allow rule for the game port. Shown to the user before running.</summary>
-    public static IReadOnlyList<string> FirewallAddArguments(int port) =>
-        ["advfirewall", "firewall", "add", "rule", $"name={FirewallRuleName(port)}", "dir=in", "action=allow", "protocol=UDP", $"localport={port}"];
+    public static IReadOnlyList<string> FirewallAddArguments(int port, string protocol = "UDP") =>
+        ["advfirewall", "firewall", "add", "rule", $"name={FirewallRuleName(port, Protocol(protocol))}", "dir=in", "action=allow", $"protocol={Protocol(protocol)}", $"localport={port}"];
+
+    // Only these two ever reach netsh.
+    private static string Protocol(string protocol) => protocol.Equals("TCP", StringComparison.OrdinalIgnoreCase) ? "TCP" : "UDP";
 
     /// <summary>True if our rule exists. Reading rules doesn't need administrator rights.</summary>
-    public static bool FirewallRuleExists(int port)
+    public static bool FirewallRuleExists(int port, string protocol = "UDP")
     {
         try
         {
-            var info = new ProcessStartInfo("netsh") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
-            foreach (var argument in new[] { "advfirewall", "firewall", "show", "rule", $"name={FirewallRuleName(port)}" })
+            var info = new ProcessStartInfo(NetshPath) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
+            foreach (var argument in new[] { "advfirewall", "firewall", "show", "rule", $"name={FirewallRuleName(port, Protocol(protocol))}" })
                 info.ArgumentList.Add(argument);
             using var process = Process.Start(info);
             if (process == null)
@@ -90,12 +100,12 @@ public static partial class NetworkHelper
     /// Adds the rule. Windows asks the user for permission (UAC), because changing the firewall needs admin rights.
     /// Returns false if they said no or it failed.
     /// </summary>
-    public static async Task<bool> AddFirewallRuleAsync(int port)
+    public static async Task<bool> AddFirewallRuleAsync(int port, string protocol = "UDP")
     {
         try
         {
-            var info = new ProcessStartInfo("netsh") { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
-            foreach (var argument in FirewallAddArguments(port))
+            var info = new ProcessStartInfo(NetshPath) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
+            foreach (var argument in FirewallAddArguments(port, protocol))
                 info.ArgumentList.Add(argument);
             using var process = Process.Start(info);
             if (process == null)

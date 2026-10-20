@@ -46,6 +46,16 @@ Things about LMP (0.29.2, and master at commit `b3b9efce`) that are surprising a
 | 25 | `Environment.ProcessPath` in a dev build is an exe that needs its DLLs next to it. | Copying it alone into a server folder makes a broken app. | `SetupWizard` only copies the published single-file exe. |
 | 26 | Avalonia controls can only be touched on the UI thread. | Reading a toggle inside `Task.Run` threw. | Read values first, then `Task.Run`. |
 
+## Players, launching, parsing (0.4)
+
+| # | Gotcha | Consequence | Where handled |
+|---|---|---|---|
+| 27 | LMP's client `-lmp lmp://host:port` **mis-parses any port** (slices with an index from the unsliced string, then reads the port from the result). There's **no password option**. | Only `lmp://host` on 8800 without a password auto-connects. | `KspLauncher.PlanFor`; otherwise LMP's server list. Fix it in the fork ([15](15-Joining-Servers.md)). |
+| 28 | The client's server list is `GameData/LunaMultiplayer/Data/settings.xml` (`<Servers><ServerEntry>`), with the same lying `utf-16` declaration, and **LMP rewrites it while KSP runs**. | Edits made while KSP is open are lost. | `KspLauncher.AddToServerList` refuses while KSP runs; edits in place with a backup. |
+| 29 | `JsonElement.TryGetInt32` / `TryGetDouble` / `TryGetInt64` **throw** if the value isn't a number. | One string where a number was expected crashed the poller. | Check `ValueKind` first ([14](14-Security.md)). |
+| 30 | LMP's website listens on `127.0.0.1` by default; `ListenAddress` empty means every address. | Players get no live info until the host shares it. | Connect → Share with players. |
+| 31 | GitHub release assets carry `"digest": "sha256:<hex>"`; old assets may have none. | No digest means nothing to verify against. | `LmpReleases.Digest`; the UI asks. |
+
 ## Our server
 
 `ModControl` is **false on purpose** (we run modded). Don't flag it as a problem.

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.4.0 (2026-10-20)
+
+### Added
+- **Join a server** page for players (no server needed): address and network type, ping, live server info (name,
+  players, mode, difficulty, password, mod control, warp), players online and vessels in game.
+- **Launch KSP and join**: starts KSP with LMP's `-lmp` auto-connect on the default port without a password;
+  otherwise adds the server (and password) to the top of LMP's own server list. **Add to LMP's server list** on its own.
+- **My servers**: saved servers (never with passwords). The KSP folder is found and remembered.
+- Connect page: **Share with players** / **Stop sharing** for LMP's website, and a TCP firewall rule for it.
+- `SECURITY.md`: what LUNA EVO touches, the full audit, and how to report a problem.
+
+### Security
+- LMP downloads are verified against GitHub's published SHA-256 (and again before unpacking), only from GitHub over
+  HTTPS, with size limits. Releases without a checksum need confirmation.
+- Limits on zip entries and unpacked size.
+- Tolerant parsing of LMP's website JSON, GitHub's release feed and `Server.runtimeconfig.json`: bad data can't crash
+  the app.
+- `netsh` and `winget` are run from fixed system paths, not looked up on `PATH`.
+- Folder scans skip symlinks/junctions. `Ui.Open` only opens web links and folders.
+
+### Removed
+- **Discord notifications**, for now. 0.4.0 removes the old plaintext webhook URL from `settings.json` on first start.
+
 ## 0.3.0 (2026-10-20)
 
 ### Added

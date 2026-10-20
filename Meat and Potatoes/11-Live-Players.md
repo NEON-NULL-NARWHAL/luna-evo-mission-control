@@ -30,7 +30,7 @@ the real shape.
 |---|---|
 | `ServerInfoClient.EndpointFor(session)` | `null` when the website is off. "Any" addresses (empty, `::`, `0.0.0.0`) become `127.0.0.1`; a specific address is used as-is. |
 | `GetAsync` / `Parse` | Players (names), vessels (name, type, altitude, body index), subspaces, memory, max players, server name. |
-| `Diff(before, after)` | Who joined and who left, for the Discord notices. |
+| `Diff(before, after)` | Who joined and who left. |
 | `PlayersPage` | Polls every 5 s while a server is running; cards (players / max, vessels, asteroids & comets, subspaces, memory); a row per player with **Kick** / **Ban** (sends `/kick name reason` / `/ban name reason`); vessels with type, body and altitude (asteroids and comets are counted, not listed). |
 
 `ReferenceBody` is KSP's body index: 0 Sun, 1 Kerbin, 2 Mun, 3 Minmus, 4 Moho, 5 Eve, 6 Duna, 7 Ike, 8 Jool, 9 Laythe,

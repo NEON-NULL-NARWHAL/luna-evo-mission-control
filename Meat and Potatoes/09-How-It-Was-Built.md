@@ -42,6 +42,11 @@ Real mistakes, all made by the AI and caught by the process, not by luck:
 | Hung test run | Blocking the UI thread on an async call deadlocked headless tests. | `ui.Await` pumps instead. |
 | Real install scan | Checked the part-name rule against 4,382 real `.cfg` files and LMP's stock list. | Confirmed; documented the two-spelling quirk. |
 | Real server | Started the real LMP 0.29.2 on a wizard-generated config: no errors. | (Confirmation, not a bug.) |
+| Owner's review | The Discord webhook was saved in plaintext; downloads weren't checksummed. | Discord removed (and scrubbed); SHA-256 verification. See [SECURITY.md](../SECURITY.md). |
+| Security audit | Website JSON parsed with throwing `TryGet*` calls could crash the app; `netsh` found via PATH; no zip-bomb limits; scans followed junctions; `Ui.Open` would run anything. | Tolerant parsing, absolute paths, limits, skip reparse points, `Ui.CanOpen`. |
+| Hardening test | A website response with a string where a number belonged threw inside `TryGetInt32`. | `ValueKind` checks everywhere. |
+| Reading LMP's client | `-lmp lmp://host:port` can't work (index bug), and there's no password option. | Auto-connect only on 8800 without a password; LMP's server list otherwise. |
+| Screenshot review | A demo check on port 8900 hit the owner's real server and showed real players. | Demo moved to 8810/8910; those screenshots were deleted, never committed. |
 
 ## Guidelines we followed (keep following them)
 

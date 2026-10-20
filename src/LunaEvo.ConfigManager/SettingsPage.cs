@@ -33,7 +33,6 @@ internal sealed class SettingsPage
     private readonly StackPanel _about = new() { Spacing = 2 };
     private readonly StackPanel _folders = new() { Spacing = 2 };
     private readonly StackPanel _updates = new() { Spacing = 2 };
-    private readonly TextBlock _discordResult = Ui.Text("", "sublabel").WithId("settings/discordResult");
     private readonly TextBlock _dailyResult = Ui.Text("", "sublabel").WithId("settings/dailyResult");
     private string? _updateMessage;
     private bool _updating;
@@ -149,30 +148,6 @@ internal sealed class SettingsPage
         auto.Children.Add(Ui.Row("Universe backups to keep", "Older ones are deleted. 0 keeps them all.",
             Number("settings/universeKeep", 0, 1000, s => s.UniverseBackupsToKeep, (s, v) => s with { UniverseBackupsToKeep = v })));
         page.Children.Add(automation);
-
-        // Discord
-        var (discord, discordBody, _) = Ui.Group("Discord");
-        var webhook = new TextBox { Width = 420, PlaceholderText = "https://discord.com/api/webhooks/...", Text = settings.DiscordWebhookUrl, PasswordChar = '•' }
-            .WithId("settings/discordWebhook");
-        webhook.Classes.Add("revealPasswordButton");
-        webhook.LostFocus += (_, _) => _host.UpdateSettings(s => s with { DiscordWebhookUrl = webhook.Text?.Trim() ?? "" });
-        var test = Ui.Button("Send a test message", "text").WithId("settings/discordTest");
-        test.Click += async (_, _) =>
-        {
-            _host.UpdateSettings(s => s with { DiscordWebhookUrl = webhook.Text?.Trim() ?? "" });
-            _discordResult.Text = !DiscordNotifier.IsWebhookUrl(_host.Settings.DiscordWebhookUrl)
-                ? "That isn't a Discord webhook URL."
-                : await new DiscordNotifier(Http.Client).SendAsync(_host.Settings.DiscordWebhookUrl, "👋 LUNA EVO is connected to this channel.")
-                    ? "Sent! Check the channel."
-                    : "Discord didn't accept it. Check the URL.";
-        };
-        discordBody.Children.Add(Ui.Row("Webhook URL",
-            "Posts when the server starts, stops or crashes. In Discord: channel settings → Integrations → Webhooks → New webhook → Copy URL. Keep it secret.",
-            new StackPanel { Spacing = 4, Children = { webhook, new StackPanel { Orientation = Orientation.Horizontal, Children = { test, _discordResult } } } }));
-        _discordResult.VerticalAlignment = VerticalAlignment.Center;
-        discordBody.Children.Add(Ui.Row("Also post players joining and leaving", "Needs live player info (see the Players page).",
-            Toggle("settings/discordPlayers", s => s.DiscordPlayerEvents, (s, v) => s with { DiscordPlayerEvents = v })));
-        page.Children.Add(discord);
 
         // Updates
         var (updates, updatesBody, _) = Ui.Group("LMP updates");
@@ -300,7 +275,7 @@ internal sealed class SettingsPage
         {
             _updateMessage = await _host.UpdateServerAsync(release);
         }
-        catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or TaskCanceledException)
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or TaskCanceledException or Core.Setup.DownloadVerificationException)
         {
             _updateMessage = $"Update failed: {e.Message}";
         }

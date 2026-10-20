@@ -315,7 +315,6 @@ internal sealed class ServerPage : IDisposable
             _nextDailyRestart = DailyRestart.Next(now.AddMinutes(1), setting);
             _dailyRestartWarned = false;
             _incoming.Enqueue(LogLine.FromManager("Scheduled restart now."));
-            _host.Notify("🔄 Scheduled restart.");
             await StopAsync(confirm: false);
             await StartAsync(automatic: true);
         }
@@ -374,31 +373,19 @@ internal sealed class ServerPage : IDisposable
 
     private void OnStateChanged(ServerState state)
     {
-        if (state == ServerState.Running)
-        {
-            var name = _host.Session?.GetValue(LmpRules.General, "ServerName");
-            _host.Notify($"🚀 **{name}** is up.");
-        }
         UpdateState();
     }
 
     private async Task OnExitedAsync(int code, bool requested)
     {
-        var name = _host.Session?.GetValue(LmpRules.General, "ServerName");
         if (requested || _automaticRestartPending)
-        {
-            if (!_automaticRestartPending)
-                _host.Notify($"🛑 **{name}** stopped.");
             return;
-        }
 
-        _host.Notify($"💥 **{name}** stopped unexpectedly (exit code {code}).");
         if (!_host.Settings.AutoRestartOnCrash)
             return;
         if (!_crashPolicy.ShouldRestart(DateTime.Now))
         {
             _incoming.Enqueue(LogLine.FromManager("The server keeps crashing (3 times in 10 minutes), so LUNA EVO stopped restarting it. Check the errors above."));
-            _host.Notify($"⚠️ **{name}** keeps crashing; auto-restart gave up.");
             return;
         }
 

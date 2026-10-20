@@ -22,14 +22,25 @@ public static class DotNetRuntime
         if (!File.Exists(config))
             return null;
 
-        using var json = JsonDocument.Parse(File.ReadAllText(config));
-        if (!json.RootElement.TryGetProperty("runtimeOptions", out var options) ||
-            !options.TryGetProperty("framework", out var framework))
+        JsonDocument json;
+        try
+        {
+            json = JsonDocument.Parse(File.ReadAllText(config));
+        }
+        catch (Exception e) when (e is JsonException or IOException)
+        {
+            return null; // unreadable: let Server.exe report it rather than crash here
+        }
+        using var _ = json;
+        if (json.RootElement.ValueKind != JsonValueKind.Object ||
+            !json.RootElement.TryGetProperty("runtimeOptions", out var options) || options.ValueKind != JsonValueKind.Object ||
+            !options.TryGetProperty("framework", out var framework) || framework.ValueKind != JsonValueKind.Object)
             return null;
 
-        var name = framework.GetProperty("name").GetString() ?? "Microsoft.NETCore.App";
-        var version = framework.GetProperty("version").GetString() ?? "0.0.0";
-        var major = int.Parse(version.Split('.')[0]);
+        var name = framework.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString()! : "Microsoft.NETCore.App";
+        var version = framework.TryGetProperty("version", out var v) && v.ValueKind == JsonValueKind.String ? v.GetString()! : "";
+        if (!int.TryParse(version.Split('.')[0], out var major))
+            return null;
         return new Requirement(name, major, version, InstalledVersions(name).Any(v => v.Major == major));
     }
 

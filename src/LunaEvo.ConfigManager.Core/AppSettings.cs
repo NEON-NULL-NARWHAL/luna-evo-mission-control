@@ -4,6 +4,7 @@
 // Guide:   Meat and Potatoes/04-App-UI.md
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace LunaEvo.ConfigManager.Core;
 
@@ -48,13 +49,13 @@ public sealed record AppSettings
 
     public int UniverseBackupsToKeep { get; init; } = 10;
 
-    // Discord
+    // Joining (player side)
 
-    /// <summary>Discord webhook URL for notifications. Empty = off.</summary>
-    public string DiscordWebhookUrl { get; init; } = "";
+    /// <summary>Servers saved on the Join page. Passwords are never stored here (they go only into LMP's own list).</summary>
+    public IReadOnlyList<SavedServer> SavedServers { get; init; } = [];
 
-    /// <summary>Also post when players join or leave (needs the website on, see the Players page).</summary>
-    public bool DiscordPlayerEvents { get; init; } = true;
+    /// <summary>KSP's folder, if it isn't in a Steam library LUNA EVO can find.</summary>
+    public string? KspFolder { get; init; }
 
     // Updates
 
@@ -63,6 +64,9 @@ public sealed record AppSettings
 
     public bool IncludeLmpPrereleases { get; init; }
 }
+
+/// <summary>A server on the Join page's list.</summary>
+public sealed record SavedServer(string Name, string Host, int Port = 8800, int WebsitePort = 8900);
 
 public static class AppSettingsStore
 {
@@ -77,7 +81,15 @@ public static class AppSettingsStore
         path ??= DefaultPath;
         try
         {
-            return File.Exists(path) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new() : new();
+            if (!File.Exists(path))
+                return new();
+            var text = File.ReadAllText(path);
+            var settings = JsonSerializer.Deserialize<AppSettings>(text, Json) ?? new();
+            // 0.3.0 stored a Discord webhook URL here in plain text. Discord support is gone; rewrite the file so
+            // that secret doesn't linger on disk.
+            if (text.Contains("\"DiscordWebhookUrl\"", StringComparison.Ordinal))
+                Save(settings, path);
+            return settings;
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
         {

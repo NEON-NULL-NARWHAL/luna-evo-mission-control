@@ -12,7 +12,6 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using LunaEvo.ConfigManager.Core;
-using LunaEvo.ConfigManager.Core.Ops;
 using LunaEvo.ConfigManager.Core.Schema;
 using LunaEvo.ConfigManager.Core.Setup;
 using LunaEvo.ConfigManager.Core.Validation;
@@ -30,6 +29,7 @@ public sealed class MainWindow : Window
     internal const string ConnectKey = "connect";
     internal const string ProfilesKey = "profiles";
     internal const string SettingsKey = "settings";
+    internal const string JoinKey = "join";
 
     // Rail sections for config files; files a newer LMP adds land in "Other".
     private static readonly (string Title, string[] Files)[] Sections =
@@ -55,6 +55,7 @@ public sealed class MainWindow : Window
     private readonly Dictionary<string, FileView> _files = [];
     private readonly Dictionary<string, (Button Nav, Control Page)> _pages = [];
     private readonly SettingsPage _settingsPage;
+    private readonly JoinPage _joinPage;
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
@@ -137,12 +138,14 @@ public sealed class MainWindow : Window
         {
             _server?.Dispose();
             _players?.Dispose();
+            _joinPage?.Dispose();
         };
         _updateText.IsVisible = false;
         _updateText.PointerPressed += (_, _) => Navigate(SettingsKey);
         _updateText.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
 
         _settingsPage = new SettingsPage(this);
+        _joinPage = new JoinPage(this);
 
         var serverDirectory = options.ServerDirectory;
         if (serverDirectory == null && Settings.OpenLastServer && Settings.LastServerDirectory is { } last &&
@@ -164,19 +167,12 @@ public sealed class MainWindow : Window
     internal ProfilesPage? Profiles => _profilesPage;
     internal ModImportPanel? ModImport => _modImport;
     internal SetupWizard? Wizard { get; private set; }
+    internal JoinPage Join => _joinPage;
 
     /// <summary>The newest LMP release found by the update check, if it's newer than the open server.</summary>
     internal LmpRelease? AvailableUpdate { get; private set; }
     internal AppSettings Settings { get; private set; }
     internal string SettingsPath { get; }
-
-    /// <summary>Posts to the Discord webhook if one is set. Fire and forget: a failed post never bothers the user.</summary>
-    internal void Notify(string message)
-    {
-        var url = Settings.DiscordWebhookUrl;
-        if (DiscordNotifier.IsWebhookUrl(url))
-            _ = new DiscordNotifier(Http.Client).SendAsync(url, message);
-    }
 
     /// <summary>Changes, saves and applies LUNA EVO's own settings.</summary>
     internal void UpdateSettings(Func<AppSettings, AppSettings> change)
@@ -283,8 +279,12 @@ public sealed class MainWindow : Window
             return "Nothing to update.";
         if (_server?.IsRunning == true)
             return "Stop the server first, then update.";
-        var zip = await new ServerInstaller(Http.Client).DownloadAsync(asset, progress);
-        var result = await Task.Run(() => ServerInstaller.Install(zip, session.ServerDirectory));
+        if (asset.Sha256 == null && !await Dialogs.ConfirmAsync(this, "Can't verify this download",
+                $"GitHub has no checksum for {asset.Name}, so LUNA EVO can't check the file wasn't tampered with on the way. Install it anyway?",
+                "Install anyway"))
+            return "Update cancelled.";
+        var zip = await new ServerInstaller(Http.Client).DownloadAsync(asset, progress, allowUnverified: asset.Sha256 == null);
+        var result = await Task.Run(() => ServerInstaller.Install(zip, session.ServerDirectory, asset.Sha256));
         Open(session.ServerDirectory, session.ConfigDirectory); // new Server.dll, maybe new settings
         Navigate(SettingsKey); // back to where the user pressed Update, to see the result
         return $"Updated to LMP {release.Tag}. The previous version is saved in {result.BinariesBackup}.";
@@ -348,6 +348,7 @@ public sealed class MainWindow : Window
         _save.IsEnabled = false;
         _serverText.Text = "No server open";
         _issuesText.Text = "";
+        AddPlaySection();
         AddLunaEvoSection();
 
         var setup = Ui.Button("Set up a new server", "fab", "IconPlay").WithId("welcome/setup");
@@ -357,6 +358,9 @@ public sealed class MainWindow : Window
         var open = Ui.Button("Open an existing server folder", "text", "IconFolder").WithId("welcome/open");
         open.HorizontalAlignment = HorizontalAlignment.Left;
         open.Click += async (_, _) => await PickServerFolderAsync();
+        var join = Ui.Button("Join a friend's server", "text", "IconPlay").WithId("welcome/join");
+        join.HorizontalAlignment = HorizontalAlignment.Left;
+        join.Click += (_, _) => Navigate(JoinKey);
         var panel = new StackPanel
         {
             Spacing = 12,
@@ -367,9 +371,10 @@ public sealed class MainWindow : Window
             {
                 Ui.Text("Welcome to LUNA EVO", "headline"),
                 Ui.Text("New to hosting? LUNA EVO can download Luna Multiplayer's server and set it up from a few questions. " +
-                        "Already have one? Open the folder that contains Server.exe.", "sublabel"),
+                        "Already have one? Open the folder that contains Server.exe. Just playing? Join a friend's server.", "sublabel"),
                 setup,
                 open,
+                join,
             },
         };
         if (error != null)
@@ -421,8 +426,15 @@ public sealed class MainWindow : Window
                 BuildFile(session, file);
         }
 
+        AddPlaySection();
         AddLunaEvoSection();
         Navigate(Sections[0].Files[0]);
+    }
+
+    private void AddPlaySection()
+    {
+        AddHeading("Play");
+        AddNav(JoinKey, new TextBlock { Text = "Join a server" }, _joinPage.View);
     }
 
     private void AddLunaEvoSection()

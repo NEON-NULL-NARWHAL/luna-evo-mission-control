@@ -55,10 +55,10 @@ box (that's how chips work), never send directly.
    `AddHeading("Section")` and `AddNav("key", new TextBlock { Text = "Name" }, page.View)`.
 3. Test with `ui.OpenTab("key")`.
 
-## Add a Discord notification
+## Download something new
 
-Call `_host.Notify("emoji **text**")` from wherever the event happens (see `ServerPage.OnStateChanged` and
-`OnExitedAsync`). It does nothing if no webhook is set and never throws. Mention it in [13](13-Automation.md).
+Follow [14 · Security](14-Security.md#checklist-for-new-code): trusted host, size limit, SHA-256, then unpack with
+`ServerInstaller`'s limits. Add a tampered-download test like the ones in `SetupTests`.
 
 ## Add a question to the setup wizard
 

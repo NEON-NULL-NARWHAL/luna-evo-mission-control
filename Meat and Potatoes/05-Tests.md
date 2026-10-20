@@ -3,7 +3,7 @@
 [← Meat and Potatoes](README.md) · Code: `tests/` 🧪
 
 ```powershell
-dotnet test                                             # everything (129 tests, ~35 s)
+dotnet test                                             # everything (171 tests, ~40 s)
 dotnet test tests/LunaEvo.ConfigManager.Core.Tests      # logic only (~3 s)
 dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 ```
@@ -17,15 +17,20 @@ dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 | `FakeLmpServer` | console app | Not tests: a stand-in `Server.exe`. |
 
 0.3 added: `SetupTests` (release feed, versions, install/update/zip-slip, generated config read by **LMP's own classes**,
-object lists), `LiveModsOpsTests` (website JSON, cfg parser, GameData scan, restart policy and schedule, Discord,
+object lists), `LiveModsOpsTests` (website JSON, cfg parser, GameData scan, restart policy and schedule,
 network, profiles, Universe backups), and `NewFeatureTests` (wizard, updater, Players + Kick, object list editor,
 GameData import, review dialog, profiles, Universe restore, Connect, auto-restart giving up, daily restart, scheduled
-backup, Discord test message).
+backup).
+
+0.4 added: `JoinTests` (address parsing, network kinds, real ping of 127.0.0.1, live info and its errors, launch plans,
+LMP's client server list), `JoinPageTests` (the Join page end to end, the host's Share flow, `Ui.CanOpen`), and
+security tests in `SetupTests` (tampered, oversized, wrong-host and unverified downloads; a zip swapped before
+install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, `netsh` path, webhook scrub).
 
 ## No network in tests
 
 `FakeHttp` (an `HttpMessageHandler`) serves canned responses by URL and records every request. `UiHarness` routes the
-whole app through it (`Core.Http.Override`), so GitHub, LMP's website and Discord are all fake, and unknown URLs get a
+whole app through it (`Core.Http.Override`), so GitHub and every LMP website are fake, and unknown URLs get a
 404. `TestData.ReleasesJson()` is a GitHub releases response shaped like LMP's; `TestData.MakeServerZip()` builds a zip
 shaped like LMP's download from the fixture binaries.
 
@@ -77,3 +82,7 @@ public void My_feature_works()
 - Dialogs are answered automatically: `ui.ConfirmDialogs = false` picks Cancel; `ui.Answer = (title, buttons) => index`
   picks a specific button; `ui.DialogsShown` lists what appeared.
 - Each harness uses temp configs and a temp settings file, so tests never touch your real files or preferences.
+- `JoinPage.StartKsp` **throws** in every harness unless the test replaces it, so no test can start a real KSP.
+  `TestData.FakeKsp()` makes a KSP folder with LMP's client `settings.xml`.
+- `TestData.ReleasesJson(zip)` gives each asset the zip's real size and SHA-256 `digest`; serve the zip at
+  `TestData.ServerZipUrl` with `.Bytes(...)`.

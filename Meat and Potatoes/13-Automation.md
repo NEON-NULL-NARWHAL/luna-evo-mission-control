@@ -1,4 +1,4 @@
-# 13 · Automation, Discord, Connect, Profiles & Backups
+# 13 · Automation, Connect, Profiles & Backups
 
 [← Meat and Potatoes](README.md) · Code: `Core/Ops/`, `App/ServerPage.cs`, `App/ConnectPage.cs`, `App/ProfilesPage.cs`, `App/SettingsPage.cs`
 
@@ -31,13 +31,8 @@ so a restore can be undone. Scheduled every *N* hours (`UniverseBackupHours`), p
 config (`Config/Backups/...`) and copies the profile over, then the app reloads (keeping a running server running;
 restart it to use the new config). Profiles are the files **on disk**, so unsaved changes are saved first.
 
-## Discord
-
-`DiscordNotifier` posts `{ "username": "LUNA EVO", "content": ... }` to a webhook URL. It only accepts real Discord
-webhook URLs (`https://discord.com/api/webhooks/...`), so a typo can't send messages elsewhere, and it never throws.
-`MainWindow.Notify(message)` is fire-and-forget. Events: up 🚀, stopped 🛑, crashed 💥, keeps crashing ⚠️, scheduled
-restart 🔄, and (if enabled, and the website is on) joined 👋 / left 🚪. The URL is a secret (anyone with it can post),
-so it lives only in LUNA EVO's own settings file, never in the server config or the repo.
+Discord notifications were removed in 0.4.0; see [14](14-Security.md#discord-removed-in-040) for why and what a
+return would need.
 
 ## Connect page
 
@@ -46,7 +41,8 @@ so it lives only in LUNA EVO's own settings file, never in the server config or 
 | Addresses to share | `NetworkHelper.LocalAddresses()`: IPv4 on adapters that are up (Ethernet, Wi-Fi, VPN/mesh like Tailscale `100.64/10` or ZeroTier); loopback and link-local removed. |
 | Internet address | LMP's own Debug line `Detected NAT addresses: <ip>:<port>`, captured by `ServerPage` into `PublicAddress`. **Hidden until you press Show**, so it doesn't end up in screenshots. |
 | Server list / UPnP | The config values, explained. |
-| Firewall | `netsh advfirewall firewall show rule name="LUNA EVO - LMP server (UDP <port>)"` (no admin needed). **Allow through firewall** runs `netsh ... add rule ... protocol=UDP localport=<port>` elevated (Windows asks for permission). The exact command is in the button's tooltip. |
+| Firewall | `netsh advfirewall firewall show rule name="LUNA EVO - LMP server (UDP <port>)"` (no admin needed). **Allow through firewall** runs `netsh ... add rule ... protocol=UDP localport=<port>` elevated (Windows asks for permission). The exact command is in the button's tooltip. `netsh` is run from System32 by full path ([14](14-Security.md)). |
+| Share live info | Shared when `EnableWebsite` is on and `ListenAddress` isn't loopback. **Share with players** (confirms first) sets `EnableWebsite=true`, `ListenAddress=""`; **Stop sharing** sets `127.0.0.1`; a TCP firewall rule for the website port. Feeds players' Join page ([15](15-Joining-Servers.md)). |
 | Listening | `IPGlobalProperties.GetActiveUdpListeners()` contains the game port. |
 
 ## Review before saving

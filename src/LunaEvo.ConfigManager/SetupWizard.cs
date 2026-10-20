@@ -143,12 +143,17 @@ internal sealed class SetupWizard
         _log.Children.Clear();
         try
         {
+            if (asset.Sha256 == null && !await Dialogs.ConfirmAsync(_host, "Can't verify this download",
+                    $"GitHub has no checksum for {asset.Name}, so LUNA EVO can't check the file wasn't tampered with on the way. Install it anyway?",
+                    "Install anyway"))
+                return;
             Log($"Downloading {asset.Name} ({asset.Size / 1024.0 / 1024.0:0.0} MB) from LMP {release.Tag}...");
             _progress.IsVisible = true;
-            var zip = await new ServerInstaller(Http.Client).DownloadAsync(asset, new Progress<double>(v => _progress.Value = v));
+            var zip = await new ServerInstaller(Http.Client).DownloadAsync(asset, new Progress<double>(v => _progress.Value = v), allowUnverified: asset.Sha256 == null);
+            Log(asset.Sha256 != null ? "Checksum verified against GitHub's SHA-256." : "Downloaded (not verified: GitHub has no checksum for it).");
 
             Log("Unpacking...");
-            await Task.Run(() => ServerInstaller.Install(zip, folder));
+            await Task.Run(() => ServerInstaller.Install(zip, folder, asset.Sha256));
 
             Log("Writing your config (the server hasn't started yet, so nothing is public)...");
             var schema = await Task.Run(() => LmpSchemaLoader.Load(folder));
@@ -173,7 +178,7 @@ internal sealed class SetupWizard
             _host.Open(folder, null);
             _host.Navigate(MainWindow.ConsolePage);
         }
-        catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException or TaskCanceledException)
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException or TaskCanceledException or DownloadVerificationException)
         {
             Log($"Setup failed: {e.Message}");
         }

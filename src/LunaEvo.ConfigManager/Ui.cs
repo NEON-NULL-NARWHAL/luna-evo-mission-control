@@ -71,6 +71,11 @@ internal static partial class Ui
         return (view, body, heading);
     }
 
+    /// <summary>Only web links and existing folders may be opened.</summary>
+    internal static bool CanOpen(string target) =>
+        (Uri.TryCreate(target, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http") ||
+        (Path.IsPathFullyQualified(target) && Directory.Exists(target));
+
     /// <summary>A settings row in the same layout as the generated ones: label and description left, control right.</summary>
     public static Border Row(string label, string? description, Control? editor)
     {
@@ -93,9 +98,14 @@ internal static partial class Ui
         return row;
     }
 
-    /// <summary>Opens a folder in Explorer or a link in the browser.</summary>
+    /// <summary>
+    /// Opens a folder in Explorer or a web link in the browser, and nothing else: with UseShellExecute, any other
+    /// string could launch a program or document, so it's refused.
+    /// </summary>
     public static void Open(string target)
     {
+        if (!CanOpen(target))
+            return;
         try
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target) { UseShellExecute = true });
@@ -105,6 +115,23 @@ internal static partial class Ui
             // Nothing registered to open it; not worth a dialog.
         }
     }
+
+    // KSP's stock body indexes, as LMP sends them in ReferenceBody.
+    private static readonly string[] Bodies =
+        ["Sun", "Kerbin", "Mun", "Minmus", "Moho", "Eve", "Duna", "Ike", "Jool", "Laythe", "Vall", "Bop", "Tylo", "Gilly", "Pol", "Dres", "Eeloo"];
+
+    /// <summary>A stock body's name from its index; modded planet packs add more (shown as "?").</summary>
+    public static string BodyName(int index) => index >= 0 && index < Bodies.Length ? Bodies[index] : "?";
+
+    public static string Altitude(double metres) =>
+        metres >= 1_000_000 ? $"{metres / 1_000_000:0.#} Mm" : metres >= 1000 ? $"{metres / 1000:0.#} km" : $"{metres:0} m";
+
+    /// <summary>"Station · Mun · 1.5 km"</summary>
+    public static string DescribeVessel(Core.Live.VesselSummary vessel) => $"{vessel.Type} · {BodyName(vessel.ReferenceBody)} · {Altitude(vessel.Altitude)}";
+
+    /// <summary>Vessels worth listing: not asteroids or comets, sorted by name, at most 100.</summary>
+    public static IEnumerable<Core.Live.VesselSummary> ListedVessels(Core.Live.ServerSnapshot snapshot) =>
+        snapshot.Vessels.Where(v => v.Type != "SpaceObject").OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase).Take(100);
 
     [GeneratedRegex("(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")]
     private static partial Regex WordBoundary();

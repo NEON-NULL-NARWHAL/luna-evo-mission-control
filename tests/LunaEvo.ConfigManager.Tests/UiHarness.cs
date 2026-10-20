@@ -34,9 +34,10 @@ internal sealed class UiHarness : IDisposable
         ConfigDirectory = TestPaths.CopyConfigs();
         SettingsPath = Path.Combine(Path.GetTempPath(), "LunaEvoTests", Guid.NewGuid().ToString("N"), "settings.json");
         ServerPage.ExecutableName = fakeServer ? FakeServer.Executable : "Server.exe";
-        // No real network in tests: GitHub, LMP's website and Discord all go to this fake (unknown URLs get 404).
+        // No real network in tests: GitHub and LMP's website go to this fake (unknown URLs get 404).
         Web = new FakeHttp();
         Core.Http.Override = Web.Client;
+        JoinPage.StartKsp = (_, _) => throw new InvalidOperationException("A test tried to start KSP without faking it.");
         Dialogs.Responder = (title, _, buttons) =>
         {
             DialogsShown.Add(title);
@@ -125,6 +126,7 @@ internal sealed class UiHarness : IDisposable
         Core.Http.Override = null;
         ServerPage.ExecutableName = "Server.exe";
         ServerPage.ExtraArguments = [];
+        JoinPage.StartKsp = (_, _) => throw new InvalidOperationException("A test tried to start KSP without faking it.");
         ServerPage.RestartDelay = Core.Ops.CrashRestartPolicy.Delay;
     }
 

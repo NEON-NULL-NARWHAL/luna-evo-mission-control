@@ -119,6 +119,58 @@ internal sealed class ConnectPage
             firewall ? "Added by LUNA EVO." : "Windows may block players on other PCs. Adding the rule needs administrator permission; Windows will ask.",
             firewallButton).WithId("connect/firewallRow"));
 
+        // Live info for players on the Join page: LMP's website must listen on the network, not just this PC.
+        var websiteOn = session.GetValue(LmpRules.Website, "EnableWebsite") == "true";
+        var listen = session.GetValue(LmpRules.Website, "ListenAddress")?.Trim() ?? "";
+        var websitePort = int.TryParse(session.GetValue(LmpRules.Website, "Port"), out var wp) ? wp : 8900;
+        var shared = websiteOn && listen is not ("127.0.0.1" or "::1" or "localhost");
+        Control? shareControl;
+        if (shared)
+        {
+            var stop = Ui.Button("Stop sharing", "text").WithId("connect/stopSharing");
+            stop.Click += (_, _) =>
+            {
+                session.SetValue(LmpRules.Website, "ListenAddress", "127.0.0.1");
+                _host.RefreshAll();
+                Refresh();
+            };
+            var allow = Ui.Button("Allow through firewall", "text").WithId("connect/websiteFirewall");
+            ToolTip.SetTip(allow, "Runs: netsh " + string.Join(" ", NetworkHelper.FirewallAddArguments(websitePort, "TCP")));
+            allow.Click += async (_, _) =>
+            {
+                var ok = await NetworkHelper.AddFirewallRuleAsync(websitePort, "TCP");
+                await Dialogs.InfoAsync(_host, ok ? "Firewall rule added" : "Firewall unchanged",
+                    ok ? $"Windows Firewall now allows TCP port {websitePort} in." : "The rule wasn't added (permission was declined, or netsh failed).");
+                Refresh();
+            };
+            shareControl = NetworkHelper.FirewallRuleExists(websitePort, "TCP")
+                ? stop
+                : new StackPanel { Orientation = Orientation.Horizontal, Children = { allow, stop } };
+        }
+        else
+        {
+            var share = Ui.Button("Share with players", "text").WithId("connect/share");
+            share.Click += async (_, _) =>
+            {
+                if (!await Dialogs.ConfirmAsync(_host, "Share live info with players?",
+                        "Players on your network will be able to see the server's name, settings (never passwords), who's online and " +
+                        "where vessels are, on LUNA EVO's Join page. LMP's website listens on every network address for that, so only do it " +
+                        "on a network you trust (home, VPN or mesh). Save and restart the server afterwards.", "Share"))
+                    return;
+                session.SetValue(LmpRules.Website, "EnableWebsite", "true");
+                session.SetValue(LmpRules.Website, "ListenAddress", ""); // empty = the game's listen address (all networks)
+                _host.RefreshAll();
+                Refresh();
+            };
+            shareControl = share;
+        }
+        _status.Children.Add(Ui.Row(
+            shared ? $"Sharing live info on TCP {websitePort}" : "Live info is only visible on this PC",
+            shared
+                ? "Players see server info, players and vessels on their Join page. Save and restart the server if you just changed this."
+                : "Players' Join page can still ping you, but can't show server info, players or vessels.",
+            shareControl).WithId("connect/shareRow"));
+
         var running = _host.Server?.IsRunning == true;
         var listening = running && NetworkHelper.IsUdpPortListening(port);
         _status.Children.Add(Ui.Row(!running ? "Server is stopped" : listening ? $"Listening on UDP {port}" : $"Nothing is listening on UDP {port}",

@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager.Core/Http.cs
-// [Core] The one HttpClient the app uses for GitHub, LMP's website JSON and Discord. Tests swap in fakes.
+// [Core] The one HttpClient the app uses for GitHub and LMP's website JSON. Tests swap in fakes.
 // Used by: SetupWizard, SettingsPage, PlayersPage, ServerPage
 // Guide:   Meat and Potatoes/10-Setup-and-Updates.md
 

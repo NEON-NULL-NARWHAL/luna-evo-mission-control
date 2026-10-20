@@ -17,6 +17,19 @@ public static class RuntimeInstaller
         ["install", "--id", WingetId(major), "--exact", "--accept-source-agreements", "--accept-package-agreements"];
 
     /// <summary>
+    /// winget's real location (it's an App Installer alias in the user's WindowsApps folder), so we don't pick up
+    /// some other "winget.exe" from the PATH. Falls back to the bare name if Windows keeps it elsewhere.
+    /// </summary>
+    public static string WingetPath
+    {
+        get
+        {
+            var alias = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "WindowsApps", "winget.exe");
+            return File.Exists(alias) ? alias : "winget";
+        }
+    }
+
+    /// <summary>
     /// Runs winget in a visible window (it shows progress and asks Windows for permission itself) and waits.
     /// Returns false if winget isn't available or failed; the caller then offers the download page instead.
     /// </summary>
@@ -24,7 +37,7 @@ public static class RuntimeInstaller
     {
         try
         {
-            var info = new ProcessStartInfo("winget") { UseShellExecute = true };
+            var info = new ProcessStartInfo(WingetPath) { UseShellExecute = true };
             foreach (var argument in WingetArguments(major))
                 info.ArgumentList.Add(argument);
             using var process = Process.Start(info);

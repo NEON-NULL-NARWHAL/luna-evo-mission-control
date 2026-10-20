@@ -87,19 +87,108 @@ public class SetupTests
         Assert.Throws<InvalidDataException>(() => ServerInstaller.Install(TestData.MakeServerZip(extraEntry: "LMPServer/../../evil.txt"), target));
     }
 
+    private static LmpAsset Asset(byte[] bytes, string? sha = "auto", long? size = null, string url = TestData.ServerZipUrl) =>
+        new("LunaMultiplayer-Server-Release.zip", url, size ?? bytes.Length,
+            sha == "auto" ? Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)) : sha);
+
     [Fact]
-    public async Task Downloads_with_progress()
+    public async Task Downloads_with_progress_and_verifies_githubs_checksum()
     {
         var bytes = File.ReadAllBytes(TestData.MakeServerZip());
-        var http = new FakeHttp().Bytes("https://example.test/dl/LunaMultiplayer-Server-Release.zip", bytes);
+        var http = new FakeHttp().Bytes(TestData.ServerZipUrl, bytes);
         var reports = new List<double>();
 
-        var path = await new ServerInstaller(http.Client).DownloadAsync(
-            new LmpAsset("LunaMultiplayer-Server-Release.zip", "https://example.test/dl/LunaMultiplayer-Server-Release.zip", bytes.Length),
-            new SyncProgress(reports.Add));
+        var path = await new ServerInstaller(http.Client).DownloadAsync(Asset(bytes), new SyncProgress(reports.Add));
 
         Assert.Equal(bytes, File.ReadAllBytes(path));
         Assert.Equal(1, reports[^1]);
+        Assert.Equal(ServerInstaller.Sha256Of(path), Asset(bytes).Sha256);
+    }
+
+    [Fact]
+    public async Task Rejects_a_download_that_doesnt_match_the_checksum_and_deletes_it()
+    {
+        var bytes = File.ReadAllBytes(TestData.MakeServerZip());
+        var tampered = bytes.ToArray();
+        tampered[^10] ^= 0xFF;
+        var http = new FakeHttp().Bytes(TestData.ServerZipUrl, tampered);
+        var downloads = Path.Combine(Path.GetTempPath(), "LunaEvo", "downloads");
+        var before = Directory.Exists(downloads) ? Directory.GetDirectories(downloads).Length : 0;
+
+        var error = await Assert.ThrowsAsync<DownloadVerificationException>(() => new ServerInstaller(http.Client).DownloadAsync(Asset(bytes)));
+
+        Assert.Contains("doesn't match the checksum", error.Message);
+        Assert.Equal(before, Directory.GetDirectories(downloads).Length); // nothing left behind
+    }
+
+    [Fact]
+    public async Task Refuses_unverifiable_downloads_unless_the_user_agreed()
+    {
+        var bytes = File.ReadAllBytes(TestData.MakeServerZip());
+        var http = new FakeHttp().Bytes(TestData.ServerZipUrl, bytes);
+        var installer = new ServerInstaller(http.Client);
+
+        await Assert.ThrowsAsync<DownloadVerificationException>(() => installer.DownloadAsync(Asset(bytes, sha: null)));
+        var path = await installer.DownloadAsync(Asset(bytes, sha: null), allowUnverified: true);
+        Assert.Equal(bytes, File.ReadAllBytes(path));
+    }
+
+    [Theory]
+    [InlineData("http://github.com/LunaMultiplayer/x.zip")]           // not HTTPS
+    [InlineData("https://evil.example/LunaMultiplayer-Server.zip")]   // not GitHub
+    [InlineData("https://github.com.evil.example/x.zip")]             // look-alike host
+    [InlineData("file:///C:/Windows/notepad.exe")]
+    public async Task Only_downloads_from_github_over_https(string url)
+    {
+        var bytes = File.ReadAllBytes(TestData.MakeServerZip());
+        var http = new FakeHttp().Bytes(url, bytes);
+        await Assert.ThrowsAsync<DownloadVerificationException>(() => new ServerInstaller(http.Client).DownloadAsync(Asset(bytes, url: url)));
+        Assert.Empty(http.Requests); // refused before connecting
+        Assert.True(ServerInstaller.IsTrustedDownload(new Uri("https://objects.githubusercontent.com/github-production-release-asset/x")));
+    }
+
+    [Fact]
+    public async Task Rejects_a_download_of_the_wrong_size()
+    {
+        var bytes = File.ReadAllBytes(TestData.MakeServerZip());
+        var http = new FakeHttp().Bytes(TestData.ServerZipUrl, bytes);
+        var error = await Assert.ThrowsAsync<DownloadVerificationException>(() =>
+            new ServerInstaller(http.Client).DownloadAsync(Asset(bytes, sha: null, size: bytes.Length + 1), allowUnverified: true));
+        Assert.Contains("incomplete or altered", error.Message);
+    }
+
+    [Fact]
+    public void Install_checks_the_zip_again_right_before_unpacking()
+    {
+        var zip = TestData.MakeServerZip();
+        var target = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "recheck-" + Guid.NewGuid().ToString("N"));
+        Assert.Throws<DownloadVerificationException>(() => ServerInstaller.Install(zip, target, expectedSha256: new string('0', 64)));
+        Assert.False(ServerInstaller.IsServerFolder(target));
+
+        ServerInstaller.Install(zip, target, ServerInstaller.Sha256Of(zip));
+        Assert.True(ServerInstaller.IsServerFolder(target));
+    }
+
+    [Fact]
+    public async Task Release_feed_reads_githubs_sha256_digest()
+    {
+        var bytes = File.ReadAllBytes(TestData.MakeServerZip());
+        var http = new FakeHttp().Text(LmpReleaseFeed.ReleasesUrl, TestData.ReleasesJson(bytes));
+        var release = (await new LmpReleaseFeed(http.Client).GetAsync(false)).Single(r => r.Tag == "0.29.2");
+        Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)), release.ServerAsset()!.Sha256);
+        Assert.Null(LmpReleaseFeed.Digest("md5:abc"));
+        Assert.Null(LmpReleaseFeed.Digest("sha256:not-hex"));
+    }
+
+    [Fact]
+    public async Task Release_feed_survives_odd_json_from_github()
+    {
+        var http = new FakeHttp().Text(LmpReleaseFeed.ReleasesUrl, "[{\"tag_name\":5},{\"assets\":\"nope\"},7,{\"tag_name\":\"0.29.2\",\"assets\":[{\"name\":\"LunaMultiplayer-Server-Release.zip\"}]}]");
+        var releases = await new LmpReleaseFeed(http.Client).GetAsync(true);
+        Assert.Equal("0.29.2", Assert.Single(releases).Tag);
+
+        var notAList = new FakeHttp().Text(LmpReleaseFeed.ReleasesUrl, "{\"message\":\"API rate limit exceeded\"}");
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => new LmpReleaseFeed(notAList.Client).GetAsync(true));
     }
 
     [Fact]

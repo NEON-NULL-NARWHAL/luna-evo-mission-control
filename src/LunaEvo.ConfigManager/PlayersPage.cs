@@ -15,10 +15,6 @@ namespace LunaEvo.ConfigManager;
 
 internal sealed class PlayersPage : IDisposable
 {
-    // KSP's stock body indexes, as LMP sends them in ReferenceBody.
-    private static readonly string[] Bodies =
-        ["Sun", "Kerbin", "Mun", "Minmus", "Moho", "Eve", "Duna", "Ike", "Jool", "Laythe", "Vall", "Bop", "Tylo", "Gilly", "Pol", "Dres", "Eeloo"];
-
     private readonly MainWindow _host;
     private readonly DispatcherTimer _poll = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly WrapPanel _cards = new() { Margin = new Thickness(0, 16, 0, 8) };
@@ -79,19 +75,13 @@ internal sealed class PlayersPage : IDisposable
         try
         {
             var snapshot = await new ServerInfoClient(Http.Client).GetAsync(endpoint);
-            var (joined, left) = ServerInfoClient.Diff(_last, snapshot);
-            if (_last != null && _host.Settings.DiscordPlayerEvents)
-            {
-                foreach (var player in joined)
-                    _host.Notify($"👋 **{player}** joined.");
-                foreach (var player in left)
-                    _host.Notify($"🚪 **{player}** left.");
-            }
             _last = snapshot;
             Show(snapshot, null);
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException)
+        catch (Exception e)
         {
+            // Whatever answers on the website port is outside our control; this runs from a timer, where an
+            // escaping exception would crash the app, so any failure just shows as a message.
             Show(_last, $"Couldn't read the server's live data at {endpoint} ({e.Message}). It can take a few seconds after starting.");
         }
         finally
@@ -148,11 +138,8 @@ internal sealed class PlayersPage : IDisposable
                 new StackPanel { Orientation = Orientation.Horizontal, Children = { kick, ban } }).WithId($"players/row/{player}"));
         }
 
-        foreach (var vessel in snapshot.Vessels.Where(v => v.Type != "SpaceObject").OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase).Take(100))
-        {
-            var body = vessel.ReferenceBody >= 0 && vessel.ReferenceBody < Bodies.Length ? Bodies[vessel.ReferenceBody] : "?";
-            _vessels.Children.Add(Ui.Row(vessel.Name, $"{vessel.Type} · {body} · {FormatAltitude(vessel.Altitude)}", null));
-        }
+        foreach (var vessel in Ui.ListedVessels(snapshot))
+            _vessels.Children.Add(Ui.Row(vessel.Name, Ui.DescribeVessel(vessel), null));
         if (_vessels.Children.Count == 0)
             _vessels.Children.Add(Ui.Row("No vessels yet", "Asteroids and comets aren't listed.", null));
     }
@@ -188,6 +175,4 @@ internal sealed class PlayersPage : IDisposable
         _cards.Children.Add(card);
     }
 
-    private static string FormatAltitude(double metres) =>
-        metres >= 1_000_000 ? $"{metres / 1_000_000:0.#} Mm" : metres >= 1000 ? $"{metres / 1000:0.#} km" : $"{metres:0} m";
 }

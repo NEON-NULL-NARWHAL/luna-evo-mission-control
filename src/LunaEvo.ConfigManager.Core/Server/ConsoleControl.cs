@@ -37,7 +37,7 @@ public static class ConsoleControl
     public static bool SendCtrlC(int processId)
     {
         if (!OperatingSystem.IsWindows())
-            return Run("kill", "-INT", processId.ToString(CultureInfo.InvariantCulture));
+            return Run(File.Exists("/bin/kill") ? "/bin/kill" : "kill", "-INT", processId.ToString(CultureInfo.InvariantCulture));
         return HelperPath != null && Run(HelperPath, HelperArgument, processId.ToString(CultureInfo.InvariantCulture));
     }
 

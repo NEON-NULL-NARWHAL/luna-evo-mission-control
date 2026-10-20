@@ -33,6 +33,14 @@ public sealed record GameDataScan(
 /// </summary>
 public static partial class GameDataScanner
 {
+    /// <summary>Recurse, but don't follow symlinks/junctions (a loop would never end) and skip unreadable folders.</summary>
+    private static readonly EnumerationOptions Recursive = new()
+    {
+        RecurseSubdirectories = true,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint,
+    };
+
     public static GameDataScan Scan(string gameDataDirectory, bool hashPlugins = true)
     {
         if (!Directory.Exists(gameDataDirectory))
@@ -43,7 +51,7 @@ public static partial class GameDataScanner
         var warnings = new List<string>();
         var configs = 0;
 
-        foreach (var cfg in Directory.EnumerateFiles(gameDataDirectory, "*.cfg", SearchOption.AllDirectories))
+        foreach (var cfg in Directory.EnumerateFiles(gameDataDirectory, "*.cfg", Recursive))
         {
             configs++;
             IReadOnlyList<KspNode> nodes;
@@ -72,7 +80,7 @@ public static partial class GameDataScanner
             var folder = Path.GetFileName(modDirectory);
             if (folder.StartsWith("squad", StringComparison.OrdinalIgnoreCase) || folder.StartsWith("lunamultiplayer", StringComparison.OrdinalIgnoreCase))
                 continue;
-            foreach (var dll in Directory.EnumerateFiles(modDirectory, "*.dll", SearchOption.AllDirectories).Order(StringComparer.OrdinalIgnoreCase))
+            foreach (var dll in Directory.EnumerateFiles(modDirectory, "*.dll", Recursive).Order(StringComparer.OrdinalIgnoreCase))
             {
                 var relative = Path.GetRelativePath(gameDataDirectory, dll).Replace('\\', '/').ToLowerInvariant();
                 var version = FileVersionInfo.GetVersionInfo(dll).FileVersion;

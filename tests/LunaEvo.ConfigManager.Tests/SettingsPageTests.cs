@@ -87,7 +87,7 @@ public class SettingsPageTests
         ui.OpenTab(MainWindow.SettingsKey);
 
         Assert.Contains($"Version {SettingsPage.AppVersion}", Texts(ui.Find<Border>("settings/appVersion")));
-        Assert.Equal("0.3.0", SettingsPage.AppVersion);
+        Assert.Equal("0.4.0", SettingsPage.AppVersion);
         Assert.Contains(Texts(ui.Find<Border>("settings/lmpVersion")), t => t.StartsWith("Version 0.29.2"));
     }
 

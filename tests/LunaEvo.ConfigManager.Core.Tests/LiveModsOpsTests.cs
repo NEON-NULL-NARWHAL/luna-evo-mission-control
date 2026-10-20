@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager.Core.Tests/LiveModsOpsTests.cs
-// [Test] Website JSON, GameData scanning, restarts, Discord, network helper, profiles, Universe backups.
+// [Test] Website JSON, GameData scanning, restarts, network helper, profiles, Universe backups.
 // Used by: dotnet test
 // Guide:   Meat and Potatoes/05-Tests.md
 
@@ -31,6 +31,25 @@ public class LiveModsOpsTests
         Assert.Equal(2, snapshot.Subspaces.Count);
         Assert.Equal(20, snapshot.MaxPlayers);
         Assert.Equal(104910848, snapshot.BytesUsed);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("[]")]
+    [InlineData("[5]")]
+    [InlineData("[{\"CurrentState\": 3}]")]
+    public void Rejects_json_that_isnt_lmps_with_a_json_error(string json) =>
+        Assert.Throws<JsonException>(() => ServerInfoClient.Parse(JsonDocument.Parse(json).RootElement));
+
+    [Fact]
+    public void Tolerates_odd_values_inside_lmps_json()
+    {
+        var snapshot = ServerInfoClient.Parse(JsonDocument.Parse(
+            "[{\"CurrentState\":{\"CurrentPlayers\":[\"Jeb\",1,{},null],\"CurrentVessels\":[7,{\"Name\":3}],\"Subspaces\":[{},{\"Id\":\"x\"}],\"BytesUsed\":\"lots\"},\"GeneralSettings\":[]}]").RootElement);
+        Assert.Equal(["Jeb"], snapshot.Players);
+        Assert.Single(snapshot.Vessels);
+        Assert.Equal(2, snapshot.Subspaces.Count);
+        Assert.Equal(0, snapshot.BytesUsed);
     }
 
     [Fact]
@@ -163,32 +182,38 @@ public class LiveModsOpsTests
         Assert.Equal((0, true), exits[1]);
     }
 
-    // ---- Discord
-
-    [Theory]
-    [InlineData("https://discord.com/api/webhooks/123/abc", true)]
-    [InlineData("https://discordapp.com/api/webhooks/123/abc", true)]
-    [InlineData("http://discord.com/api/webhooks/123/abc", false)]
-    [InlineData("https://evil.example/api/webhooks/123/abc", false)]
-    [InlineData("https://discord.com/channels/123", false)]
-    [InlineData("", false)]
-    public void Recognises_discord_webhook_urls(string url, bool valid) => Assert.Equal(valid, DiscordNotifier.IsWebhookUrl(url));
+    // ---- Hardening
 
     [Fact]
-    public async Task Posts_to_discord_as_luna_evo()
+    public void A_broken_runtimeconfig_is_ignored_instead_of_crashing()
     {
-        const string url = "https://discord.com/api/webhooks/123/abc";
-        var http = new FakeHttp().Status(url, HttpStatusCode.NoContent);
+        var server = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "LunaEvoTests", "rc-" + Guid.NewGuid().ToString("N"))).FullName;
+        foreach (var text in new[] { "{ not json", "[]", "{\"runtimeOptions\":{\"framework\":{\"version\":\"abc\"}}}" })
+        {
+            File.WriteAllText(Path.Combine(server, "Server.runtimeconfig.json"), text);
+            Assert.Null(DotNetRuntime.Check(server));
+        }
+    }
 
-        Assert.True(await new DiscordNotifier(http.Client).SendAsync(url, "🚀 Server is up"));
-        var request = Assert.Single(http.Requests);
-        Assert.Equal(HttpMethod.Post, request.Method);
-        using var body = JsonDocument.Parse(request.Body);
-        Assert.Equal("LUNA EVO", body.RootElement.GetProperty("username").GetString());
-        Assert.Equal("🚀 Server is up", body.RootElement.GetProperty("content").GetString());
+    [Fact]
+    public void System_tools_are_run_from_fixed_locations_not_the_path()
+    {
+        Assert.Equal(Path.Combine(Environment.SystemDirectory, "netsh.exe"), NetworkHelper.NetshPath);
+        Assert.True(Path.IsPathRooted(NetworkHelper.NetshPath));
+        Assert.True(Core.Setup.RuntimeInstaller.WingetPath == "winget" || Path.IsPathRooted(Core.Setup.RuntimeInstaller.WingetPath));
+    }
 
-        Assert.False(await new DiscordNotifier(http.Client).SendAsync("not a url", "x"));
-        Assert.Single(http.Requests);
+    [Fact]
+    public void Old_settings_with_a_discord_webhook_are_scrubbed_on_load()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "LunaEvoTests", Guid.NewGuid().ToString("N"), "settings.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "{ \"Theme\": \"Light\", \"DiscordWebhookUrl\": \"https://discord.com/api/webhooks/123/secret\" }");
+
+        var settings = AppSettingsStore.Load(path);
+
+        Assert.Equal("Light", settings.Theme);
+        Assert.DoesNotContain("webhooks", File.ReadAllText(path));
     }
 
     // ---- Network

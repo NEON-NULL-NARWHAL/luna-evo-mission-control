@@ -45,7 +45,9 @@ public sealed class UniverseBackups(string serverDirectory)
         var skipped = 0;
         using (var zip = ZipFile.Open(path, ZipArchiveMode.Create))
         {
-            foreach (var file in Directory.EnumerateFiles(UniverseFolder, "*", SearchOption.AllDirectories))
+            // Don't follow symlinks/junctions out of (or around in loops inside) the Universe folder.
+            var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
+            foreach (var file in Directory.EnumerateFiles(UniverseFolder, "*", options))
             {
                 try
                 {

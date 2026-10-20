@@ -1,10 +1,9 @@
 // LUNA EVO · LunaEvo.ConfigManager.Tests/NewFeatureTests.cs
 // [Test] 0.3 features through the UI: setup wizard, updater, players, mod import, object lists, review, profiles,
-//        Universe backups, connect page, auto-restart, daily restart, Discord.
+//        Universe backups, connect page, auto-restart, daily restart.
 // Used by: dotnet test
 // Guide:   Meat and Potatoes/05-Tests.md
 
-using System.Net;
 using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -21,7 +20,6 @@ namespace LunaEvo.ConfigManager.Tests;
 
 public class NewFeatureTests
 {
-    private const string Webhook = "https://discord.com/api/webhooks/1/test";
     private const string Website = "http://127.0.0.1:8900/";
     private static string WebJson => File.ReadAllText(Path.Combine(TestPaths.Fixtures, "Web", "serverinfo.json"));
 
@@ -31,8 +29,8 @@ public class NewFeatureTests
     public void Wizard_downloads_lmp_writes_the_config_and_opens_the_server()
     {
         using var ui = new UiHarness(openServer: false);
-        ui.Web.Text(LmpReleaseFeed.ReleasesUrl, TestData.ReleasesJson())
-              .Bytes("https://example.test/dl/LunaMultiplayer-Server-Release.zip", File.ReadAllBytes(TestData.MakeServerZip()));
+        var zip = File.ReadAllBytes(TestData.MakeServerZip());
+        ui.Web.Text(LmpReleaseFeed.ReleasesUrl, TestData.ReleasesJson(zip)).Bytes(TestData.ServerZipUrl, zip);
         ui.Answer = (title, buttons) => title.StartsWith(".NET") ? buttons.Count - 1 : null; // never run winget in tests
 
         ui.Click(ui.Find<Button>("welcome/setup"));
@@ -65,8 +63,8 @@ public class NewFeatureTests
     public void Update_check_offers_a_newer_lmp_and_updates_keeping_the_config()
     {
         using var ui = new UiHarness(fakeServer: true);
-        ui.Web.Text(LmpReleaseFeed.ReleasesUrl, TestData.ReleasesJson())
-              .Bytes("https://example.test/dl/LunaMultiplayer-Server-Release.zip", File.ReadAllBytes(TestData.MakeServerZip()));
+        var zip = File.ReadAllBytes(TestData.MakeServerZip());
+        ui.Web.Text(LmpReleaseFeed.ReleasesUrl, TestData.ReleasesJson(zip)).Bytes(TestData.ServerZipUrl, zip);
         var config = File.ReadAllBytes(Path.Combine(ui.ConfigDirectory, LmpRules.General));
 
         ui.Await(ui.Window.CheckForUpdateAsync(force: true));
@@ -90,12 +88,10 @@ public class NewFeatureTests
     public void Players_page_shows_who_is_online_and_kicks_with_a_reason()
     {
         using var ui = new UiHarness(fakeServer: true);
-        ui.Web.Text(Website, WebJson).Status(Webhook, HttpStatusCode.NoContent);
-        ui.Window.UpdateSettings(s => s with { DiscordWebhookUrl = Webhook });
+        ui.Web.Text(Website, WebJson);
         ui.OpenTab(MainWindow.ConsolePage);
         ui.Click(ui.Find<Button>("console/start"));
         ui.WaitFor(() => ui.Server.State == ServerState.Running, "server running");
-        ui.WaitFor(() => ui.Web.Requests.Any(r => r.Url == Webhook && r.Body.Contains("is up")), "Discord 'is up' post");
 
         ui.OpenTab(MainWindow.PlayersKey);
         ui.Await(ui.Window.Players!.PollAsync());
@@ -269,11 +265,10 @@ public class NewFeatureTests
     // ---- Automation
 
     [AvaloniaFact]
-    public void Crashes_restart_automatically_then_give_up_and_tell_discord()
+    public void Crashes_restart_automatically_then_give_up()
     {
         using var ui = new UiHarness(fakeServer: true);
-        ui.Web.Status(Webhook, HttpStatusCode.NoContent);
-        ui.Window.UpdateSettings(s => s with { DiscordWebhookUrl = Webhook, AutoRestartOnCrash = true });
+        ui.Window.UpdateSettings(s => s with { AutoRestartOnCrash = true });
         ServerPage.ExtraArguments = ["--crash"];
         ServerPage.RestartDelay = TimeSpan.FromMilliseconds(100);
 
@@ -282,8 +277,6 @@ public class NewFeatureTests
 
         ui.WaitFor(() => ui.Server.VisibleLines.Any(l => l.Message.Contains("keeps crashing")), "auto-restart gave up", seconds: 30);
         Assert.Equal(4, ui.Server.VisibleLines.Count(l => l.Message.StartsWith("All systems up"))); // first start + 3 restarts
-        ui.WaitFor(() => ui.Web.Requests.Any(r => r.Url == Webhook && r.Body.Contains("keeps crashing")), "Discord told");
-        Assert.Contains(ui.Web.Requests, r => r.Body.Contains("stopped unexpectedly (exit code 3)"));
     }
 
     [AvaloniaFact]
@@ -325,25 +318,6 @@ public class NewFeatureTests
 
         Assert.Equal("scheduled", Assert.Single(new UniverseBackups(ui.ServerDirectory).List()).Label);
         ui.WaitFor(() => ui.Server.VisibleLines.Any(l => l.Message == "Command input: /backup now"), "LMP asked to save first");
-    }
-
-    [AvaloniaFact]
-    public void Discord_test_message_and_bad_urls()
-    {
-        using var ui = new UiHarness();
-        ui.Web.Status(Webhook, HttpStatusCode.NoContent);
-        ui.OpenTab(MainWindow.SettingsKey);
-
-        ui.Find<TextBox>("settings/discordWebhook").Text = "https://example.com/not-discord";
-        ui.Click(ui.Find<Button>("settings/discordTest"));
-        ui.WaitFor(() => ui.Find<TextBlock>("settings/discordResult").Text == "That isn't a Discord webhook URL.", "rejected");
-
-        ui.Find<TextBox>("settings/discordWebhook").Text = Webhook;
-        ui.Click(ui.Find<Button>("settings/discordTest"));
-        ui.WaitFor(() => ui.Find<TextBlock>("settings/discordResult").Text == "Sent! Check the channel.", "sent");
-        Assert.Equal(Webhook, ui.Window.Settings.DiscordWebhookUrl);
-        using var body = JsonDocument.Parse(Assert.Single(ui.Web.Requests, r => r.Url == Webhook).Body);
-        Assert.Contains("LUNA EVO is connected", body.RootElement.GetProperty("content").GetString());
     }
 
     private static List<string> Texts(Control control) =>
