@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1 (2026-10-20)
+
+### Added
+- **Automatic Universe backups** every time LUNA EVO stops the server (right after LMP's own final save; the last 5
+  are kept) and before every LMP update. They're labelled `onstop` / `beforeupdate` on the Profiles & Backups page,
+  are pruned separately, and never push out your manual backups.
+
 ## 0.7.0 (2026-10-20)
 
 ### Added

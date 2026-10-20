@@ -472,6 +472,7 @@ public sealed class MainWindow : Window
                 "Install anyway"))
             return "Update cancelled.";
         var zip = await new ServerInstaller(Http.Client).DownloadAsync(asset, progress, allowUnverified: asset.Sha256 == null);
+        await Task.Run(() => new UniverseBackups(session.ServerDirectory).Safety("beforeupdate"));
         var result = await Task.Run(() => ServerInstaller.Install(zip, session.ServerDirectory, asset.Sha256));
         Open(session.ServerDirectory, session.ConfigDirectory); // new Server.dll, maybe new settings
         Navigate(SettingsKey); // back to where the user pressed Update, to see the result

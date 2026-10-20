@@ -256,6 +256,9 @@ internal sealed class ServerPage : IDisposable
         if (_runner.IsActive)
         {
             await _runner.StopAsync(timeout);
+            // LMP has just written its final backup; keep a dated copy in case the next start goes wrong.
+            if (await Task.Run(() => new UniverseBackups(_serverDirectory).Safety("onstop")) is { } snapshot)
+                _incoming.Enqueue(LogLine.FromManager($"Universe backed up to {snapshot.Name} (the last 5 stops are kept)."));
         }
         else if (_externalPid is { } pid)
         {

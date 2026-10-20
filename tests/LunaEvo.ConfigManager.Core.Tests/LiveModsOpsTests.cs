@@ -287,6 +287,23 @@ public class LiveModsOpsTests
         Assert.All(backups.List(), b => Assert.Equal("scheduled", b.Label));
     }
 
+    [Fact]
+    public void Automatic_safety_snapshots_keep_their_own_count_and_never_remove_manual_ones()
+    {
+        var server = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "safety-" + Guid.NewGuid().ToString("N"));
+        Assert.Null(new UniverseBackups(server).Safety("onstop")); // no Universe yet: nothing, no error
+        Directory.CreateDirectory(Path.Combine(server, "Universe"));
+        File.WriteAllText(Path.Combine(server, "Universe", "ship.txt"), "v1");
+        var backups = new UniverseBackups(server);
+        backups.Create("manual", new DateTime(2020, 1, 1));
+
+        for (var i = 0; i < 3; i++)
+            Assert.NotNull(backups.Safety("onstop", keep: 2));
+
+        Assert.Equal(2, backups.List().Count(s => s.Label == "onstop"));
+        Assert.Single(backups.List(), s => s.Label == "manual"); // the oldest, but kept
+    }
+
     private static async Task Until(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);

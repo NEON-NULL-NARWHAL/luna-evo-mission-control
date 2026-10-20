@@ -156,6 +156,35 @@ public sealed class UniverseBackups(string serverDirectory)
             File.Delete(old.Path);
     }
 
+    /// <summary>Like <see cref="Prune(int)"/>, but only among snapshots with this label, so automatic ones never push out manual ones.</summary>
+    public void Prune(int keep, string label)
+    {
+        if (keep <= 0)
+            return;
+        foreach (var old in List().Where(s => s.Label == label).Skip(keep))
+            File.Delete(old.Path);
+    }
+
+    /// <summary>
+    /// A safety snapshot taken automatically (server stopped, before an LMP update). Keeps the newest
+    /// <paramref name="keep"/> with that label. Returns null, never throws, if there's no Universe or it can't be read.
+    /// </summary>
+    public UniverseSnapshot? Safety(string label, int keep = 5)
+    {
+        if (!Directory.Exists(UniverseFolder))
+            return null;
+        try
+        {
+            var snapshot = Create(label).Snapshot;
+            Prune(keep, label);
+            return snapshot;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     private static string LabelOf(string name)
     {
         // universe_yyyy-MM-dd_HH-mm-ss_<label>.zip
