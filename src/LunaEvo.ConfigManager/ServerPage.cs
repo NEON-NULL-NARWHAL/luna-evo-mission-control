@@ -722,8 +722,32 @@ internal sealed class ServerPage : IDisposable
             CheckExternal();
         _ = CheckDailyRestartAsync(DateTime.Now);
         _ = CheckUniverseBackupAsync(DateTime.Now);
+        CheckAnnouncements(DateTime.Now);
         if (_runner.State == ServerState.Running)
             UpdateState(); // uptime
+    }
+
+    private readonly Dictionary<int, DateTime> _announced = [];
+    private DateTime _announceSince = DateTime.Now;
+    private string? _announceSetting;
+
+    /// <summary>Sends scheduled chat announcements (LUNA EVO Settings → Automation). Runs every second; tests call it with a chosen time.</summary>
+    internal void CheckAnnouncements(DateTime now)
+    {
+        if (_runner.State != ServerState.Running)
+        {
+            _announced.Clear();
+            _announceSince = now; // counting starts when the server is up
+            return;
+        }
+        if (_host.Settings.Announcements != _announceSetting)
+        {
+            _announceSetting = _host.Settings.Announcements;
+            _announced.Clear();
+        }
+        var (items, _) = Announcements.Parse(_announceSetting);
+        foreach (var announcement in Announcements.Due(items, _announced, _announceSince, now))
+            TrySend("/say " + announcement.Text);
     }
 
     /// <summary>Notices a Server.exe from this folder that someone started by hand, and follows its log file.</summary>

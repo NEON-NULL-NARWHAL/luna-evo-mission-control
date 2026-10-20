@@ -150,6 +150,13 @@ public sealed class MainWindow : Window
         {
             if (TryGetPlatformHandle() is { } handle)
                 DesktopNotifier.Attach(handle.Handle);
+            if (!Settings.HomeServerMode)
+                return;
+            // Home server mode: started by Windows at login → straight to the notification area, and the server up.
+            if (options.Minimized)
+                HideToTray();
+            if (_server is { IsRunning: false })
+                _ = _server.StartAsync(automatic: true);
         };
         Closed += (_, _) =>
         {
@@ -515,10 +522,51 @@ public sealed class MainWindow : Window
         }
     }
 
+    private TrayIcon? _tray;
+    private bool _quitting;
+
+    /// <summary>Hides the window to the notification area (home server mode). The icon's menu opens it again or quits.</summary>
+    internal void HideToTray()
+    {
+        try
+        {
+            if (_tray == null && Application.Current is { } app)
+            {
+                var open = new NativeMenuItem("Open LUNA EVO");
+                open.Click += (_, _) => ShowFromTray();
+                var quit = new NativeMenuItem("Quit LUNA EVO");
+                quit.Click += (_, _) =>
+                {
+                    ShowFromTray();
+                    _quitting = true;
+                    Close(); // the usual questions: unsaved changes, stop the server?
+                    _quitting = false;
+                };
+                _tray = new TrayIcon { Icon = AppIcon, ToolTipText = "LUNA EVO Config Manager", Menu = new NativeMenu { Items = { open, quit } } };
+                _tray.Clicked += (_, _) => ShowFromTray();
+                TrayIcon.SetIcons(app, [_tray]);
+            }
+        }
+        catch (Exception)
+        {
+            // No notification area (headless, or an unusual desktop): stay visible rather than vanish.
+            return;
+        }
+        Hide();
+    }
+
+    private void ShowFromTray()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+    }
+
     /// <summary>Called by the server page whenever the server starts, stops or ticks.</summary>
     internal void OnServerStatusChanged()
     {
         var running = _server?.IsRunning == true;
+        HomeServer.KeepAwake(Settings.HomeServerMode && running);
         _serverDot.Classes.Set("running", running);
         _consoleDot.Classes.Set("running", running);
         _consoleDot.IsVisible = running;
@@ -636,7 +684,10 @@ public sealed class MainWindow : Window
             {
                 Ui.Text("Server settings", "headline"),
                 Ui.Text($"LMP's config files in {session.ConfigDirectory}. Changes are saved together with Save.", "sublabel"),
-                new Border { Height = 14 },
+                new Border { Height = 10 },
+                SearchBox(session),
+                _searchResults,
+                new Border { Height = 6 },
                 _settingsTabs.Strip,
             },
         };
@@ -656,6 +707,51 @@ public sealed class MainWindow : Window
         AddPlaySection();
         AddLunaEvoSection();
         Navigate(Sections[0].Files[0]);
+    }
+
+    private readonly WrapPanel _searchResults = new() { Margin = new Thickness(0, 6, 0, 0) };
+
+    /// <summary>Finds settings in every config file by name or description; picking one opens its tab and scrolls to it.</summary>
+    private TextBox SearchBox(ConfigSession session)
+    {
+        var box = new TextBox { PlaceholderText = "Search all settings (e.g. heartbeat, password, warp)...", Width = 420, HorizontalAlignment = HorizontalAlignment.Left }
+            .WithId("serverSettings/search");
+        box.TextChanged += (_, _) => ShowSearch(session, box.Text?.Trim() ?? "");
+        _searchResults.Children.Clear();
+        if (_searchResults.Parent is Panel old) // the page is rebuilt when a server is reopened
+            old.Children.Remove(_searchResults);
+        return box;
+    }
+
+    internal void ShowSearch(ConfigSession session, string query)
+    {
+        _searchResults.Children.Clear();
+        if (query.Length < 2)
+            return;
+        var matches = _rows
+            .Where(r => Ui.Humanize(r.Setting.Name).Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                        r.Setting.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                        (r.Setting.Description ?? "").Contains(query, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(r => r.Setting.Name.Contains(query, StringComparison.OrdinalIgnoreCase)) // name matches first
+            .Take(12).ToList();
+        if (matches.Count == 0)
+        {
+            _searchResults.Children.Add(Ui.Text("No setting matches.", "sublabel"));
+            return;
+        }
+        foreach (var row in matches)
+        {
+            var file = session.Schema.Find(row.FileName);
+            var label = $"{(row.FileName == ModControlFile ? "Mod Control" : Ui.Humanize(file?.DisplayName ?? row.FileName))} › {Ui.Humanize(row.Setting.Name)}";
+            var result = Ui.Button(label, "chip").WithId($"serverSettings/result/{row.FileName}/{row.Setting.Name}");
+            result.Margin = new Thickness(0, 0, 6, 6);
+            result.Click += (_, _) =>
+            {
+                Navigate(row.FileName);
+                row.View.BringIntoView();
+            };
+            _searchResults.Children.Add(result);
+        }
     }
 
     /// <summary>A rail or tab label with an error-count badge and an unsaved-changes dot.</summary>
@@ -910,6 +1006,13 @@ public sealed class MainWindow : Window
     {
         if (_closeConfirmed)
             return;
+        if (Settings.HomeServerMode && !_quitting)
+        {
+            // Home server mode keeps running; quitting is in the notification-area icon's menu.
+            e.Cancel = true;
+            HideToTray();
+            return;
+        }
         var dirty = _session is { IsDirty: true };
         var serverUp = _server?.IsOwnedActive == true;
         if (!dirty && !serverUp)

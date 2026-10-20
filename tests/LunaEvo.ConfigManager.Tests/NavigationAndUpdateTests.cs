@@ -83,6 +83,64 @@ public class NavigationAndUpdateTests
     }
 
     [AvaloniaFact]
+    public void Search_finds_a_setting_on_any_tab_and_opens_it()
+    {
+        using var ui = new UiHarness();
+        ui.OpenTab(MainWindow.ServerSettingsKey);
+        ui.Find<TextBox>("serverSettings/search").Text = "heartbeat";
+        ui.Pump();
+
+        ui.Click(ui.Find<Button>("serverSettings/result/ConnectionSettings.xml/HearbeatMsInterval"));
+        ui.Pump();
+        Assert.Contains("selected", ui.Find<Button>("nav/ConnectionSettings.xml").Classes);
+        Assert.True(ui.Find<Control>("ConnectionSettings.xml/HearbeatMsInterval").IsEffectivelyVisible);
+    }
+
+    [AvaloniaFact]
+    public void Announcements_go_to_chat_on_schedule()
+    {
+        using var ui = new UiHarness(fakeServer: true);
+        ui.Window.UpdateSettings(s => s with { Announcements = "30 Welcome to Kerbin Space Agency!" });
+        ui.OpenTab(MainWindow.ConsolePage);
+        ui.Click(ui.Find<Button>("console/start"));
+        ui.WaitFor(() => ui.Server.State == Core.Server.ServerState.Running, "server running");
+
+        ui.Server.CheckAnnouncements(DateTime.Now);              // starts the clock
+        ui.Server.CheckAnnouncements(DateTime.Now.AddMinutes(31));
+        ui.WaitFor(() => ui.Server.VisibleLines.Any(l => l.Message == "Command input: /say Welcome to Kerbin Space Agency!"), "announcement sent");
+    }
+
+    [AvaloniaFact]
+    public void Home_server_mode_registers_with_windows_and_hides_instead_of_closing()
+    {
+        using var ui = new UiHarness();
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "LunaEvoTests", "home-" + Guid.NewGuid().ToString("N"))).FullName;
+        MainWindow.CurrentExe = Path.Combine(dir, AppUpdater.ExeName);
+        File.WriteAllText(MainWindow.CurrentExe, "MZ");
+        var registered = new List<(bool On, string Command)>();
+        HomeServer.ApplyStartWithWindows = (on, command) => registered.Add((on, command));
+        ui.OpenTab(MainWindow.SettingsKey);
+
+        ui.Find<ToggleSwitch>("settings/homeServer").IsChecked = true;
+        ui.Pump();
+        Assert.True(ui.Window.Settings.HomeServerMode);
+        var (on, command) = Assert.Single(registered);
+        Assert.True(on);
+        Assert.Contains("--minimized", command);
+        Assert.Contains("--settings", command); // the harness uses its own settings file, so it's passed along
+
+        var closed = false;
+        ui.Window.Closed += (_, _) => closed = true;
+        ui.Window.Close();
+        ui.Pump();
+        Assert.False(closed); // hidden to the notification area (or left open if there isn't one), never closed
+
+        ui.Find<ToggleSwitch>("settings/homeServer").IsChecked = false;
+        ui.Pump();
+        Assert.False(registered.Last().On);
+    }
+
+    [AvaloniaFact]
     public void Players_settings_and_join_pages_have_tabs()
     {
         using var ui = new UiHarness();

@@ -304,6 +304,21 @@ public class LiveModsOpsTests
         Assert.Single(backups.List(), s => s.Label == "manual"); // the oldest, but kept
     }
 
+    [Fact]
+    public void Announcements_are_read_one_per_line_and_sent_when_due()
+    {
+        var (items, problems) = Announcements.Parse(string.Join("\n", "60 Join our Discord", "# a comment", "", "120: Backups every 2 h", "2 too often", "no number"));
+        Assert.Equal([new Announcement(60, "Join our Discord"), new Announcement(120, "Backups every 2 h")], items);
+        Assert.Equal(2, problems.Count);
+
+        var start = new DateTime(2026, 10, 20, 12, 0, 0);
+        var sent = new Dictionary<int, DateTime>();
+        Assert.Empty(Announcements.Due(items, sent, start, start.AddMinutes(59)));
+        Assert.Equal("Join our Discord", Assert.Single(Announcements.Due(items, sent, start, start.AddMinutes(60))).Text);
+        Assert.Empty(Announcements.Due(items, sent, start, start.AddMinutes(61))); // not again until 120
+        Assert.Equal(2, Announcements.Due(items, sent, start, start.AddMinutes(120)).Count);
+    }
+
     private static async Task Until(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);

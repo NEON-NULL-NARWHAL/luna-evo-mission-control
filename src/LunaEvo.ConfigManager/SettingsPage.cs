@@ -37,6 +37,8 @@ internal sealed class SettingsPage
     private readonly StackPanel _appUpdates = new() { Spacing = 2 };
     private readonly TextBlock _appStatus = Ui.Text("", "sublabel").WithId("settings/appUpdateStatus");
     private readonly TabSet _tabs = new("settings/tab");
+    private readonly TextBlock _homeResult = Ui.Text("", "sublabel").WithId("settings/homeResult");
+    private readonly TextBlock _announceResult = Ui.Text("", "sublabel").WithId("settings/announceResult");
     private readonly Dictionary<string, StackPanel> _tabPages = new()
     {
         ["look"] = new(), ["behaviour"] = new(), ["automation"] = new(), ["updates"] = new(), ["about"] = new(),
@@ -149,6 +151,27 @@ internal sealed class SettingsPage
             Toggle("settings/reviewChanges", s => s.ReviewChangesBeforeSave, (s, v) => s with { ReviewChangesBeforeSave = v })));
         _tabPages["behaviour"].Children.Add(behaviour);
 
+        // Home server mode
+        var (home, homeBody, _) = Ui.Group("Home server mode");
+        var homeToggle = Toggle("settings/homeServer", s => s.HomeServerMode, (s, v) => s with { HomeServerMode = v });
+        homeToggle.IsCheckedChanged += (_, _) =>
+        {
+            if (_updating)
+                return;
+            var on = homeToggle.IsChecked == true;
+            var registered = HomeServer.SetStartWithWindows(on, MainWindow.CurrentExe, _host.SettingsPath, _host.SettingsPath != AppSettingsStore.DefaultPath);
+            _homeResult.Text = !on ? "Off. LUNA EVO no longer starts with Windows." :
+                registered ? "On. LUNA EVO starts with Windows, minimised, and starts the server." :
+                "On, except starting with Windows: only the downloaded LUNA EVO exe can do that (not a development build).";
+            _host.OnServerStatusChanged(); // keep-awake follows straight away
+        };
+        homeBody.Children.Add(Ui.Row("Run as a home server",
+            "For a PC that hosts all the time: starts with Windows minimised to the notification area, starts the server by itself, " +
+            "closing the window hides it there instead of quitting (right-click the icon to quit), and the PC doesn't go to sleep while the server runs.",
+            homeToggle));
+        homeBody.Children.Add(new Border { Padding = new Thickness(12, 0, 12, 10), Child = _homeResult });
+        _tabPages["behaviour"].Children.Add(home);
+
         // Server automation
         var (automation, auto, _) = Ui.Group("Server automation");
         auto.Children.Add(Ui.Row("Restart after a crash", "If the server stops without being asked, start it again after 10 seconds. Gives up after 3 crashes in 10 minutes.",
@@ -166,6 +189,31 @@ internal sealed class SettingsPage
         auto.Children.Add(Ui.Row("Universe backups to keep", "Older ones are deleted. 0 keeps them all.",
             Number("settings/universeKeep", 0, 1000, s => s.UniverseBackupsToKeep, (s, v) => s with { UniverseBackupsToKeep = v })));
         _tabPages["automation"].Children.Add(automation);
+
+        // Scheduled announcements
+        var (announce, announceBody, _) = Ui.Group("Chat announcements");
+        var lines = new TextBox
+        {
+            AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Height = 110, Width = 460,
+            Text = settings.Announcements,
+            PlaceholderText = "60 Join our Discord: discord.gg/...\n180 Universe backups run every 3 hours",
+        }.WithId("settings/announcements");
+        void ShowAnnouncements()
+        {
+            var (items, problems) = Announcements.Parse(lines.Text);
+            _announceResult.Text = problems.Count > 0 ? string.Join(" ", problems) :
+                items.Count == 0 ? "None set." : $"{items.Count} announcement(s), sent as /say while LUNA EVO runs the server.";
+        }
+        lines.LostFocus += (_, _) =>
+        {
+            _host.UpdateSettings(s => s with { Announcements = lines.Text ?? "" });
+            ShowAnnouncements();
+        };
+        announceBody.Children.Add(Ui.Row("Every N minutes, say...",
+            $"One per line: minutes, then the message (at least every {Announcements.MinMinutes} minutes). Counted from when the server starts.",
+            new StackPanel { Spacing = 4, Children = { lines, _announceResult } }));
+        ShowAnnouncements();
+        _tabPages["automation"].Children.Add(announce);
 
         // Notifications
         var (notify, notifyBody, _) = Ui.Group("Notifications");

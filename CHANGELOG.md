@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0 (2026-10-20)
+
+### Added
+- **Settings search** on the Server settings page: type part of a name or description (heartbeat, password, warp)
+  and pick a result to open its tab and scroll to it.
+- **Chat announcements** (Settings → Automation & alerts): one per line, "minutes then message", sent as `/say`
+  while LUNA EVO runs the server (at least every 5 minutes, counted from when the server starts).
+- **Home server mode** (Settings → Behaviour): one switch for an always-on host PC. LUNA EVO starts with Windows
+  minimised to the notification area, starts the server by itself, hides to the notification area instead of quitting
+  (right-click the icon → Quit), and keeps the PC from sleeping while the server runs. The Windows startup entry is
+  per-user (no admin) and is removed when you switch it off.
+
 ## 0.7.1 (2026-10-20)
 
 ### Added

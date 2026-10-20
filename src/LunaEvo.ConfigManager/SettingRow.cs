@@ -24,6 +24,9 @@ internal sealed class SettingRow
     private readonly ConfigSession _session;
     private readonly string _fileName;
     private readonly SettingDefinition _setting;
+
+    internal string FileName => _fileName;
+    internal SettingDefinition Setting => _setting;
     private readonly Action _changed;
     private readonly Border _row = new();
     private readonly TextBlock _label;

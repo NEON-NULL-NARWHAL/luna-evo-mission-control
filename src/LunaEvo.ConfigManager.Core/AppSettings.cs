@@ -57,6 +57,15 @@ public sealed record AppSettings
     /// <summary>KSP's folder, if it isn't in a Steam library LUNA EVO can find.</summary>
     public string? KspFolder { get; init; }
 
+    /// <summary>"Every N minutes, say this" lines (Announcements.Parse), sent while LUNA EVO runs the server.</summary>
+    public string Announcements { get; init; } = "";
+
+    /// <summary>
+    /// Home server mode: start with Windows (minimised to the notification area), start the server by itself, hide to
+    /// the notification area instead of quitting, and keep the PC awake while the server runs.
+    /// </summary>
+    public bool HomeServerMode { get; init; }
+
     // Notifications
 
     /// <summary>Windows notifications for the server going up/down, crashes and alerts.</summary>

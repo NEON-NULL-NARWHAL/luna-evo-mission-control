@@ -43,6 +43,7 @@ internal sealed class UiHarness : IDisposable
         MainWindow.ShowDesktopNotification = (title, message, alert) => Notifications.Add((title, message, alert));
         CraftsPage.PickExportPath = (_, _) => throw new InvalidOperationException("A test opened a save dialog without faking it.");
         CraftsPage.PickImportPath = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
+        HomeServer.ApplyStartWithWindows = (_, _) => throw new InvalidOperationException("A test touched the Windows startup list without faking it.");
         MainWindow.CurrentExe = null; // the test host must never be "updated"
         MainWindow.StartNewVersion = (_, _) => throw new InvalidOperationException("A test tried to restart the app without faking it.");
         Dialogs.Responder = (title, _, buttons) =>
