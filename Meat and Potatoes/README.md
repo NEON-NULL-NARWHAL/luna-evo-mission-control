@@ -35,6 +35,7 @@ Every source file starts with a short header pointing back here, like this:
 | 17 | [Notifications](17-Notifications.md) | add a notification, or change Windows or Discord delivery |
 | 18 | [Updating LUNA EVO itself](18-Updating-LUNA-EVO.md) | ship a release (`release.ps1`), or change how the app updates itself |
 | 19 | [Sharing crafts](19-Sharing-Crafts.md) | work on the Crafts page, the .lunacraft format, or craft import/export |
+| 20 | [Next steps (handoff)](20-Next-Steps.md) | pick up the next task: house rules, quick wins with file pointers, the LMP fork list |
 
 ## 🔣 Legend
 
