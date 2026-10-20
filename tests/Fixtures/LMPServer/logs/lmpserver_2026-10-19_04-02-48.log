@@ -1,0 +1,18 @@
+[08:02:48][Info]: Remember! Quit the server by using 'Control + C' so a backup is properly made before closing!
+[08:02:48][Info]: Documentation available at https://github.com/LunaMultiplayer/LunaMultiplayer/wiki
+[08:02:48][LMP]: Luna Server version: 0.29.2 (C:\LMPServer\)
+[08:02:48][Debug]: Loading universe... 0.845KB
+[08:02:48][Debug]: Loading groups...
+[08:02:48][Debug]: Loading settings...
+[08:02:48][Warning]: Default server description detected! Consider changing it in GeneralSettings.xml.
+[08:02:48][Debug]: Loading plugins...
+[08:02:48][LMP]: Starting 'LUNA EVO Test Server' on Address :: Port 8800... 
+[08:02:49][LMP]: All systems up and running. Поехали!
+[08:05:12][LMP]: Client Jebediah (192.0.2.10:50000) connected
+[08:05:30][Chat]: Jebediah: hello from the Mun
+[08:09:01][Error]: Error handling server command kick, Exception System.ArgumentException: no such player
+   at Server.Command.Command.KickCommand.Execute(String commandArgs)
+[08:12:40][LMP]: Exiting... Please wait until all threads are finished
+[08:12:40][Debug]: Performing backups...
+[08:12:40][Debug]: Backups done
+[08:12:41][LMP]: So long and thanks for all the fish!

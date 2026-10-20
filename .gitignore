@@ -1,0 +1,16 @@
+bin/
+obj/
+.vs/
+.vscode/
+.idea/
+*.user
+TestResults/
+
+# Real server configs hold passwords; never commit them.
+*.xml.bak
+Backups/
+
+dist/
+
+# Written by the "Fixtures (in repo)" launch profile.
+tests/Fixtures/dev-settings.json

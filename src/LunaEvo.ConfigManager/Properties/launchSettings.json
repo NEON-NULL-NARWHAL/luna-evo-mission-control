@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Fixtures (in repo)": {
+      "commandName": "Project",
+      "commandLineArgs": "--server ../../tests/Fixtures/LMPServer --config ../../tests/Fixtures/Config --settings ../../tests/Fixtures/dev-settings.json"
+    },
+    "Local LMP folders": {
+      "commandName": "Project",
+      "commandLineArgs": "--server ../../../LMPServer --config ../../../server-configs"
+    }
+  }
+}
