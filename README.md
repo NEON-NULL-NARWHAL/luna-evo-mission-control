@@ -139,6 +139,7 @@ or build it with `publish.ps1` (see [Build it](#build-it)). It's a single file w
 - **Already have an LMP server?** Put the exe in your server folder, next to `Server.exe`, and double-click it.
   Edit, **Save** (Ctrl+S), then **Server Console → Start**.
 - **Just playing?** Choose **Join a friend's server** on the welcome page. See [Join a friend's server](#join-a-friends-server).
+- **Playing over the internet?** Use a mesh VPN and never open a port: [Tailscale or Twingate](#play-together-without-opening-any-ports-tailscale-twingate).
 
 ### Set up a new server, step by step
 
@@ -219,6 +220,39 @@ server for changes to take effect.
 6. **Check my mods** (optional): LUNA EVO fills in the rules LMP saved the last time you joined a server with mod
    control, or use the file your host sent (Mod Control → Share these rules with players).
    It lists exactly what LMP would refuse.
+
+### Play together without opening any ports (Tailscale, Twingate)
+
+The safest way to host for friends is a **mesh VPN**: everyone's PC joins a private network that works over the
+internet, so friends connect to your server as if they were on your LAN. **Nothing is opened on your router**, and
+nobody outside your mesh can even see the server. This is how we run ours.
+
+**Tailscale** (easiest, free for personal use):
+
+1. Install [Tailscale](https://tailscale.com/download) on the server PC and sign in.
+2. Each friend installs Tailscale too, and you invite them to your tailnet (admin console → *Share* the server PC, or
+   add them as users).
+3. On the server PC, open LUNA EVO's **Connect** page: the Tailscale address (`100.x.y.z`, labelled VPN or mesh) is
+   in *Addresses to share*. Press **Copy** and send it to your friends. With MagicDNS on, the PC's name works too.
+4. Friends use that address on LUNA EVO's **Join a server** page (it shows "VPN or mesh network") or in LMP's own
+   server list.
+
+**Twingate** works too: run a Twingate **Connector** on your home network, add the server PC as a **Resource**
+(allow UDP 8800 for the game, and TCP 8900 if you share live info), and give your friends access. They connect to the
+Resource's address with the Twingate client running.
+
+**Then keep the server private.** In LUNA EVO:
+
+| Setting | For a mesh server |
+|---|---|
+| Connection → **Upnp** | **Off.** Nothing needs opening, and UPnP would open ports to the whole internet. LUNA EVO shows a "reachable from the internet" banner if it's on. |
+| Master Server → **Register With Master Server** | **Off.** Friends join by address; the public list is for strangers. |
+| Connect → **Allow through firewall** | Press it once. Windows Firewall still applies to mesh traffic. |
+| Connect → **Share with players** (optional) | Lets friends' Join page show live info (players, vessels) over the mesh, on TCP 8900. |
+| General → **Password** | Still worth setting a long one (**Generate a strong password**), as is a long admin password. |
+
+Mesh addresses are private to your group, so they're fine to share with friends, but they're still yours: don't
+post them publicly.
 
 LMP 0.29.x itself needs the [.NET 6 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/6.0); LUNA EVO checks for it and can install it for you (via Windows' `winget`).
 
