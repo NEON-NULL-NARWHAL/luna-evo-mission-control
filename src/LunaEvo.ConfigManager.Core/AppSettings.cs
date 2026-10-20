@@ -57,6 +57,17 @@ public sealed record AppSettings
     /// <summary>KSP's folder, if it isn't in a Steam library LUNA EVO can find.</summary>
     public string? KspFolder { get; init; }
 
+    // Notifications
+
+    /// <summary>Windows notifications for the server going up/down, crashes and alerts.</summary>
+    public bool NotifyDesktop { get; init; } = true;
+
+    /// <summary>Also notify (Windows and Discord) when players join and leave.</summary>
+    public bool NotifyPlayerActivity { get; init; }
+
+    /// <summary>The Discord webhook URL, encrypted for this Windows account (SecretProtector). Never stored in plain text.</summary>
+    public string? DiscordWebhookProtected { get; init; }
+
     // Updates
 
     /// <summary>Look for a newer LMP server on GitHub when a server is opened.</summary>

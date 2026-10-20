@@ -30,7 +30,8 @@ internal sealed class UiHarness : IDisposable
     /// <param name="openServer">False starts on the welcome page with nothing open (for the setup wizard).</param>
     public UiHarness(bool fakeServer = false, bool openServer = true)
     {
-        ServerDirectory = fakeServer ? CreateFakeServerFolder() : TestPaths.LmpServer;
+        // A copy, never the fixture itself: the app writes next to the server (LunaEvo/players.json, profiles...).
+        ServerDirectory = fakeServer ? CreateFakeServerFolder() : CopyFixtureServer();
         ConfigDirectory = TestPaths.CopyConfigs();
         SettingsPath = Path.Combine(Path.GetTempPath(), "LunaEvoTests", Guid.NewGuid().ToString("N"), "settings.json");
         ServerPage.ExecutableName = fakeServer ? FakeServer.Executable : "Server.exe";
@@ -38,6 +39,8 @@ internal sealed class UiHarness : IDisposable
         Web = new FakeHttp();
         Core.Http.Override = Web.Client;
         JoinPage.StartKsp = (_, _) => throw new InvalidOperationException("A test tried to start KSP without faking it.");
+        ModImportPanel.PickSharePath = _ => throw new InvalidOperationException("A test opened a save dialog without faking it.");
+        MainWindow.ShowDesktopNotification = (title, message, alert) => Notifications.Add((title, message, alert));
         Dialogs.Responder = (title, _, buttons) =>
         {
             DialogsShown.Add(title);
@@ -54,6 +57,9 @@ internal sealed class UiHarness : IDisposable
     public string ConfigDirectory { get; }
     public string SettingsPath { get; }
     public List<string> DialogsShown { get; } = [];
+
+    /// <summary>Windows notifications the app tried to show: (title, message, is an alert).</summary>
+    public List<(string Title, string Message, bool Alert)> Notifications { get; } = [];
     public bool ConfirmDialogs { get; set; } = true;
 
     /// <summary>Picks a dialog button by title: return its index, or null for the default answer.</summary>
@@ -131,6 +137,17 @@ internal sealed class UiHarness : IDisposable
     }
 
     /// <summary>LMP's real Server.dll (for the settings schema) and logs, plus the fake server exe to run.</summary>
+    private static string CopyFixtureServer()
+    {
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "LunaEvoTests", "server-" + Guid.NewGuid().ToString("N"))).FullName;
+        foreach (var file in Directory.GetFiles(TestPaths.LmpServer))
+            File.Copy(file, Path.Combine(dir, Path.GetFileName(file)));
+        var logs = Directory.CreateDirectory(Path.Combine(dir, "logs"));
+        foreach (var log in Directory.GetFiles(Path.Combine(TestPaths.LmpServer, "logs")))
+            File.Copy(log, Path.Combine(logs.FullName, Path.GetFileName(log)));
+        return dir;
+    }
+
     private static string CreateFakeServerFolder()
     {
         var dir = FakeServer.CreateServerFolder();

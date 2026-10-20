@@ -7,4 +7,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Windows DPAPI, to keep the Discord webhook URL encrypted (Ops/Notifications.cs, SecretProtector). -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.2" />
+  </ItemGroup>
+
 </Project>

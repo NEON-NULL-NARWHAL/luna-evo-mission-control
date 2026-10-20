@@ -34,6 +34,8 @@ internal sealed class SettingsPage
     private readonly StackPanel _folders = new() { Spacing = 2 };
     private readonly StackPanel _updates = new() { Spacing = 2 };
     private readonly TextBlock _dailyResult = Ui.Text("", "sublabel").WithId("settings/dailyResult");
+    private readonly TextBox _webhook = new TextBox { Width = 420, PasswordChar = '•' }.WithId("settings/discordWebhook");
+    private readonly TextBlock _discordResult = Ui.Text("", "sublabel").WithId("settings/discordResult");
     private string? _updateMessage;
     private bool _updating;
 
@@ -148,6 +150,47 @@ internal sealed class SettingsPage
         auto.Children.Add(Ui.Row("Universe backups to keep", "Older ones are deleted. 0 keeps them all.",
             Number("settings/universeKeep", 0, 1000, s => s.UniverseBackupsToKeep, (s, v) => s with { UniverseBackupsToKeep = v })));
         page.Children.Add(automation);
+
+        // Notifications
+        var (notify, notifyBody, _) = Ui.Group("Notifications");
+        notifyBody.Children.Add(Ui.Row("Windows notifications",
+            "When the server starts, stops or crashes, and for alerts (someone guessing the admin password, a banned player trying to join).",
+            Toggle("settings/notifyDesktop", s => s.NotifyDesktop, (s, v) => s with { NotifyDesktop = v })));
+        notifyBody.Children.Add(Ui.Row("Also players joining and leaving", "On Windows and Discord. Needs live player info or LMP's log (see the Players page).",
+            Toggle("settings/notifyPlayers", s => s.NotifyPlayerActivity, (s, v) => s with { NotifyPlayerActivity = v })));
+        _webhook.Classes.Add("revealPasswordButton");
+        var saveWebhook = Ui.Button("Save", "text").WithId("settings/discordSave");
+        saveWebhook.Click += (_, _) => SaveWebhook();
+        var removeWebhook = Ui.Button("Remove", "text").WithId("settings/discordRemove");
+        removeWebhook.Click += (_, _) =>
+        {
+            _host.UpdateSettings(s => s with { DiscordWebhookProtected = null });
+            _webhook.Text = "";
+            ShowWebhookState();
+        };
+        var test = Ui.Button("Send a test message", "text").WithId("settings/discordTest");
+        test.Click += async (_, _) =>
+        {
+            if (!string.IsNullOrWhiteSpace(_webhook.Text) && !SaveWebhook())
+                return;
+            var url = SecretProtector.Unprotect(_host.Settings.DiscordWebhookProtected);
+            _discordResult.Text = url == null
+                ? "Save a webhook URL first."
+                : await new DiscordNotifier(Http.Client).PostAsync(url, "👋 LUNA EVO is connected to this channel.")
+                    ? "Sent! Check the channel."
+                    : "Discord didn't accept it. Check the URL.";
+        };
+        notifyBody.Children.Add(Ui.Row("Discord webhook",
+            "Posts the same notifications to a Discord channel. In Discord: channel settings → Integrations → Webhooks → New webhook → Copy URL. " +
+            "It's stored encrypted for your Windows account, and posts can never ping @everyone.",
+            new StackPanel { Spacing = 4, Children =
+            {
+                _webhook,
+                new StackPanel { Orientation = Orientation.Horizontal, Children = { saveWebhook, removeWebhook, test } },
+                _discordResult,
+            } }));
+        page.Children.Add(notify);
+        ShowWebhookState();
 
         // Updates
         var (updates, updatesBody, _) = Ui.Group("LMP updates");
@@ -309,6 +352,35 @@ internal sealed class SettingsPage
             SetAccent(Color.FromRgb(color.R, color.G, color.B));
         else
             _hex.Text = _host.Settings.AccentColor;
+    }
+
+    /// <summary>Encrypts and stores the URL in the box, then clears the box. False (with a message) if it isn't a webhook.</summary>
+    private bool SaveWebhook()
+    {
+        var url = _webhook.Text?.Trim() ?? "";
+        if (!DiscordNotifier.IsWebhookUrl(url))
+        {
+            _discordResult.Text = "That isn't a Discord webhook URL (https://discord.com/api/webhooks/...).";
+            return false;
+        }
+        if (SecretProtector.Protect(url) is not { } encrypted)
+        {
+            _discordResult.Text = "Encrypted storage isn't available on this system, so LUNA EVO won't keep the URL.";
+            return false;
+        }
+        _host.UpdateSettings(s => s with { DiscordWebhookProtected = encrypted });
+        _webhook.Text = "";
+        ShowWebhookState();
+        return true;
+    }
+
+    /// <summary>The saved URL is never shown again, only whether there is one.</summary>
+    private void ShowWebhookState()
+    {
+        var saved = SecretProtector.Unprotect(_host.Settings.DiscordWebhookProtected) != null;
+        _webhook.PlaceholderText = saved ? "Saved (encrypted). Paste a new URL to replace it." : "https://discord.com/api/webhooks/...";
+        _discordResult.Text = saved ? "A webhook is saved." :
+            _host.Settings.DiscordWebhookProtected != null ? "The saved webhook can't be read on this Windows account. Paste it again." : "";
     }
 
     private ToggleSwitch Toggle(string id, Func<AppSettings, bool> get, Func<AppSettings, bool, AppSettings> set)

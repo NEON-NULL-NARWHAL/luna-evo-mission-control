@@ -315,6 +315,7 @@ internal sealed class ServerPage : IDisposable
             _nextDailyRestart = DailyRestart.Next(now.AddMinutes(1), setting);
             _dailyRestartWarned = false;
             _incoming.Enqueue(LogLine.FromManager("Scheduled restart now."));
+            _host.Notify(new Notification(NotificationKind.ScheduledRestart, $"{_host.ServerName}: scheduled restart", "Back in a moment.", _host.ServerName));
             await StopAsync(confirm: false);
             await StartAsync(automatic: true);
         }
@@ -373,19 +374,30 @@ internal sealed class ServerPage : IDisposable
 
     private void OnStateChanged(ServerState state)
     {
+        if (state == ServerState.Running)
+            _host.Notify(new Notification(NotificationKind.ServerUp, $"{_host.ServerName} is up", "Players can join.", _host.ServerName));
         UpdateState();
     }
 
     private async Task OnExitedAsync(int code, bool requested)
     {
+        _host.Tracker?.ServerStopped();
         if (requested || _automaticRestartPending)
+        {
+            if (!_automaticRestartPending)
+                _host.Notify(new Notification(NotificationKind.ServerStopped, $"{_host.ServerName} stopped", "Stopped from LUNA EVO.", _host.ServerName));
             return;
+        }
 
+        _host.Notify(new Notification(NotificationKind.ServerCrashed, $"{_host.ServerName} stopped unexpectedly",
+            _host.Settings.AutoRestartOnCrash ? $"Exit code {code}. LUNA EVO will try to restart it." : $"Exit code {code}.", _host.ServerName));
         if (!_host.Settings.AutoRestartOnCrash)
             return;
         if (!_crashPolicy.ShouldRestart(DateTime.Now))
         {
             _incoming.Enqueue(LogLine.FromManager("The server keeps crashing (3 times in 10 minutes), so LUNA EVO stopped restarting it. Check the errors above."));
+            _host.Notify(new Notification(NotificationKind.AutoRestartGaveUp, $"{_host.ServerName} keeps crashing",
+                "3 crashes in 10 minutes, so LUNA EVO stopped restarting it. Check the Server Console.", _host.ServerName));
             return;
         }
 
@@ -434,6 +446,8 @@ internal sealed class ServerPage : IDisposable
         {
             if (line.Kind == LogKind.Debug && NetworkHelper.PublicAddressFrom(line) is { } address)
                 PublicAddress = address;
+            if (!line.Replayed)
+                _host.Tracker?.Observe(line); // player history and alerts
             _all.Add(line);
             if (Passes(line))
             {
@@ -722,6 +736,7 @@ internal sealed class ServerPage : IDisposable
             _tail.Dispose();
             _tail = null;
             _incoming.Enqueue(LogLine.FromManager("The outside server has stopped."));
+            _host.Tracker?.ServerStopped();
         }
         UpdateState();
     }

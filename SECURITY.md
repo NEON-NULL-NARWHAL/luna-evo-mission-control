@@ -20,9 +20,26 @@ response time.
 | **A friend's server** | Join page, when you press Check | DNS lookup, 4 pings (ICMP) and one HTTP request to the address you typed. Nothing else. |
 | **Windows Firewall** (`netsh`, as administrator) | Only when you press "Allow through firewall" | Windows asks for permission each time. The exact command is in the button's tooltip. |
 | **winget** | Only when you accept installing the .NET runtime | Installs Microsoft's `Microsoft.DotNet.Runtime.6`. |
-| **Your KSP install** | Join page: "Launch KSP and join" or "Add to LMP's server list" | Starts `KSP_x64.exe` and edits LMP's own `settings.xml` server list (backed up first, and never while KSP is running). |
+| **Your KSP install** | Join page: "Launch KSP and join" or "Add to LMP's server list" | Starts `KSP_x64.exe` and edits LMP's own `settings.xml` server list (backed up first, and never while KSP is running). "Check my mods" only reads your GameData. |
+| **Discord** (`discord.com`) | Only if you save a webhook (Settings → Notifications) | HTTPS posts of the notifications. The URL is stored encrypted for your Windows account (DPAPI) and never shown again; posts can't mention anyone. |
+| **Windows notifications** | Settings → Notifications (on by default) | Shown on this PC only. |
 
 LUNA EVO has no telemetry, no accounts and no server of its own.
+
+**What it keeps about players** (0.5): `<server>/LunaEvo/players.json` holds player names, LMP's ids for them (needed
+to unban), when they played, their LMP/KSP versions, wrong admin passwords, ban reasons and your notes. **Never IP
+addresses**, even though LMP's own log lines contain them. It stays next to your server; delete it to forget everyone.
+
+## Security notes on the 0.5 features
+
+- **Discord is back, with audit 1's H2 and H3 fixed:** the webhook is encrypted with Windows DPAPI (useless on
+  another account or PC), never displayed again after saving, and every post sends `allowed_mentions: { parse: [] }`
+  and escapes player-controlled text, so a player named `@everyone` can't ping anyone or add links.
+- **Alerts come from LMP's log.** LUNA EVO only reads LMP's own server messages, never chat, and only accepts player
+  names LMP itself allows. A modified client could still fake a log line with a line break in a chat message; the
+  worst that does is a wrong history entry or a false alert, never a command.
+- **Unban edits LMP's ban list** only while the server is stopped, after backing it up.
+- **The mod check** reads files only; it never changes your GameData.
 
 ## Audit 2 (0.4.1, October 2026)
 

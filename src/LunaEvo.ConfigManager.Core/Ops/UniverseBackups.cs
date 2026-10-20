@@ -80,18 +80,40 @@ public sealed class UniverseBackups(string serverDirectory)
 
         // Unpack next to the Universe first and only swap once that worked, so a damaged or hostile zip can never
         // leave a half-restored Universe behind.
-        var staging = UniverseFolder + ".restoring-" + Guid.NewGuid().ToString("N")[..8];
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var staging = UniverseFolder + ".restoring-" + suffix;
+        var old = UniverseFolder + ".old-" + suffix;
         try
         {
             Extract(snapshotPath, staging);
+            // Rename rather than delete-then-move: on Windows a deleted folder can linger for a moment, which would
+            // make the move fail. If the swap fails, the old Universe goes back.
             if (Directory.Exists(UniverseFolder))
-                Directory.Delete(UniverseFolder, recursive: true);
-            Directory.Move(staging, UniverseFolder);
+                Directory.Move(UniverseFolder, old);
+            try
+            {
+                Directory.Move(staging, UniverseFolder);
+            }
+            catch
+            {
+                if (Directory.Exists(old) && !Directory.Exists(UniverseFolder))
+                    Directory.Move(old, UniverseFolder);
+                throw;
+            }
         }
         finally
         {
             if (Directory.Exists(staging))
                 Directory.Delete(staging, recursive: true);
+        }
+        try
+        {
+            if (Directory.Exists(old))
+                Directory.Delete(old, recursive: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Restored either way; a leftover Universe.old-* folder is harmless (and the safety snapshot has it too).
         }
         return safety;
     }

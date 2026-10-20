@@ -81,4 +81,27 @@ internal static class TestData
         return ksp;
     }
 
+    /// <summary>An LMPModControl.xml with the given lists (inner XML), for mod-check tests.</summary>
+    public static string ModRules(bool allowNonListed, string mandatory = "", string optional = "", string forbidden = "", string parts = "",
+        string mandatoryParts = "", string expansions = "")
+    {
+        var path = Path.Combine(Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "LunaEvoTests", "rules-" + Guid.NewGuid().ToString("N"))).FullName, "LMPModControl.xml");
+        File.WriteAllText(path, $"""
+            <?xml version="1.0" encoding="utf-16"?>
+            <ModControlStructure xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+              <RequiredExpansions>{expansions}</RequiredExpansions>
+              <AllowNonListedPlugins>{(allowNonListed ? "true" : "false")}</AllowNonListedPlugins>
+              <MandatoryPlugins>{mandatory}</MandatoryPlugins>
+              <OptionalPlugins>{optional}</OptionalPlugins>
+              <ForbiddenPlugins>{forbidden}</ForbiddenPlugins>
+              <MandatoryParts>{mandatoryParts}</MandatoryParts>
+              <AllowedParts>{parts}</AllowedParts>
+              <AllowedResources><string>LiquidFuel</string></AllowedResources>
+            </ModControlStructure>
+            """);
+        return path;
+    }
+
+    public static string RuleDll(string path, string sha = "", string element = "DllFile") =>
+        $"<{element}><Text>{Path.GetFileNameWithoutExtension(path)}</Text><FilePath>{path}</FilePath>{(element == "DllFile" ? $"<Sha>{sha}</Sha>" : "")}</{element}>";
 }

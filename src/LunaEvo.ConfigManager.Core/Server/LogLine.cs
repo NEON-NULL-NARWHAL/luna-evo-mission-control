@@ -34,6 +34,12 @@ public sealed partial record LogLine(string? Time, LogKind Kind, string Message)
         _ => Kind.ToString(),
     };
 
+    /// <summary>
+    /// True for old lines replayed from a log file when LUNA EVO starts following a server. They're shown, but player
+    /// history and alerts ignore them, so restarting the app doesn't count yesterday's joins again.
+    /// </summary>
+    public bool Replayed { get; init; }
+
     public override string ToString() => Time == null ? Message : $"[{Time}][{Tag}]: {Message}";
 
     /// <param name="previous">Kind of the line before, used for continuation lines such as stack traces.</param>

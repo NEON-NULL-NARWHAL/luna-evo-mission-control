@@ -2,6 +2,8 @@
 
 [← Meat and Potatoes](README.md) · Code: `Core/Live/ServerInfoClient.cs`, `App/PlayersPage.cs` 🔌
 
+Player history, alerts and bans (0.5) build on this: see [16](16-Players-History-And-Alerts.md).
+
 ## Where the data comes from
 
 LMP has a small built-in web server (`Server/Web/WebServer.cs`), on when `WebsiteSettings.EnableWebsite` is true.

@@ -132,6 +132,14 @@
     <Style Selector="Border.row.inactive TextBlock.label">
       <Setter Property="Opacity" Value="0.5" />
     </Style>
+    <!-- Security alerts on the Players page (admin password guessing, banned players trying to join). -->
+    <Style Selector="Border.row.alert">
+      <Setter Property="BorderBrush" Value="{DynamicResource Error}" />
+      <Setter Property="BorderThickness" Value="3,0,0,0" />
+    </Style>
+    <Style Selector="Border.row.alert TextBlock.label">
+      <Setter Property="Foreground" Value="{DynamicResource Error}" />
+    </Style>
     <Style Selector="Border.banner">
       <Setter Property="Background" Value="{DynamicResource WarningContainer}" />
       <Setter Property="CornerRadius" Value="10" />

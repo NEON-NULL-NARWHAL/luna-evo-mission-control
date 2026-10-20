@@ -63,6 +63,13 @@ _ = Task.Run(async () =>
         Log("LMP", $"Command input: {input}");
         if (input == "/help")
             Log("LMP", "Available commands: help, say, listclients");
+        // Test-only commands that print LMP 0.29.2's real player lines, for player history and alerts.
+        else if (input.StartsWith("/fakejoin ", StringComparison.Ordinal))
+            Log("LMP", $"Client {input[10..]} (id-{input[10..]}) handshake successful, LMP Version: 0.29.2, KSP Version: 1.12.5");
+        else if (input.StartsWith("/fakeguess ", StringComparison.Ordinal))
+            Log("Warning", $"{input[11..]}: Tried to run an admin command with an invalid password");
+        else if (input.StartsWith("/fakeleave ", StringComparison.Ordinal))
+            Log("LMP", $"Client {input[11..]} disconnected in ReceiveCallback, Endpoint 203.0.113.9:51000, Error: closed");
         else if (!input.StartsWith('/'))
             Log("Chat", $"Server: {input}");
         await Task.Delay(50);

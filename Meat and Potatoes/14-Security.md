@@ -36,12 +36,18 @@ the rules the code follows now, so new code doesn't undo them.
 - **LMP's website has no auth.** It's local-only unless the host presses **Share with players** (Connect page), which
   confirms first.
 
-## Discord (removed in 0.4.0)
+## Discord (removed in 0.4.0, back in 0.5)
 
-Removed rather than fixed, for now. `AppSettingsStore.Load` re-saves `settings.json` if its raw JSON still contains
-`"DiscordWebhookUrl"`, so the old plaintext webhook is scrubbed on first start (`LiveModsOpsTests` covers it). If it
-comes back: encrypt the URL (DPAPI on Windows), send `allowed_mentions: { "parse": [] }` on every post, and escape
-player names (`@everyone`, Markdown).
+Removed in 0.4.0. `AppSettingsStore.Load` still re-saves `settings.json` if its raw JSON contains
+`"DiscordWebhookUrl"`, so a 0.3 plaintext webhook is scrubbed on first start (`LiveModsOpsTests` covers it).
+It came back in 0.5 the safe way: the URL encrypted with DPAPI (`SecretProtector`, `AppSettings.DiscordWebhookProtected`),
+`allowed_mentions: { "parse": [] }` on every post, and player-controlled text escaped. Details in [17](17-Notifications.md).
+
+## Text from players
+
+Player names and chat come from other people's game clients. Read only LMP's own messages (never `[Chat]` lines),
+match names with LMP's rule (`A-Z a-z 0-9 - _`), escape them before sending anywhere (Discord), and never store
+their IP addresses (`PlayerTracker`).
 
 ## Checklist for new code
 

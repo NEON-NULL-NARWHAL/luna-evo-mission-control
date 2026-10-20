@@ -96,7 +96,7 @@ public sealed class LogTail : IDisposable
                     _partial = "";
                     var lines = LogFiles.Read(_path);
                     foreach (var line in first ? lines.TakeLast(_initialLines) : lines)
-                        LineReceived?.Invoke(line);
+                        LineReceived?.Invoke(first ? line with { Replayed = true } : line);
                     _position = newest.Length;
                     return;
                 }

@@ -11,7 +11,10 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using LunaEvo.ConfigManager.Core;
+using LunaEvo.ConfigManager.Core.Live;
+using LunaEvo.ConfigManager.Core.Ops;
 using LunaEvo.ConfigManager.Core.Schema;
 using LunaEvo.ConfigManager.Core.Setup;
 using LunaEvo.ConfigManager.Core.Validation;
@@ -59,6 +62,7 @@ public sealed class MainWindow : Window
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
+    private PlayerTracker? _tracker;
     private ConnectPage? _connect;
     private ProfilesPage? _profilesPage;
     private ModImportPanel? _modImport;
@@ -134,11 +138,18 @@ public sealed class MainWindow : Window
                 await SaveAsync();
         };
         Closing += OnClosing;
+        Opened += (_, _) =>
+        {
+            if (TryGetPlatformHandle() is { } handle)
+                DesktopNotifier.Attach(handle.Handle);
+        };
         Closed += (_, _) =>
         {
             _server?.Dispose();
             _players?.Dispose();
             _joinPage?.Dispose();
+            _tracker?.Save();
+            DesktopNotifier.Remove();
         };
         _updateText.IsVisible = false;
         _updateText.PointerPressed += (_, _) => Navigate(SettingsKey);
@@ -163,6 +174,7 @@ public sealed class MainWindow : Window
     internal ConfigSession? Session => _session;
     internal ServerPage? Server => _server;
     internal PlayersPage? Players => _players;
+    internal PlayerTracker? Tracker => _tracker;
     internal ConnectPage? Connect => _connect;
     internal ProfilesPage? Profiles => _profilesPage;
     internal ModImportPanel? ModImport => _modImport;
@@ -192,6 +204,62 @@ public sealed class MainWindow : Window
         }
         if (lookChanged)
             ThemeManager.Apply(ThemeManager.Parse(Settings.AccentColor, Color.Parse(AppSettings.DefaultAccent)), Settings.Theme);
+    }
+
+    /// <summary>Tests capture notifications here instead of showing them: (title, message, is an alert).</summary>
+    internal static Action<string, string, bool> ShowDesktopNotification { get; set; } = DesktopNotifier.Show;
+
+    /// <summary>
+    /// Tells the user something happened: a Windows notification (if on) and a Discord post (if a webhook is set).
+    /// Joins and leaves only when "players joining and leaving" is on. Fire and forget: it never throws.
+    /// </summary>
+    internal void Notify(Notification notification)
+    {
+        if (notification.IsPlayerActivity && !Settings.NotifyPlayerActivity)
+            return;
+        if (Settings.NotifyDesktop)
+        {
+            try
+            {
+                ShowDesktopNotification(notification.Title, notification.Message, notification.IsAlert);
+            }
+            catch (Exception)
+            {
+                // A notification that can't be shown is never worth an error.
+            }
+        }
+        if (SecretProtector.Unprotect(Settings.DiscordWebhookProtected) is { } webhook)
+            _ = new DiscordNotifier(Http.Client).SendAsync(webhook, notification);
+    }
+
+    /// <summary>The open server's name for messages, or a fallback.</summary>
+    internal string ServerName =>
+        _session?.GetValue(LmpRules.General, "ServerName") is { Length: > 0 } name ? name : "The server";
+
+    private PlayerTracker NewTracker(string serverDirectory)
+    {
+        var tracker = new PlayerTracker(serverDirectory);
+        tracker.EventRaised += e => Dispatcher.UIThread.Post(() => OnPlayerEvent(tracker, e));
+        return tracker;
+    }
+
+    private void OnPlayerEvent(PlayerTracker tracker, PlayerEvent e)
+    {
+        if (tracker != _tracker)
+            return; // from a server that has since been closed
+        _players?.OnPlayerEvent(e);
+        Notification? notification = e.Kind switch
+        {
+            PlayerEventKind.Joined => new(NotificationKind.PlayerJoined, $"{e.Player} joined", ServerName, e.Player),
+            PlayerEventKind.Left => new(NotificationKind.PlayerLeft, $"{e.Player} left", ServerName, e.Player),
+            PlayerEventKind.AdminPasswordGuessing => new(NotificationKind.AdminPasswordGuessing, "Someone is guessing the admin password",
+                $"{e.Player}: {e.Detail}. Kick or ban them on the Players page, and use a long admin password.", e.Player),
+            PlayerEventKind.BannedPlayerTried => new(NotificationKind.BannedPlayerTried, "A banned player tried to join",
+                $"{e.Player} was refused by {ServerName}.", e.Player),
+            _ => null,
+        };
+        if (notification != null)
+            Notify(notification);
     }
 
     /// <summary>Opens an LMP server folder: reads its schema and configs, then rebuilds every page. Shows the welcome page on failure.</summary>
@@ -225,6 +293,8 @@ public sealed class MainWindow : Window
         if (!keepServerPage || _server == null)
         {
             _server?.Dispose();
+            _tracker?.Save();
+            _tracker = NewTracker(session.ServerDirectory);
             _server = new ServerPage(this, session.ServerDirectory);
             _players?.Dispose();
             _players = new PlayersPage(this);
@@ -336,6 +406,8 @@ public sealed class MainWindow : Window
         _server = null;
         _players?.Dispose();
         _players = null;
+        _tracker?.Save();
+        _tracker = null;
         _connect = null;
         _profilesPage = null;
         _modImport = null;

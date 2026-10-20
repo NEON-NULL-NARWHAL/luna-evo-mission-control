@@ -3,7 +3,7 @@
 [← Meat and Potatoes](README.md) · Code: `tests/` 🧪
 
 ```powershell
-dotnet test                                             # everything (183 tests, ~40 s)
+dotnet test                                             # everything (204 tests, ~45 s)
 dotnet test tests/LunaEvo.ConfigManager.Core.Tests      # logic only (~3 s)
 dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 ```
@@ -30,6 +30,13 @@ install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, 
 0.4.1 added `SecurityRound2Tests`: oversized live info, long text cut, Universe restores that escape the folder or are
 damaged (the current Universe must survive), DTDs refused, Windows device names as profile names, weak-password
 warnings, and a hand-edited settings file full of nulls.
+
+0.5 added `PlayerFeaturesTests` (history from real LMP log lines, replayed and chat lines ignored, no IPs stored,
+admin-password alerts, bans and the ban list, the mod check against LMP's client rules, Discord escaping and
+`allowed_mentions`, DPAPI) and `PlayerFeaturesUiTests` (a running fake server driving history and alerts end to end,
+notifications, unban, notes, the encrypted webhook, Check my mods, sharing rules). The fake server's `/fakejoin`,
+`/fakeguess` and `/fakeleave` print LMP's real lines. `UiHarness` now copies the fixture server to a temp folder,
+and collects Windows notifications in `ui.Notifications`.
 
 ## No network in tests
 

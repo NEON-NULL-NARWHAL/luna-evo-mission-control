@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager/JoinPage.cs
-// [UI] For players (not hosting): check a friend's server (IP, ping, server info, players, vessels) and launch KSP into it.
+// [UI] For players (not hosting): check a friend's server (IP, ping, server info, players, vessels), check your mods, launch KSP into it.
 // Used by: MainWindow
 // Guide:   Meat and Potatoes/15-Joining-Servers.md
 
@@ -11,6 +11,7 @@ using Avalonia.Threading;
 using LunaEvo.ConfigManager.Core;
 using LunaEvo.ConfigManager.Core.Join;
 using LunaEvo.ConfigManager.Core.Live;
+using LunaEvo.ConfigManager.Core.Mods;
 
 namespace LunaEvo.ConfigManager;
 
@@ -41,6 +42,11 @@ internal sealed class JoinPage : IDisposable
     private readonly Button _addToList = Ui.Button("Add to LMP's server list", "text").WithId("join/addToList");
     private readonly TextBlock _launchResult = Ui.Text("", "sublabel").WithId("join/launchResult");
     private readonly DispatcherTimer _refresh = new() { Interval = TimeSpan.FromSeconds(10) };
+    private readonly TextBox _modRules = new TextBox { PlaceholderText = @"...\LMPModControl.xml" }.WithId("join/modRules");
+    private readonly Button _modCheck = Ui.Button("Check my mods", "fab").WithId("join/modCheck");
+    private readonly TextBlock _modSummary = Ui.Text("", "sublabel").WithId("join/modSummary");
+    private readonly StackPanel _modResults = new() { Spacing = 2 };
+    private string? _autoModRules;
     private ServerAddress? _server;
     private LiveInfoResult? _live;
     private bool _checking;
@@ -82,6 +88,19 @@ internal sealed class JoinPage : IDisposable
         _launch.Padding = new Thickness(18, 10);
         _launch.Click += async (_, _) => await LaunchAsync();
         _addToList.Click += (_, _) => AddToList(showResult: true);
+        _modCheck.Padding = new Thickness(18, 8);
+        _modCheck.Click += async (_, _) => await CheckModsAsync();
+        var browseRules = Ui.Button("Browse...", "text", "IconFolder").WithId("join/modRulesBrowse");
+        browseRules.Click += async (_, _) =>
+        {
+            var files = await _host.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Choose the server's LMPModControl.xml",
+                FileTypeFilter = [new FilePickerFileType("LMP mod control") { Patterns = ["*.xml"] }],
+            });
+            if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
+                _modRules.Text = path;
+        };
 
         var addressRow = new DockPanel { Margin = new Thickness(12, 8) };
         DockPanel.SetDock(_check, Dock.Right);
@@ -124,6 +143,22 @@ internal sealed class JoinPage : IDisposable
         });
         playBody.Children.Add(new Border { Padding = new Thickness(12, 0, 12, 12), Child = _launchResult });
 
+        var (modsGroup, modsBody, _) = Ui.Group("Check my mods");
+        var rulesRow = new DockPanel();
+        DockPanel.SetDock(browseRules, Dock.Right);
+        rulesRow.Children.Add(browseRules);
+        rulesRow.Children.Add(_modRules);
+        modsBody.Children.Add(Ui.Row("The server's mod rules",
+            "When you join a server with mod control on, LMP saves its rules in your KSP (filled in below). Or ask the host for " +
+            "theirs: in LUNA EVO, Mod Control → \"Share these rules with players\".", null));
+        modsBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 8, Children =
+        {
+            rulesRow,
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { _modCheck, _modSummary } },
+        } });
+        _modSummary.VerticalAlignment = VerticalAlignment.Center;
+        modsBody.Children.Add(_modResults);
+
         View = new ScrollViewer
         {
             Content = new StackPanel
@@ -134,7 +169,7 @@ internal sealed class JoinPage : IDisposable
                     Ui.Text("Join a server", "headline"),
                     Ui.Text("For players: check a friend's server before you join, then launch KSP straight into it. You don't need to host anything.", "sublabel"),
                     new Border { Height = 16 },
-                    _banner, serverGroup, savedGroup, _results, playGroup,
+                    _banner, serverGroup, savedGroup, _results, modsGroup, playGroup,
                 },
             },
         };
@@ -143,6 +178,75 @@ internal sealed class JoinPage : IDisposable
     }
 
     public Control View { get; }
+
+    internal TextBox ModRulesBox => _modRules;
+
+    /// <summary>
+    /// Scans the KSP folder's GameData and checks it against the rules file, the way LMP's client will when you
+    /// connect (see <see cref="ModCheck"/>).
+    /// </summary>
+    internal async Task CheckModsAsync()
+    {
+        var ksp = _ksp.Text?.Trim() ?? "";
+        var rules = _modRules.Text?.Trim() ?? "";
+        _modResults.Children.Clear();
+        if (!KspLauncher.IsKspFolder(ksp))
+        {
+            _modSummary.Text = "Choose your Kerbal Space Program folder under Play first.";
+            return;
+        }
+        if (!File.Exists(rules))
+        {
+            _modSummary.Text = "Choose the server's LMPModControl.xml first.";
+            return;
+        }
+
+        _modCheck.IsEnabled = false;
+        _modSummary.Text = "Scanning your GameData (this can take a minute with many mods)...";
+        try
+        {
+            var result = await Task.Run(() => ModCheck.Check(ModRules.Load(rules), GameDataScanner.Scan(Path.Combine(ksp, "GameData"))));
+            ShowModResult(result);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Xml.XmlException)
+        {
+            _modSummary.Text = "Couldn't check: " + e.Message;
+        }
+        finally
+        {
+            _modCheck.IsEnabled = true;
+        }
+    }
+
+    private void ShowModResult(ModCheckResult result)
+    {
+        var off = _live?.Snapshot?.ModControl == false ? " (this server has mod control off, so LMP won't check anyway)" : "";
+        _modSummary.Text = result.Passes
+            ? $"Your mods pass this server's check{off}."
+            : $"{result.Problems.Count} problem{(result.Problems.Count == 1 ? "" : "s")} LMP will stop you joining for{off}:";
+        foreach (var problem in result.Problems.Take(200))
+        {
+            var title = problem.Kind switch
+            {
+                ModProblemKind.MissingExpansion => $"Missing expansion: {problem.Item}",
+                ModProblemKind.ForbiddenPlugin => $"Banned mod: {problem.Item}",
+                ModProblemKind.PluginNotAllowed => $"Not allowed: {problem.Item}",
+                ModProblemKind.MissingPlugin => $"Missing mod: {problem.Item}",
+                ModProblemKind.WrongPluginVersion => $"Different version: {problem.Item}",
+                _ => $"Missing part: {problem.Item}",
+            };
+            _modResults.Children.Add(Ui.Row(title, problem.Detail, null).WithId("join/modProblem/" + problem.Item));
+        }
+        if (result.Problems.Count > 200)
+            _modResults.Children.Add(Ui.Row($"...and {result.Problems.Count - 200} more", null, null));
+        if (result.PartsNotAllowed.Count > 0)
+            _modResults.Children.Add(Ui.Row($"{result.PartsNotAllowed.Count} of your parts {(result.PartsNotAllowed.Count == 1 ? "isn't" : "aren't")} on the server's allowed list",
+                $"You can still join, but the server drops vessels that use them. For example: {string.Join(", ", result.PartsNotAllowed.Take(8))}.", null)
+                .WithId("join/modParts"));
+        if (result.ResourcesNotAllowed.Count > 0)
+            _modResults.Children.Add(Ui.Row($"{result.ResourcesNotAllowed.Count} of your resources {(result.ResourcesNotAllowed.Count == 1 ? "isn't" : "aren't")} on the server's allowed list",
+                $"For example: {string.Join(", ", result.ResourcesNotAllowed.Take(8))}.", null).WithId("join/modResources"));
+    }
 
     internal ServerAddress? Server => _server;
     internal LiveInfoResult? Live => _live;
@@ -403,6 +507,11 @@ internal sealed class JoinPage : IDisposable
             _kspStatus.Text = folder.Length == 0 ? "KSP wasn't found automatically. Choose its folder." : $"No {KspLauncher.ExeName} in that folder.";
             return;
         }
+        // LMP saves the rules of the last mod-controlled server you joined here; offer it unless the user chose a file.
+        var saved = Path.Combine(folder, "GameData", "LunaMultiplayer", "Data", "LMPModControl.xml");
+        if (File.Exists(saved) && (string.IsNullOrEmpty(_modRules.Text) || _modRules.Text == _autoModRules))
+            _modRules.Text = _autoModRules = saved;
+
         var client = KspLauncher.ClientVersion(folder);
         _kspStatus.Text = client == null
             ? "Found KSP, but the LMP client mod isn't installed (GameData/LunaMultiplayer)."

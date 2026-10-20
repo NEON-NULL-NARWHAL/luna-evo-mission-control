@@ -24,6 +24,16 @@ internal sealed class ModImportPanel
     private readonly ToggleSwitch _plugins = new ToggleSwitch { OnContent = "", OffContent = "", MinWidth = 0, IsChecked = true }.WithId("modimport/plugins");
     private readonly ToggleSwitch _expansions = new ToggleSwitch { OnContent = "", OffContent = "", MinWidth = 0, IsChecked = false }.WithId("modimport/expansions");
     private readonly TextBlock _result = Ui.Text("", "sublabel").WithId("modimport/result");
+    private readonly TextBlock _shareResult = Ui.Text("", "sublabel").WithId("modimport/shareResult");
+
+    /// <summary>Tests replace the save dialog: returns the chosen path, or null if cancelled.</summary>
+    internal static Func<MainWindow, Task<string?>> PickSharePath { get; set; } = async host =>
+        (await host.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save the mod rules for your players",
+            SuggestedFileName = File,
+            DefaultExtension = "xml",
+        }))?.TryGetLocalPath();
 
     public ModImportPanel(MainWindow host, ConfigSession session, Action changed)
     {
@@ -53,14 +63,43 @@ internal sealed class ModImportPanel
         });
         body.Children.Add(pathRow);
         body.Children.Add(Ui.Row("Replace the current lists", "Off adds to what's already allowed instead.", _replace));
-        body.Children.Add(Ui.Row("Add plugins to Optional Plugins", "Every mod DLL with its SHA-256, so only these exact versions are allowed when non-listed plugins are off.", _plugins));
+        body.Children.Add(Ui.Row("Add plugins to Optional Plugins", "Every mod DLL (with its SHA-256), so these mods are allowed when non-listed plugins are off. LMP only checks hashes on Mandatory Plugins.", _plugins));
         body.Children.Add(Ui.Row("Require the expansions found", "Making History / Breaking Ground become Required Expansions.", _expansions));
         body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14, Margin = new Thickness(12, 4, 12, 12), Children = { import, _result } });
         _result.VerticalAlignment = VerticalAlignment.Center;
+
+        var share = Ui.Button("Save a copy...", "text", "IconSave").WithId("modimport/share");
+        share.Click += async (_, _) => await ShareAsync();
+        body.Children.Add(Ui.Row("Share these rules with players",
+            "Saves a copy of LMPModControl.xml (as saved on disk) to send to your friends. On LUNA EVO's Join page, " +
+            "\"Check my mods\" tells them exactly what to add or remove before they join.",
+            new StackPanel { Spacing = 4, Children = { share, _shareResult } }));
         View = view;
     }
 
     public Control View { get; }
+
+    /// <summary>Copies the saved LMPModControl.xml to a file the host can send to players.</summary>
+    internal async Task ShareAsync()
+    {
+        if (_session.DirtyFiles.Contains(File))
+        {
+            _shareResult.Text = "Save first: the copy is the file on disk.";
+            return;
+        }
+        var target = await PickSharePath(_host);
+        if (string.IsNullOrEmpty(target))
+            return;
+        try
+        {
+            System.IO.File.Copy(Path.Combine(_session.ConfigDirectory, File), target, overwrite: true);
+            _shareResult.Text = $"Saved {Path.GetFileName(target)}. Send it to your players.";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _shareResult.Text = "Couldn't save it: " + e.Message;
+        }
+    }
 
     /// <summary>Scans the folder in the box and applies the result. Public for tests.</summary>
     internal async Task ImportAsync()

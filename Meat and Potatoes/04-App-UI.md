@@ -45,11 +45,11 @@ is on), else the welcome page.
 | `SettingRow` | One setting row | Editor by `SettingKind`. Number boxes have **no Min/Max** on purpose: the control would silently clamp a bad value from the file instead of flagging it. Passwords use `PasswordChar` plus a reveal button. Descriptions that only repeat the name are hidden. |
 | `ListEditor` | One list group (mod control) | Items are `Entry(index, text, isDuplicate)` so identical names can be selected one at a time. |
 | `ServerPage` | The Server Console | See [03](03-Server-Control.md). |
-| `SettingsPage` | LUNA EVO Settings | Colour wheel (`ColorView`, ring shape), presets, theme, behaviour, automation, LMP updates, about, folders, links. |
+| `SettingsPage` | LUNA EVO Settings | Colour wheel (`ColorView`, ring shape), presets, theme, behaviour, automation, notifications ([17](17-Notifications.md)), LMP updates, about, folders, links. |
 | `ObjectListEditor` | One record list (plugins, mandatory parts) | See [12](12-Mod-Control-From-GameData.md). |
 | `ModImportPanel` | Import from GameData | See [12](12-Mod-Control-From-GameData.md). |
 | `SetupWizard` | Set up a new server | Shown from the welcome page. See [10](10-Setup-and-Updates.md). |
-| `PlayersPage` | Players | See [11](11-Live-Players.md). |
+| `PlayersPage` | Players | See [11](11-Live-Players.md) and [16](16-Players-History-And-Alerts.md). |
 | `ConnectPage` / `ProfilesPage` | Connect / Profiles & Backups | See [13](13-Automation.md). |
 | `JoinPage` | Join a server | Works with no server open. See [15](15-Joining-Servers.md). |
 

@@ -31,6 +31,8 @@ Every source file starts with a short header pointing back here, like this:
 | 13 | [Automation, Connect, Profiles](13-Automation.md) | change auto/daily restarts, Universe backups, profiles, the Connect page, or review-before-save |
 | 14 | [Security](14-Security.md) | download, parse, launch or store anything. The rules from the 0.4.0 and 0.4.1 audits. |
 | 15 | [Joining servers](15-Joining-Servers.md) | work on the player side: the Join page, ping and live info, launching KSP, LMP's server list |
+| 16 | [Player history, alerts and bans](16-Players-History-And-Alerts.md) | change what's recorded about players, the alerts, or the ban list |
+| 17 | [Notifications](17-Notifications.md) | add a notification, or change Windows or Discord delivery |
 
 ## 🔣 Legend
 
@@ -94,9 +96,12 @@ Symbols used in the map below and throughout these chapters:
 | 🧠 | `Setup/RuntimeInstaller.cs` | Installs the .NET runtime with winget. |
 | **Live/** | | *What's happening on the server* ([11](11-Live-Players.md)) |
 | 🧠🔌 | `Live/ServerInfoClient.cs` | Reads LMP's website JSON: players, vessels, subspaces; join/leave diff. |
+| ⭐🧠🔌⚠️ | `Live/PlayerTracker.cs` | Player history and alerts from LMP's log lines and the live player list. See [16](16-Players-History-And-Alerts.md). |
+| 🧠🔌 | `Live/BanList.cs` | LMP's `LMPPlayerBans.txt` (ids), with unban. |
 | **Mods/** | | *Mod control from a KSP install* ([12](12-Mod-Control-From-GameData.md)) |
 | 🧠 | `Mods/KspConfigParser.cs` | Reads KSP `.cfg` ConfigNode files. |
 | ⭐🧠🔌⚠️ | `Mods/GameDataScanner.cs` | Parts, resources, plugins (SHA-256) and expansions from GameData, like LMP's client. |
+| 🧠🔌 | `Mods/ModCheck.cs` | Checks a GameData scan against an LMPModControl.xml, mirroring LMP's client check. |
 | **Ops/** | | *Keeping it running* ([13](13-Automation.md)) |
 | 🧠 | `Ops/Restarts.cs` | Crash-restart policy (gives up after 3 in 10 min) and daily restart times. |
 | 🧠🔌⚠️ | `Ops/NetworkHelper.cs` | Local addresses, LMP's detected public address, Windows Firewall rules (UDP game port, TCP website port), port check. `netsh` by absolute path. |
@@ -104,6 +109,7 @@ Symbols used in the map below and throughout these chapters:
 | 🧠 | `Join/ServerProbe.cs` | `ServerAddress` parsing; DNS, network kind, ping, and live info from a host's LMP website. |
 | 🧠🔌⚠️ | `Join/KspLauncher.cs` | Finds KSP and the LMP client, plans auto-connect vs server list (LMP's `-lmp` bug), edits LMP's client `settings.xml`, starts KSP. |
 | 🧠 | `Ops/ProfileStore.cs` | Named copies of the whole config. |
+| 🧠⚠️ | `Ops/Notifications.cs` | Notification kinds, Discord posting (no mentions, escaped), `SecretProtector` (DPAPI). See [17](17-Notifications.md). |
 | 🧠🔌 | `Ops/UniverseBackups.cs` | Zips and restores the Universe. |
 
 ### `src/LunaEvo.ConfigManager/`: the app 🖥️
@@ -118,11 +124,12 @@ Symbols used in the map below and throughout these chapters:
 | 🖥️ | `SettingRow.cs` | One generated row; picks the editor for the setting's type. |
 | 🖥️ | `ListEditor.cs` | Searchable list editor for mod control lists. |
 | 🖥️ | `ObjectListEditor.cs` | Row editor for LMP's DllFile / MandatoryPart lists. |
-| 🖥️🔌 | `ModImportPanel.cs` | "Import from GameData" on the Mod Control page. |
+| 🖥️🔌 | `ModImportPanel.cs` | "Import from GameData" and "Share these rules with players" on the Mod Control page. |
+| 🖥️ | `DesktopNotifier.cs` | Windows notifications through the notification area (`Shell_NotifyIcon`). |
 | ⭐🖥️🔌 | `SetupWizard.cs` | "Set up a new server": download, configure, open. |
-| 🖥️🔌 | `PlayersPage.cs` | Live players and vessels, Kick/Ban. |
+| 🖥️🔌 | `PlayersPage.cs` | Live players and vessels, Kick/Ban, alerts, player history and notes, bans with unban. |
 | 🖥️ | `ConnectPage.cs` | Addresses to share, firewall, reachability, sharing live info with players. |
-| ⭐🖥️ | `JoinPage.cs` | Join a server (for players): check, save, launch KSP into it. `StartKsp` is the test seam. |
+| ⭐🖥️ | `JoinPage.cs` | Join a server (for players): check, save, check my mods, launch KSP into it. `StartKsp` is the test seam. |
 | 🖥️ | `ProfilesPage.cs` | Config profiles and Universe backups. |
 | ⭐🖥️🔌 | `ServerPage.cs` | The Server Console page. |
 | 🖥️ | `SettingsPage.cs` | The LUNA EVO Settings page (colour wheel, behaviour, about). |
@@ -136,8 +143,8 @@ Symbols used in the map below and throughout these chapters:
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (125 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
-| 🧪🖥️ | `LunaEvo.ConfigManager.Tests/` | Headless UI tests: the real window, clicked through like a user (58 tests). |
+| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (139 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪🖥️ | `LunaEvo.ConfigManager.Tests/` | Headless UI tests: the real window, clicked through like a user (65 tests). |
 | ⭐🧪 | `LunaEvo.ConfigManager.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |
@@ -159,6 +166,8 @@ Symbols used in the map below and throughout these chapters:
 | **Headless** | Running the real Avalonia UI without a screen, for tests. |
 | **Universe** | `<server>/Universe`: the game state (vessels, kerbals, scenarios). |
 | **Live info** | LMP's website JSON (TCP 8900): players, vessels, settings. Read by the Players and Join pages. |
+| **Session** (player) | One stretch of play, from join to leave; history counts them. |
+| **LMP id** | LMP's unique id for a player's install; bans are stored by id, not name. |
 | **Digest** | The SHA-256 that GitHub publishes for each release file; we compare downloads against it. |
 | **GameData** | KSP's mod folder; every mod lives in a subfolder of it. |
 | **ModuleManager (MM)** | A KSP mod that patches other mods' `.cfg` files at load time (`@PART[...]`). |

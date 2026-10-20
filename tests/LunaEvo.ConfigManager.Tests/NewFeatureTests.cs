@@ -242,7 +242,8 @@ public class NewFeatureTests
 
         var snapshot = new UniverseBackups(ui.ServerDirectory).List()[0];
         ui.Click(ui.Find<Button>("profiles/restore/" + snapshot.Name));
-        ui.WaitFor(() => File.ReadAllText(Path.Combine(universe, "KerbalX.txt")) == "before", "restored");
+        // The restore runs in the background and swaps folders, so the file can be missing for a moment.
+        ui.WaitFor(() => File.Exists(Path.Combine(universe, "KerbalX.txt")) && Read(Path.Combine(universe, "KerbalX.txt")) == "before", "restored");
         Assert.Equal(2, new UniverseBackups(ui.ServerDirectory).List().Count); // plus the safety copy
     }
 
@@ -318,6 +319,19 @@ public class NewFeatureTests
 
         Assert.Equal("scheduled", Assert.Single(new UniverseBackups(ui.ServerDirectory).List()).Label);
         ui.WaitFor(() => ui.Server.VisibleLines.Any(l => l.Message == "Command input: /backup now"), "LMP asked to save first");
+    }
+
+    /// <summary>The file's text, or null while it's being swapped in.</summary>
+    private static string? Read(string path)
+    {
+        try
+        {
+            return File.ReadAllText(path);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
     }
 
     private static List<string> Texts(Control control) =>

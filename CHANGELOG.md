@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.5.0 (2026-10-20)
+
+### Added
+- **Player history** on the Players page: everyone who's played, last seen, sessions, time played, LMP/KSP version,
+  wrong admin passwords, ban reason, and your own notes. Stored in `<server>/LunaEvo/players.json`; never IPs.
+- **Alerts**: 3 wrong admin passwords from one player in 10 minutes, or a banned player trying to join, shown at the
+  top of the Players page (with Kick/Ban) and as a notification.
+- **Bans**: LMP's ban list with names, and **Unban** (while the server is stopped; the old list is backed up).
+- **Check my mods** on the Join page: checks a player's GameData against a server's mod rules the way LMP's client
+  does, and lists parts the server would drop. Uses the rules LMP saved, or a file from the host.
+- **Share these rules with players** on the Mod Control page.
+- **Notifications**: Windows notifications and Discord, for server up/stopped/crashed/gave up/scheduled restart,
+  alerts, and optionally joins and leaves. The Discord webhook is stored encrypted (DPAPI), never shown again, and
+  posts set `allowed_mentions` to nothing and escape player names.
+
+### Fixed
+- The Mod Control page said optional plugins were checked by hash; LMP only checks hashes on mandatory plugins.
+- UI tests now run on a copy of the fixture server, so nothing is ever written into `tests/Fixtures`.
+- Universe restore swaps folders by renaming (and puts the old Universe back if the swap fails), instead of
+  delete-then-move, which could fail on Windows while the deleted folder was still going away.
+
 ## 0.4.1 (2026-10-20)
 
 Second security audit; details in `SECURITY.md`.
