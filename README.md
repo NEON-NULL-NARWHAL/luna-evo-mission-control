@@ -6,7 +6,12 @@
 
 **Set up, configure, run and watch a [Luna Multiplayer](https://github.com/LunaMultiplayer/LunaMultiplayer) (LMP) server for Kerbal Space Program, without touching a config file or a console window.**
 
-Version 0.7.0 · Windows · .NET 10 · Avalonia 12 · GPL-3.0
+[![Latest release](https://img.shields.io/github/v/release/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager?label=download)](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest)
+[![Tests](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/actions/workflows/tests.yml/badge.svg)](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/actions/workflows/tests.yml)
+![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
+
+**[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Join a friend](#join-a-friends-server)** · **[No open ports (Tailscale)](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
 </div>
 
@@ -267,6 +272,12 @@ Everything is local except, and only when you use them:
 **LMP's own website on this PC** (for the Players page), **the server you type on the Join page** (a DNS lookup,
 4 pings and its LMP website), and **your Discord webhook** if you add one. Details are in [`SECURITY.md`](SECURITY.md).
 
+## For developers
+
+Start with the maintainer's guide, [`Meat and Potatoes/`](Meat%20and%20Potatoes/README.md), and
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the house rules. What's next is in
+[`Meat and Potatoes/20-Next-Steps.md`](Meat%20and%20Potatoes/20-Next-Steps.md).
+
 ### Build it
 
 Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
@@ -287,7 +298,7 @@ dotnet run --project src/LunaEvo.ConfigManager --launch-profile "Fixtures (in re
 Command-line options: `--server <folder>` (contains Server.dll), `--config <folder>` (defaults to `<server>\Config`),
 `--settings <file>` (LUNA EVO's own preferences, for portable use; defaults to `%APPDATA%\LunaEvo\ConfigManager\settings.json`).
 
-## Repository layout
+### Repository layout
 
 ```
 ConfigManager/
