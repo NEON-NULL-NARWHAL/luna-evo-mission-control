@@ -110,7 +110,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | ![Players](docs/screenshots/players.png) | ![Player history and bans](docs/screenshots/players-history.png) |
 | **Players:** live from LMP's own data, with alerts for admin-password guessing and banned players. | **Player history and bans:** sessions, time played, notes; unban by name. |
 | ![Check my mods](docs/screenshots/join-mods.png) | ![Updates](docs/screenshots/settings-updates.png) |
-| **Check my mods:** what LMP will refuse, before you join. | **Updates:** LUNA EVO updates itself from its GitHub releases (this copy can't see them while the repository is private). |
+| **Check my mods:** what LMP will refuse, before you join. | **Updates:** LUNA EVO updates itself from its GitHub releases. (Taken while the repository was still private, hence the message.) |
 | ![Profiles and backups](docs/screenshots/profiles.png) | ![A Windows notification](docs/screenshots/notification-toast.png) |
 | **Profiles & Backups:** switch whole configs; snapshot and restore the Universe. | **A Windows notification** from LUNA EVO. |
 | ![Import from GameData](docs/screenshots/mod-import.png) | ![Plugin lists](docs/screenshots/mod-lists.png) |
@@ -283,7 +283,7 @@ We want to be completely clear about this.
 | The project owner (human) | Claude (AI), via Claude Code in VS Code |
 |---|---|
 | Set the goals: a GUI config manager, then server control, theming, this repo, the 0.3 feature set (wizard, players, mod import, automation...), 0.4 (a security audit, the Join page, removing Discord), 0.5 (player history, alerts, bans, mod check, notifications), and 0.6 (self-update, a tidier layout). Found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API and mod checks really work. |
-| Made the decisions: desktop app, Avalonia, .NET 10, private repo, GPL-3.0, the look (inspired by [NOMM](https://github.com/Combat787/NOMM)). | Wrote all of the code: the C#, XAML and build scripts. |
+| Made the decisions: desktop app, Avalonia, .NET 10, GPL-3.0 (the repo started private and is now public), the look (inspired by [NOMM](https://github.com/Combat787/NOMM)). | Wrote all of the code: the C#, XAML and build scripts. |
 | Supplied the real server, its configs and the requirements. | Wrote all 214 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP (below), took the screenshots, and wrote these docs. |
 

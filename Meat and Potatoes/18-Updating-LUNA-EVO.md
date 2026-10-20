@@ -39,8 +39,9 @@ Checked on real Windows: a running 0.5.0 exe was renamed to `.old`, 0.6.0 starte
 
 - **Only the published single-file exe updates itself** (`CanUpdateItself`). A development build (DLLs next to the exe,
   or `dotnet run`) shows the release page instead.
-- **The repository must be public** for unauthenticated checks. While it's private, GitHub answers 404 and Settings →
-  Updates says "The repository may be private."
+- **The repository must stay public**: the check isn't signed in. If it were made private again, GitHub would answer
+  404 and Settings → Updates would say "The repository may be private." (It was public from 0.6.0's release on; checked
+  that an anonymous request lists v0.6.0 and v0.4.0 with their SHA-256 digests.)
 - Each copy updates itself. The setup wizard copies LUNA EVO into each server folder, so a PC with several copies
   updates each when it's opened.
 - The folder must be writable. Under `Program Files` the update says so and points to the release page.
