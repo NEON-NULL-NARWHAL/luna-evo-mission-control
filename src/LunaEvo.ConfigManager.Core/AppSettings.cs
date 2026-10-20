@@ -31,6 +31,37 @@ public sealed record AppSettings
     public int StopTimeoutSeconds { get; init; } = 30;
 
     public bool ConfirmStop { get; init; } = true;
+
+    /// <summary>Show a list of what changed before saving.</summary>
+    public bool ReviewChangesBeforeSave { get; init; } = true;
+
+    // Automation (Server Console)
+
+    /// <summary>Start the server again if it exits without being asked (gives up after 3 crashes in 10 minutes).</summary>
+    public bool AutoRestartOnCrash { get; init; } = true;
+
+    /// <summary>"HH:mm" to restart every day, with a one-minute warning in chat. Empty = off.</summary>
+    public string DailyRestartTime { get; init; } = "";
+
+    /// <summary>Zip the Universe every this many hours while LUNA EVO runs the server. 0 = off.</summary>
+    public int UniverseBackupHours { get; init; }
+
+    public int UniverseBackupsToKeep { get; init; } = 10;
+
+    // Discord
+
+    /// <summary>Discord webhook URL for notifications. Empty = off.</summary>
+    public string DiscordWebhookUrl { get; init; } = "";
+
+    /// <summary>Also post when players join or leave (needs the website on, see the Players page).</summary>
+    public bool DiscordPlayerEvents { get; init; } = true;
+
+    // Updates
+
+    /// <summary>Look for a newer LMP server on GitHub when a server is opened.</summary>
+    public bool CheckForLmpUpdates { get; init; } = true;
+
+    public bool IncludeLmpPrereleases { get; init; }
 }
 
 public static class AppSettingsStore

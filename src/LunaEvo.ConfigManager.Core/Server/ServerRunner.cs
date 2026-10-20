@@ -23,6 +23,7 @@ public sealed class ServerRunner : IDisposable
     private Process? _process;
     private TaskCompletionSource _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private LogKind _lastKind = LogKind.Normal;
+    private bool _stopRequested;
 
     /// <summary>One runner per server folder. <paramref name="executableName"/> lets tests use the fake server.</summary>
     public ServerRunner(string serverDirectory, string executableName = "Server.exe")
@@ -42,6 +43,12 @@ public sealed class ServerRunner : IDisposable
 
     /// <summary>Raised on a background thread.</summary>
     public event Action<ServerState>? StateChanged;
+
+    /// <summary>
+    /// Raised on a background thread when the process ends: (exit code, whether we asked it to stop).
+    /// "Not requested" means it crashed or was closed from outside, which is when auto-restart kicks in.
+    /// </summary>
+    public event Action<int, bool>? Exited;
 
     /// <summary>Starts the server and begins streaming its output. State goes Starting, then Running once LMP prints its ready line.</summary>
     public void Start(IEnumerable<string>? arguments = null)
@@ -74,6 +81,7 @@ public sealed class ServerRunner : IDisposable
 
             _process?.Dispose(); // the previous run's, kept until now so late callers never see a disposed process
             _exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _stopRequested = false;
             Emit(LogLine.FromManager($"Starting {Path.GetFileName(_executable)} in {ServerDirectory}"));
             SetState(ServerState.Starting);
             ConsoleControl.AllowCtrlCInChildren();
@@ -107,6 +115,7 @@ public sealed class ServerRunner : IDisposable
         if (State == ServerState.Stopped || ProcessId is not { } pid)
             return true;
 
+        _stopRequested = true;
         SetState(ServerState.Stopping);
         Emit(LogLine.FromManager("Stopping the server (Ctrl+C), waiting for LMP to finish its backup..."));
         if (!ConsoleControl.SendCtrlC(pid))
@@ -132,7 +141,10 @@ public sealed class ServerRunner : IDisposable
         try
         {
             if (State != ServerState.Stopped)
+            {
+                _stopRequested = true;
                 _process?.Kill(entireProcessTree: true);
+            }
         }
         catch (InvalidOperationException)
         {
@@ -178,6 +190,7 @@ public sealed class ServerRunner : IDisposable
         Emit(LogLine.FromManager($"Server exited (code {code})."));
         SetState(ServerState.Stopped);
         _exited.TrySetResult();
+        Exited?.Invoke(code, _stopRequested);
     }
 
     private void SetState(ServerState state)

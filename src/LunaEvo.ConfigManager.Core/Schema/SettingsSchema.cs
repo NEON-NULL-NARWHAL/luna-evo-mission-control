@@ -14,7 +14,9 @@ public enum SettingKind
     MultilineText,
     Enum,
     StringList,
-    /// <summary>A type we can't edit yet (e.g. lists of objects in LMPModControl.xml). Shown read-only.</summary>
+    /// <summary>A list of small records, e.g. LMPModControl.xml's plugin lists (DllFile: Text, Link, FilePath, Sha).</summary>
+    ObjectList,
+    /// <summary>A type we can't edit yet. Shown read-only.</summary>
     Unsupported,
 }
 
@@ -28,7 +30,14 @@ public sealed record SettingDefinition(
     IReadOnlyList<string> EnumValues,
     decimal? Min,
     decimal? Max,
-    int? MaxLength);
+    int? MaxLength)
+{
+    /// <summary>For <see cref="SettingKind.ObjectList"/>: the XML element of each item (the record's type name, e.g. "DllFile").</summary>
+    public string? ItemElement { get; init; }
+
+    /// <summary>For <see cref="SettingKind.ObjectList"/>: the item's fields in declaration order.</summary>
+    public IReadOnlyList<string> ItemFields { get; init; } = [];
+}
 
 /// <summary>One config file and the settings it holds, in declaration order.</summary>
 public sealed record SettingsFileSchema(

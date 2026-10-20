@@ -25,6 +25,10 @@ Every source file starts with a short header pointing back here, like this:
 | 07 | [LMP gotchas](07-LMP-Gotchas.md) | avoid the traps we already fell into. **Read before touching XML or server control.** |
 | 08 | [Recipes](08-Recipes.md) | follow step-by-step guides for common changes |
 | 09 | [How it was built](09-How-It-Was-Built.md) | learn how the app was written with AI, and how to keep working that way |
+| 10 | [Setup wizard and LMP updates](10-Setup-and-Updates.md) | change how servers are downloaded, installed, configured the first time, or updated |
+| 11 | [Live players](11-Live-Players.md) | work on the Players page or LMP's website JSON |
+| 12 | [Mod control from GameData](12-Mod-Control-From-GameData.md) | change the GameData scan, the KSP `.cfg` parser or the plugin-list editors |
+| 13 | [Automation, Discord, Connect, Profiles](13-Automation.md) | change auto/daily restarts, Universe backups, profiles, Discord, the Connect page, or review-before-save |
 
 ## 🔣 Legend
 
@@ -61,7 +65,8 @@ Symbols used in the map below and throughout these chapters:
 | | File | What it is |
 |:---:|---|---|
 | ⭐🧠 | `ConfigSession.cs` | **The heart.** Schema plus loaded files: get/set values, validate, track unsaved changes, save with backup. |
-| 🧠 | `AppSettings.cs` | LUNA EVO's own preferences (accent colour, theme, backups to keep...) and their JSON file. |
+| 🧠 | `AppSettings.cs` | LUNA EVO's own preferences (accent colour, theme, backups to keep, automation, Discord, updates...) and their JSON file. |
+| 🧠 | `Http.cs` | The one `HttpClient` the app uses (GitHub, LMP's website, Discord). Tests set `Http.Override`. |
 | 🧠🔌 | `ServerProcess.cs` | Finds a running `Server.exe` from a folder. |
 | **Schema/** | | *What settings exist* |
 | ⭐🧠🔌 | `Schema/LmpSchemaLoader.cs` | Reflects over the server's `Server.dll` to list files and settings, with types, defaults, descriptions and presets. |
@@ -79,6 +84,22 @@ Symbols used in the map below and throughout these chapters:
 | 🧠 | `Server/LogLine.cs` | Parses `[HH:mm:ss][Type]: message` into time, kind and message. |
 | 🧠🔌 | `Server/LogFiles.cs` | Lists and reads `logs/lmpserver_*.log`; `LogTail` follows the newest one. |
 | 🧠🔌 | `Server/DotNetRuntime.cs` | Checks the .NET runtime `Server.exe` needs is installed. |
+| **Setup/** | | *Getting and updating LMP* ([10](10-Setup-and-Updates.md)) |
+| 🧠🔌 | `Setup/LmpReleases.cs` | LMP's GitHub releases, picking the server zip; version parsing. |
+| ⭐🧠🔌⚠️ | `Setup/ServerInstaller.cs` | Download + install/update a server zip; never touches Config/Universe/logs/Plugins; backs up old binaries. |
+| 🧠🔌 | `Setup/ConfigGenerator.cs` | Writes a new server's config from the schema and the wizard's choices. |
+| 🧠 | `Setup/RuntimeInstaller.cs` | Installs the .NET runtime with winget. |
+| **Live/** | | *What's happening on the server* ([11](11-Live-Players.md)) |
+| 🧠🔌 | `Live/ServerInfoClient.cs` | Reads LMP's website JSON: players, vessels, subspaces; join/leave diff. |
+| **Mods/** | | *Mod control from a KSP install* ([12](12-Mod-Control-From-GameData.md)) |
+| 🧠 | `Mods/KspConfigParser.cs` | Reads KSP `.cfg` ConfigNode files. |
+| ⭐🧠🔌⚠️ | `Mods/GameDataScanner.cs` | Parts, resources, plugins (SHA-256) and expansions from GameData, like LMP's client. |
+| **Ops/** | | *Keeping it running* ([13](13-Automation.md)) |
+| 🧠 | `Ops/Restarts.cs` | Crash-restart policy (gives up after 3 in 10 min) and daily restart times. |
+| 🧠 | `Ops/DiscordNotifier.cs` | Posts to a Discord webhook. |
+| 🧠🔌 | `Ops/NetworkHelper.cs` | Local addresses, LMP's detected public address, Windows Firewall rule, port check. |
+| 🧠 | `Ops/ProfileStore.cs` | Named copies of the whole config. |
+| 🧠🔌 | `Ops/UniverseBackups.cs` | Zips and restores the Universe. |
 
 ### `src/LunaEvo.ConfigManager/`: the app 🖥️
 
@@ -91,6 +112,12 @@ Symbols used in the map below and throughout these chapters:
 | ⭐🖥️ | `MainWindow.cs` | The shell: navigation rail, pages, status area, save, close prompts. |
 | 🖥️ | `SettingRow.cs` | One generated row; picks the editor for the setting's type. |
 | 🖥️ | `ListEditor.cs` | Searchable list editor for mod control lists. |
+| 🖥️ | `ObjectListEditor.cs` | Row editor for LMP's DllFile / MandatoryPart lists. |
+| 🖥️🔌 | `ModImportPanel.cs` | "Import from GameData" on the Mod Control page. |
+| ⭐🖥️🔌 | `SetupWizard.cs` | "Set up a new server": download, configure, open. |
+| 🖥️🔌 | `PlayersPage.cs` | Live players and vessels, Kick/Ban. |
+| 🖥️ | `ConnectPage.cs` | Addresses to share, firewall, reachability. |
+| 🖥️ | `ProfilesPage.cs` | Config profiles and Universe backups. |
 | ⭐🖥️🔌 | `ServerPage.cs` | The Server Console page. |
 | 🖥️ | `SettingsPage.cs` | The LUNA EVO Settings page (colour wheel, behaviour, about). |
 | 🎨 | `ThemeManager.cs` | Generates the palette from one accent colour and applies it live. |
@@ -103,12 +130,13 @@ Symbols used in the map below and throughout these chapters:
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (48 tests). |
-| 🧪🖥️ | `LunaEvo.ConfigManager.Tests/` | Headless UI tests: the real window, clicked through like a user (37 tests). |
+| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (78 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪🖥️ | `LunaEvo.ConfigManager.Tests/` | Headless UI tests: the real window, clicked through like a user (51 tests). |
 | ⭐🧪 | `LunaEvo.ConfigManager.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |
 | 🧪🔌 | `Fixtures/LMPServer/` | LMP 0.29.2's `Server.dll` and dependencies (MIT), plus synthetic sample logs. |
+| 🧪 | `Fixtures/Web/serverinfo.json` | A synthetic copy of LMP's website JSON (players, vessels, subspaces). |
 
 ## 📚 Glossary
 
@@ -123,3 +151,7 @@ Symbols used in the map below and throughout these chapters:
 | **Inactive** | A setting that has no effect right now (e.g. Red while rainbow is on); shown greyed out. |
 | **Fixture** | Test input data checked into the repo (`tests/Fixtures`). |
 | **Headless** | Running the real Avalonia UI without a screen, for tests. |
+| **Universe** | `<server>/Universe`: the game state (vessels, kerbals, scenarios). |
+| **Webhook** | A secret Discord URL that lets an app post into one channel. |
+| **GameData** | KSP's mod folder; every mod lives in a subfolder of it. |
+| **ModuleManager (MM)** | A KSP mod that patches other mods' `.cfg` files at load time (`@PART[...]`). |

@@ -12,7 +12,9 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using LunaEvo.ConfigManager.Core;
+using LunaEvo.ConfigManager.Core.Ops;
 using LunaEvo.ConfigManager.Core.Schema;
+using LunaEvo.ConfigManager.Core.Setup;
 using LunaEvo.ConfigManager.Core.Validation;
 
 namespace LunaEvo.ConfigManager;
@@ -24,6 +26,9 @@ namespace LunaEvo.ConfigManager;
 public sealed class MainWindow : Window
 {
     internal const string ConsolePage = "console";
+    internal const string PlayersKey = "players";
+    internal const string ConnectKey = "connect";
+    internal const string ProfilesKey = "profiles";
     internal const string SettingsKey = "settings";
 
     // Rail sections for config files; files a newer LMP adds land in "Other".
@@ -45,11 +50,17 @@ public sealed class MainWindow : Window
     private readonly Button _save = Ui.Button("Save", "fab", "IconSave").WithId("save");
     private readonly List<SettingRow> _rows = [];
     private readonly List<ListEditor> _lists = [];
+    private readonly List<ObjectListEditor> _objectLists = [];
+    private readonly TextBlock _updateText = Ui.Text("", "sublabel", "modified").WithId("status/update");
     private readonly Dictionary<string, FileView> _files = [];
     private readonly Dictionary<string, (Button Nav, Control Page)> _pages = [];
     private readonly SettingsPage _settingsPage;
     private ConfigSession? _session;
     private ServerPage? _server;
+    private PlayersPage? _players;
+    private ConnectPage? _connect;
+    private ProfilesPage? _profilesPage;
+    private ModImportPanel? _modImport;
     private string? _current;
     private bool _closeConfirmed;
 
@@ -92,6 +103,7 @@ public sealed class MainWindow : Window
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(8, 0), Children = { _serverDot, _serverText } },
                 new Border { Margin = new Thickness(8, 0), Child = _issuesText },
                 new Border { Margin = new Thickness(8, 0), Child = _saveText },
+                new Border { Margin = new Thickness(8, 0), Child = _updateText },
                 open,
                 _save,
             },
@@ -121,7 +133,14 @@ public sealed class MainWindow : Window
                 await SaveAsync();
         };
         Closing += OnClosing;
-        Closed += (_, _) => _server?.Dispose();
+        Closed += (_, _) =>
+        {
+            _server?.Dispose();
+            _players?.Dispose();
+        };
+        _updateText.IsVisible = false;
+        _updateText.PointerPressed += (_, _) => Navigate(SettingsKey);
+        _updateText.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
 
         _settingsPage = new SettingsPage(this);
 
@@ -140,8 +159,24 @@ public sealed class MainWindow : Window
 
     internal ConfigSession? Session => _session;
     internal ServerPage? Server => _server;
+    internal PlayersPage? Players => _players;
+    internal ConnectPage? Connect => _connect;
+    internal ProfilesPage? Profiles => _profilesPage;
+    internal ModImportPanel? ModImport => _modImport;
+    internal SetupWizard? Wizard { get; private set; }
+
+    /// <summary>The newest LMP release found by the update check, if it's newer than the open server.</summary>
+    internal LmpRelease? AvailableUpdate { get; private set; }
     internal AppSettings Settings { get; private set; }
     internal string SettingsPath { get; }
+
+    /// <summary>Posts to the Discord webhook if one is set. Fire and forget: a failed post never bothers the user.</summary>
+    internal void Notify(string message)
+    {
+        var url = Settings.DiscordWebhookUrl;
+        if (DiscordNotifier.IsWebhookUrl(url))
+            _ = new DiscordNotifier(Http.Client).SendAsync(url, message);
+    }
 
     /// <summary>Changes, saves and applies LUNA EVO's own settings.</summary>
     internal void UpdateSettings(Func<AppSettings, AppSettings> change)
@@ -164,7 +199,19 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>Opens an LMP server folder: reads its schema and configs, then rebuilds every page. Shows the welcome page on failure.</summary>
-    internal void Open(string serverDirectory, string? configDirectory)
+    internal void Open(string serverDirectory, string? configDirectory) => Open(serverDirectory, configDirectory, keepServerPage: false);
+
+    /// <summary>Re-reads the config from disk (after switching profile), keeping the Server Console and a running server as they are.</summary>
+    internal void Reopen()
+    {
+        if (_session != null)
+            Open(_session.ServerDirectory, _session.ConfigDirectory, keepServerPage: true);
+    }
+
+    /// <summary>Re-validates and redraws everything after an edit made outside a setting row.</summary>
+    internal void RefreshAll() => Refresh();
+
+    private void Open(string serverDirectory, string? configDirectory, bool keepServerPage)
     {
         ConfigSession session;
         try
@@ -177,16 +224,70 @@ public sealed class MainWindow : Window
             return;
         }
 
-        _server?.Dispose();
+        var current = _current;
         _session = session;
-        _server = new ServerPage(this, session.ServerDirectory);
+        if (!keepServerPage || _server == null)
+        {
+            _server?.Dispose();
+            _server = new ServerPage(this, session.ServerDirectory);
+            _players?.Dispose();
+            _players = new PlayersPage(this);
+            _connect = new ConnectPage(this);
+            _profilesPage = new ProfilesPage(this);
+        }
         UpdateSettings(s => s with { LastServerDirectory = session.ServerDirectory });
 
         _saveText.Text = $"LMP {session.Schema.ServerVersion}";
         ToolTip.SetTip(_saveText, $"Server: {session.ServerDirectory}\nConfig: {session.ConfigDirectory}");
         BuildPages(session);
+        if (keepServerPage && current != null)
+            Navigate(current);
         _settingsPage.Refresh();
         Refresh();
+        if (!keepServerPage)
+            _ = CheckForUpdateAsync();
+    }
+
+    /// <summary>Looks for a newer LMP on GitHub (if enabled in settings) and shows a note in the rail.</summary>
+    internal async Task CheckForUpdateAsync(bool force = false)
+    {
+        AvailableUpdate = null;
+        _updateText.IsVisible = false;
+        if (_session == null || (!force && !Settings.CheckForLmpUpdates))
+            return;
+        try
+        {
+            var latest = await new LmpReleaseFeed(Http.Client).LatestAsync(Settings.IncludeLmpPrereleases);
+            var installed = LmpVersion.OfServer(_session.ServerDirectory);
+            if (latest?.Version != null && installed != null && latest.Version > installed)
+            {
+                AvailableUpdate = latest;
+                _updateText.Text = $"LMP {latest.Tag} is available";
+                _updateText.IsVisible = true;
+            }
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            // Offline or GitHub is down: just don't show an update.
+        }
+        _settingsPage.Refresh();
+    }
+
+    /// <summary>
+    /// Updates the LMP server to a release: the server must be stopped. Old binaries are zipped into
+    /// LunaEvo/ServerBackups; Config, Universe, logs and Plugins aren't touched. Returns a message for the user.
+    /// </summary>
+    internal async Task<string> UpdateServerAsync(LmpRelease release, IProgress<double>? progress = null)
+    {
+        if (_session is not { } session || release.ServerAsset() is not { } asset)
+            return "Nothing to update.";
+        if (_server?.IsRunning == true)
+            return "Stop the server first, then update.";
+        var zip = await new ServerInstaller(Http.Client).DownloadAsync(asset, progress);
+        var result = await Task.Run(() => ServerInstaller.Install(zip, session.ServerDirectory));
+        Open(session.ServerDirectory, session.ConfigDirectory); // new Server.dll, maybe new settings
+        Navigate(SettingsKey); // back to where the user pressed Update, to see the result
+        return $"Updated to LMP {release.Tag}. The previous version is saved in {result.BinariesBackup}.";
     }
 
     /// <summary>Shows a page, as clicking it in the rail does: a file name, <see cref="ConsolePage"/> or <see cref="SettingsKey"/>.</summary>
@@ -199,8 +300,21 @@ public sealed class MainWindow : Window
         page.Nav.Classes.Add("selected");
         _current = key;
         _page.Content = page.Page;
-        if (key == SettingsKey)
-            _settingsPage.Refresh();
+        switch (key)
+        {
+            case SettingsKey:
+                _settingsPage.Refresh();
+                break;
+            case ConnectKey:
+                _connect?.Refresh();
+                break;
+            case ProfilesKey:
+                _profilesPage?.Refresh();
+                break;
+            case PlayersKey:
+                _ = _players?.PollAsync();
+                break;
+        }
     }
 
     /// <summary>Called by the server page whenever the server starts, stops or ticks.</summary>
@@ -213,11 +327,20 @@ public sealed class MainWindow : Window
         _serverText.Text = _server?.StatusText ?? "No server open";
     }
 
+    /// <summary>Back to the welcome page (from the setup wizard's Back button).</summary>
+    internal void ShowWelcomePage() => ShowWelcome(null);
+
     private void ShowWelcome(string? error)
     {
         _server?.Dispose();
         _server = null;
+        _players?.Dispose();
+        _players = null;
+        _connect = null;
+        _profilesPage = null;
+        _modImport = null;
         _session = null;
+        _updateText.IsVisible = false;
         _nav.Children.Clear();
         _pages.Clear();
         _files.Clear();
@@ -227,7 +350,11 @@ public sealed class MainWindow : Window
         _issuesText.Text = "";
         AddLunaEvoSection();
 
-        var open = Ui.Button("Open server folder", "fab", "IconFolder");
+        var setup = Ui.Button("Set up a new server", "fab", "IconPlay").WithId("welcome/setup");
+        setup.HorizontalAlignment = HorizontalAlignment.Left;
+        setup.Padding = new Thickness(22, 12);
+        setup.Click += async (_, _) => await ShowWizardAsync();
+        var open = Ui.Button("Open an existing server folder", "text", "IconFolder").WithId("welcome/open");
         open.HorizontalAlignment = HorizontalAlignment.Left;
         open.Click += async (_, _) => await PickServerFolderAsync();
         var panel = new StackPanel
@@ -235,12 +362,13 @@ public sealed class MainWindow : Window
             Spacing = 12,
             Margin = new Thickness(40),
             VerticalAlignment = VerticalAlignment.Center,
-            MaxWidth = 560,
+            MaxWidth = 600,
             Children =
             {
-                Ui.Text("Open your LMP server", "headline"),
-                Ui.Text("Pick the folder that contains Server.exe. The settings are read from that server's own Server.dll, " +
-                        "so this always matches the LMP version you run.", "sublabel"),
+                Ui.Text("Welcome to LUNA EVO", "headline"),
+                Ui.Text("New to hosting? LUNA EVO can download Luna Multiplayer's server and set it up from a few questions. " +
+                        "Already have one? Open the folder that contains Server.exe.", "sublabel"),
+                setup,
                 open,
             },
         };
@@ -250,11 +378,20 @@ public sealed class MainWindow : Window
         _settingsPage.Refresh();
     }
 
+    /// <summary>Shows the setup wizard and loads LMP's releases.</summary>
+    internal async Task ShowWizardAsync()
+    {
+        Wizard = new SetupWizard(this);
+        _page.Content = Wizard.View;
+        await Wizard.LoadReleasesAsync();
+    }
+
     private void BuildPages(ConfigSession session)
     {
         _nav.Children.Clear();
         _rows.Clear();
         _lists.Clear();
+        _objectLists.Clear();
         _files.Clear();
         _pages.Clear();
         _current = null;
@@ -267,6 +404,9 @@ public sealed class MainWindow : Window
         Grid.SetColumn(_consoleDot, 1);
         consoleContent.Children.Add(_consoleDot);
         AddNav(ConsolePage, consoleContent, _server!.View);
+        AddNav(PlayersKey, new TextBlock { Text = "Players" }, _players!.View);
+        AddNav(ConnectKey, new TextBlock { Text = "Connect" }, _connect!.View);
+        AddNav(ProfilesKey, new TextBlock { Text = "Profiles & Backups" }, _profilesPage!.View);
 
         var known = Sections.SelectMany(s => s.Files).ToHashSet();
         var sections = Sections
@@ -342,7 +482,13 @@ public sealed class MainWindow : Window
             var (group, body, _) = Ui.Group(file.FileName);
             foreach (var setting in file.Settings)
             {
-                if (setting.Kind == SettingKind.StringList)
+                if (setting.Kind == SettingKind.ObjectList)
+                {
+                    var editor = new ObjectListEditor(session, file.FileName, setting, Refresh);
+                    _objectLists.Add(editor);
+                    page.Children.Add(editor.View);
+                }
+                else if (setting.Kind == SettingKind.StringList)
                 {
                     var list = new ListEditor(session, file.FileName, setting, Refresh);
                     _lists.Add(list);
@@ -357,6 +503,11 @@ public sealed class MainWindow : Window
             }
             if (body.Children.Count > 0)
                 page.Children.Insert(3, group);
+            if (file.FileName == "LMPModControl.xml")
+            {
+                _modImport = new ModImportPanel(this, session, Refresh);
+                page.Children.Insert(3, _modImport.View);
+            }
         }
 
         AddNav(file.FileName, navContent, new ScrollViewer { Content = page });
@@ -372,6 +523,8 @@ public sealed class MainWindow : Window
         foreach (var row in _rows)
             row.Refresh(issues);
         foreach (var list in _lists)
+            list.Refresh();
+        foreach (var list in _objectLists)
             list.Refresh();
 
         foreach (var (fileName, view) in _files)
@@ -429,6 +582,9 @@ public sealed class MainWindow : Window
                 "Save"))
             return false;
 
+        if (Settings.ReviewChangesBeforeSave && !await Dialogs.ConfirmAsync(this, "Review changes", DescribeChanges(_session.GetChanges()), "Save"))
+            return false;
+
         try
         {
             var backup = _session.Save(Settings.BackupsToKeep);
@@ -442,6 +598,25 @@ public sealed class MainWindow : Window
         }
         Refresh();
         return true;
+    }
+
+    /// <summary>"Server Name: Luna Server → LUNA EVO" lines for the review dialog; long lists are summarised.</summary>
+    internal static string DescribeChanges(IReadOnlyList<Change> changes)
+    {
+        string Value(string v) => v.Length == 0 ? "(empty)" : v.Length > 40 ? v[..40] + "…" : v;
+        var lines = changes.Take(25).Select(c =>
+        {
+            var name = $"{Ui.Humanize(c.FileName.Replace("Settings.xml", "").Replace(".xml", ""))} › {Ui.Humanize(c.Setting)}";
+            if (c.Kind is SettingKind.StringList or SettingKind.ObjectList)
+            {
+                var before = c.Before.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+                var after = c.After.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+                return $"• {name}: {after.Except(before).Count()} added, {before.Except(after).Count()} removed";
+            }
+            return $"• {name}: {Value(c.Before)} → {Value(c.After)}";
+        });
+        var more = changes.Count > 25 ? $"\n...and {changes.Count - 25} more" : "";
+        return $"Save these {changes.Count} change(s)? A backup of the current files is made first.\n\n{string.Join("\n", lines)}{more}";
     }
 
     private async Task PickServerFolderAsync()

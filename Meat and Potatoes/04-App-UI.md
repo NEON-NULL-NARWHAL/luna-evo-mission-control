@@ -17,6 +17,8 @@ is on), else the welcome page.
 │ LUNA EVO               ││ Headline                               │
 │ Control                ││ path                                   │
 │   Server Console   ●   ││ [banner: file-level warnings]          │
+│   Players / Connect    ││                                        │
+│   Profiles & Backups   ││                                        │
 │ Game / Network / ...   ││ ┌ group: FileName.xml ────────────────┐ │
 │   General      ② ●     ││ │ Label            [editor]   ↺       │ │
 │   ...                  ││ │ description                         │ │
@@ -43,7 +45,12 @@ is on), else the welcome page.
 | `SettingRow` | One setting row | Editor by `SettingKind`. Number boxes have **no Min/Max** on purpose: the control would silently clamp a bad value from the file instead of flagging it. Passwords use `PasswordChar` plus a reveal button. Descriptions that only repeat the name are hidden. |
 | `ListEditor` | One list group (mod control) | Items are `Entry(index, text, isDuplicate)` so identical names can be selected one at a time. |
 | `ServerPage` | The Server Console | See [03](03-Server-Control.md). |
-| `SettingsPage` | LUNA EVO Settings | Colour wheel (`ColorView`, ring shape), presets, theme, behaviour, about, folders, links. |
+| `SettingsPage` | LUNA EVO Settings | Colour wheel (`ColorView`, ring shape), presets, theme, behaviour, automation, Discord, LMP updates, about, folders, links. |
+| `ObjectListEditor` | One record list (plugins, mandatory parts) | See [12](12-Mod-Control-From-GameData.md). |
+| `ModImportPanel` | Import from GameData | See [12](12-Mod-Control-From-GameData.md). |
+| `SetupWizard` | Set up a new server | Shown from the welcome page. See [10](10-Setup-and-Updates.md). |
+| `PlayersPage` | Players | See [11](11-Live-Players.md). |
+| `ConnectPage` / `ProfilesPage` | Connect / Profiles & Backups | See [13](13-Automation.md). |
 
 Every interactive control gets an **AutomationId** via `.WithId(...)`, e.g. `GeneralSettings.xml/ServerName`,
 `nav/console`, `console/start`, `settings/preset/Kerbin blue`. The UI tests and Windows UI Automation find controls by

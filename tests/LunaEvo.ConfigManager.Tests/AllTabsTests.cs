@@ -55,6 +55,10 @@ public class AllTabsTests
                     var items = ui.Find<ListBox>(id + "/items").ItemsSource!.Cast<object>().Count();
                     Assert.Equal(ui.Session.GetList(fileName, setting.Name).Count, items);
                     break;
+                case SettingKind.ObjectList:
+                    Assert.NotNull(ui.Find<Control>(id));
+                    Assert.NotNull(ui.Find<Button>(id + "/add"));
+                    break;
                 default:
                     Assert.NotNull(ui.Find<TextBlock>(id));
                     break;
@@ -98,7 +102,7 @@ public class AllTabsTests
         }
 
         // Everything except greyed-out, list and read-only settings.
-        var editable = ui.Session.Schema.Files.Sum(f => f.Settings.Count(s => s.Kind is not (SettingKind.StringList or SettingKind.Unsupported)));
+        var editable = ui.Session.Schema.Files.Sum(f => f.Settings.Count(s => s.Kind is not (SettingKind.StringList or SettingKind.ObjectList or SettingKind.Unsupported)));
         Assert.Equal(editable - greyedOut, expected.Count);
         Assert.DoesNotContain(ui.Session.Validate(), i => i.Severity == Severity.Error);
         Assert.Equal(ui.Session.Schema.Files.Count, ui.Session.DirtyFiles.Count);

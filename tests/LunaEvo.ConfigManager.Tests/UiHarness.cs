@@ -27,23 +27,28 @@ public static class TestApp
 internal sealed class UiHarness : IDisposable
 {
     /// <param name="fakeServer">Use a server folder whose "Server.exe" is the FakeLmpServer, so it can really be started.</param>
-    public UiHarness(bool fakeServer = false)
+    /// <param name="openServer">False starts on the welcome page with nothing open (for the setup wizard).</param>
+    public UiHarness(bool fakeServer = false, bool openServer = true)
     {
         ServerDirectory = fakeServer ? CreateFakeServerFolder() : TestPaths.LmpServer;
         ConfigDirectory = TestPaths.CopyConfigs();
         SettingsPath = Path.Combine(Path.GetTempPath(), "LunaEvoTests", Guid.NewGuid().ToString("N"), "settings.json");
         ServerPage.ExecutableName = fakeServer ? FakeServer.Executable : "Server.exe";
+        // No real network in tests: GitHub, LMP's website and Discord all go to this fake (unknown URLs get 404).
+        Web = new FakeHttp();
+        Core.Http.Override = Web.Client;
         Dialogs.Responder = (title, _, buttons) =>
         {
             DialogsShown.Add(title);
             return Answer?.Invoke(title, buttons) ?? (ConfirmDialogs ? 0 : buttons.Count - 1);
         };
-        Window = new MainWindow(new StartupOptions(ServerDirectory, ConfigDirectory, SettingsPath));
+        Window = new MainWindow(openServer ? new StartupOptions(ServerDirectory, ConfigDirectory, SettingsPath) : new StartupOptions(null, null, SettingsPath));
         Window.Show();
         Pump();
     }
 
     public MainWindow Window { get; }
+    public FakeHttp Web { get; }
     public string ServerDirectory { get; }
     public string ConfigDirectory { get; }
     public string SettingsPath { get; }
@@ -79,6 +84,16 @@ internal sealed class UiHarness : IDisposable
         }
     }
 
+    /// <summary>
+    /// Waits for an async UI method while pumping the dispatcher. Never block on .Result/.GetResult() in a UI test:
+    /// the awaited code needs the UI thread to continue, so blocking it deadlocks.
+    /// </summary>
+    public void Await(Task task, string what = "task", int seconds = 30)
+    {
+        WaitFor(() => task.IsCompleted, what, seconds);
+        task.GetAwaiter().GetResult(); // rethrows if it failed
+    }
+
     /// <summary>Clicks a page in the navigation rail.</summary>
     public void OpenTab(string key) => Click(Find<Button>("nav/" + key));
 
@@ -106,7 +121,11 @@ internal sealed class UiHarness : IDisposable
         Window.Close();
         Pump();
         Dialogs.Responder = null;
+        Dialogs.PromptResponder = null;
+        Core.Http.Override = null;
         ServerPage.ExecutableName = "Server.exe";
+        ServerPage.ExtraArguments = [];
+        ServerPage.RestartDelay = Core.Ops.CrashRestartPolicy.Delay;
     }
 
     /// <summary>LMP's real Server.dll (for the settings schema) and logs, plus the fake server exe to run.</summary>

@@ -15,6 +15,49 @@ internal static class Dialogs
     /// <summary>Tests set this to answer dialogs instead of showing them: (title, message, buttons) → chosen index.</summary>
     internal static Func<string, string, IReadOnlyList<string>, int>? Responder { get; set; }
 
+    /// <summary>Tests set this to answer text prompts: (title, suggested text) → typed text, or null for Cancel.</summary>
+    internal static Func<string, string, string?>? PromptResponder { get; set; }
+
+    /// <summary>Asks for a line of text. Returns null if cancelled.</summary>
+    public static async Task<string?> PromptAsync(Window owner, string title, string message, string initial = "", string confirmText = "OK")
+    {
+        if (PromptResponder != null)
+            return PromptResponder(title, initial);
+
+        var dialog = new Window
+        {
+            Title = title,
+            Icon = MainWindow.AppIcon,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            MaxWidth = 600,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        var box = new TextBox { Text = initial, Width = 420 };
+        var confirm = Ui.Button(confirmText, "fab");
+        confirm.IsDefault = true;
+        confirm.Padding = new Thickness(18, 10);
+        confirm.Click += (_, _) => dialog.Close(box.Text ?? "");
+        var cancel = Ui.Button("Cancel", "text");
+        cancel.IsCancel = true;
+        cancel.Click += (_, _) => dialog.Close(null);
+
+        dialog.Content = new StackPanel
+        {
+            Margin = new Thickness(24),
+            Spacing = 14,
+            Children =
+            {
+                Ui.Text(title, "headline"),
+                Ui.Text(message, "label"),
+                box,
+                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Children = { confirm, cancel } },
+            },
+        };
+        dialog.Opened += (_, _) => box.Focus();
+        return await dialog.ShowDialog<string?>(owner);
+    }
+
     /// <summary>Two-button question. True if the user picked <paramref name="confirmText"/>.</summary>
     public static async Task<bool> ConfirmAsync(Window owner, string title, string message, string confirmText) =>
         await ChooseAsync(owner, title, message, confirmText, "Cancel") == 0;

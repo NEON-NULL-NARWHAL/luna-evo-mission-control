@@ -92,6 +92,51 @@ public sealed class ConfigFile
     }
 
     /// <summary>The whole file as text, exactly as it will be saved.</summary>
+    /// <summary>The items of an object list (e.g. MandatoryPlugins), each as field name → value. Null if the element is missing.</summary>
+    public IReadOnlyList<IReadOnlyDictionary<string, string>>? GetObjectList(string name) =>
+        Root.Element(name)?.Elements()
+            .Select(item => (IReadOnlyDictionary<string, string>)item.Elements()
+                .GroupBy(e => e.Name.LocalName).ToDictionary(g => g.Key, g => g.First().Value))
+            .ToList();
+
+    /// <summary>Replaces an object list, writing each item as &lt;ItemElement&gt; with one child per field, LMP style.</summary>
+    public void SetObjectList(string name, string itemElement, IReadOnlyList<string> fields,
+        IEnumerable<IReadOnlyDictionary<string, string>> items, string? comment = null)
+    {
+        var element = Root.Element(name) ?? AddElement(name, comment);
+        var indent = IndentOf(element);
+        element.RemoveNodes();
+
+        var rows = items.ToList();
+        if (rows.Count == 0)
+        {
+            element.Value = "";
+            return;
+        }
+
+        foreach (var row in rows)
+        {
+            var item = new XElement(itemElement);
+            foreach (var field in fields)
+                item.Add(new XText("\n" + indent + "    "), new XElement(field, row.TryGetValue(field, out var value) ? value : ""));
+            item.Add(new XText("\n" + indent + "  "));
+            element.Add(new XText("\n" + indent + "  "), item);
+        }
+        element.Add(new XText("\n" + indent));
+    }
+
+    /// <summary>
+    /// A new, empty LMP-style file (UTF-8, CRLF, XmlSerializer's namespaces), ready for SetValue/SetList to fill.
+    /// Used to create a server's first config without starting it with LMP's defaults.
+    /// </summary>
+    public static ConfigFile CreateNew(string path, string rootElement)
+    {
+        var text = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n" +
+                   $"<{rootElement} xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\r\n" +
+                   $"</{rootElement}>";
+        return new ConfigFile(path, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), text);
+    }
+
     public string Render()
     {
         // XmlWriter turns \n into the platform newline, so normalise before applying the file's own.

@@ -32,6 +32,20 @@ Things about LMP (0.29.2, and master at commit `b3b9efce`) that are surprising a
 | 16 | 0.29.x needs the **.NET 6** runtime; without it `Server.exe` flashes an error and closes. | Looks like "nothing happens". | `DotNetRuntime.Check` before Start. |
 | 17 | It logs **"Detected NAT addresses: <your public IP>"** at Debug level, even with the master server off. | Screenshots or shared logs can leak your IP. | Set LogLevel to Normal for screenshots; the fixture logs are synthetic. |
 
+## Releases, website, mods (0.3)
+
+| # | Gotcha | Consequence | Where handled |
+|---|---|---|---|
+| 18 | LMP's defaults list the server publicly and turn on UPnP. | "Start once to generate the config" exposes a new server before the user chooses. | `ConfigGenerator` writes the config first. |
+| 19 | Release zip names changed in 0.30 (`Server-Release.zip` → `Server-<rid>-Release.zip`), and 0.30's are self-contained. | Hard-coding one name breaks updates. | `LmpRelease.ServerAsset`. |
+| 20 | GitHub's API rejects requests with no User-Agent. | 403s. | `Http` sets one. |
+| 21 | The website JSON is an **array** holding one object, not an object. | Naive parsing fails. | `ServerInfoClient.Parse` handles both. |
+| 22 | LMP's stock part list contains **both** `Decoupler_0` and `Decoupler.0`, and some retired names (`mark3Cockpit`). | A scan of a real install "misses" 15 of LMP's 531 stock names, correctly. | Documented; the scan follows KSP (dots). |
+| 23 | ModuleManager patches aren't in the `.cfg` files as KSP sees them. | `+PART` copies and `!PART` deletions are missed by a file scan. | Documented limitation; LMP's in-game generator sees patches. |
+| 24 | Plugin `FilePath`s are lowercase, relative to GameData, with `/`; hashes are `BitConverter.ToString(SHA256)`. | Any other format never matches on the client. | `GameDataScanner`. |
+| 25 | `Environment.ProcessPath` in a dev build is an exe that needs its DLLs next to it. | Copying it alone into a server folder makes a broken app. | `SetupWizard` only copies the published single-file exe. |
+| 26 | Avalonia controls can only be touched on the UI thread. | Reading a toggle inside `Task.Run` threw. | Read values first, then `Task.Run`. |
+
 ## Our server
 
 `ModControl` is **false on purpose** (we run modded). Don't flag it as a problem.

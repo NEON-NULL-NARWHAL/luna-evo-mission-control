@@ -36,6 +36,12 @@ Real mistakes, all made by the AI and caught by the process, not by luck:
 | Screenshot review | Reverting a value left the file marked as changed. | A file is dirty only while a setting really differs. |
 | Screenshot review | Times mixed UTC (LMP) and local (ours). | Ours are UTC too. |
 | Safety review | Real logs contained IP addresses and player names. | Synthetic fixture logs; screenshots taken from a sanitized demo copy. |
+| Reading the code | A setting missing from an older file counted as "modified" forever (`null` vs `""`). | Snapshots keep `null`. |
+| UI test | The GameData import read a toggle inside `Task.Run` (Avalonia threads). | Read first, then run. |
+| UI test | After an update, the "update available" text hid the "Updated to..." result. | Results win. |
+| Hung test run | Blocking the UI thread on an async call deadlocked headless tests. | `ui.Await` pumps instead. |
+| Real install scan | Checked the part-name rule against 4,382 real `.cfg` files and LMP's stock list. | Confirmed; documented the two-spelling quirk. |
+| Real server | Started the real LMP 0.29.2 on a wizard-generated config: no errors. | (Confirmation, not a bug.) |
 
 ## Guidelines we followed (keep following them)
 

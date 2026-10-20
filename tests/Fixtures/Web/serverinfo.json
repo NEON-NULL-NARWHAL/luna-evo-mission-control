@@ -1,0 +1,107 @@
+[
+  {
+    "CurrentState": {
+      "StartTime": "2026-10-13T03:59:54",
+      "CurrentPlayers": [
+        "Jebediah",
+        "Valentina"
+      ],
+      "CurrentVessels": [
+        {
+          "Id": "0b6c9a5e-0000-4000-8000-000000000001",
+          "Name": "Kerbal X",
+          "Type": "Ship",
+          "DistanceTravelled": 1200.5,
+          "Situation": null,
+          "Lat": -0.09,
+          "Lon": -74.55,
+          "Alt": 75.2,
+          "SemiMajorAxis": 600000.0,
+          "Eccentricity": 0.0,
+          "Inclination": 0.0,
+          "ArgumentOfPeriapsis": 0.0,
+          "LongitudeOfAscendingNode": 0.0,
+          "MeanAnomaly": 0.0,
+          "Epoch": 0.0,
+          "ReferenceBody": 1
+        },
+        {
+          "Id": "0b6c9a5e-0000-4000-8000-000000000002",
+          "Name": "Mun Base Alpha",
+          "Type": "Station",
+          "DistanceTravelled": 0.0,
+          "Situation": null,
+          "Lat": 3.2,
+          "Lon": 20.1,
+          "Alt": 1500.0,
+          "SemiMajorAxis": 200000.0,
+          "Eccentricity": 0.0,
+          "Inclination": 0.0,
+          "ArgumentOfPeriapsis": 0.0,
+          "LongitudeOfAscendingNode": 0.0,
+          "MeanAnomaly": 0.0,
+          "Epoch": 0.0,
+          "ReferenceBody": 2
+        },
+        {
+          "Id": "0b6c9a5e-0000-4000-8000-000000000003",
+          "Name": "Ast. GHI-046",
+          "Type": "SpaceObject",
+          "DistanceTravelled": 0.0,
+          "Situation": null,
+          "Lat": -56.9,
+          "Lon": 146.8,
+          "Alt": 238492749.9,
+          "SemiMajorAxis": 228902176.0,
+          "Eccentricity": 0.38,
+          "Inclination": 240.6,
+          "ArgumentOfPeriapsis": 193.5,
+          "LongitudeOfAscendingNode": 300.5,
+          "MeanAnomaly": 104.9,
+          "Epoch": 1.0,
+          "ReferenceBody": 0
+        }
+      ],
+      "Subspaces": [
+        {
+          "Id": 72,
+          "Time": 681407.493142584,
+          "Creator": "Server"
+        },
+        {
+          "Id": 73,
+          "Time": 681500.25,
+          "Creator": "Valentina"
+        }
+      ],
+      "BytesUsed": 104910848
+    },
+    "GeneralSettings": {
+      "ServerName": "LUNA EVO Test Server",
+      "Description": "Luna Server Description",
+      "CountryCode": "",
+      "WebsiteText": "LMP",
+      "Website": "lunamultiplayer.com",
+      "HasPassword": false,
+      "HasAdminPassword": false,
+      "Motd": "Hi %Name%!",
+      "MaxPlayers": 20,
+      "MaxUsernameLength": 15,
+      "AutoDekessler": 0.5,
+      "AutoNuke": 0.5,
+      "Cheats": true,
+      "AllowSackKerbals": false,
+      "ConsoleIdentifier": "Server",
+      "GameDifficulty": "Normal",
+      "GameMode": "Sandbox",
+      "ModControl": false,
+      "NumberOfAsteroids": 5,
+      "NumberOfComets": 5,
+      "TerrainQuality": "High",
+      "SafetyBubbleDistance": 100.0
+    },
+    "WarpSettings": {
+      "WarpMode": "Subspace"
+    }
+  }
+]

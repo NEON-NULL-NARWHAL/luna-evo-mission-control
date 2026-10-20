@@ -15,7 +15,9 @@ using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using LunaEvo.ConfigManager.Core;
+using LunaEvo.ConfigManager.Core.Ops;
 using LunaEvo.ConfigManager.Core.Server;
+using LunaEvo.ConfigManager.Core.Setup;
 using LunaEvo.ConfigManager.Core.Validation;
 
 namespace LunaEvo.ConfigManager;
@@ -28,6 +30,9 @@ internal sealed class ServerPage : IDisposable
 {
     /// <summary>Tests swap in the fake server.</summary>
     internal static string ExecutableName { get; set; } = "Server.exe";
+
+    /// <summary>Tests pass flags to the fake server (e.g. --crash).</summary>
+    internal static string[] ExtraArguments { get; set; } = [];
 
     // From LMP 0.29.2's CommandHandler.RegisterCommands.
     private static readonly (string Command, string Help)[] QuickCommands =
@@ -69,6 +74,14 @@ internal sealed class ServerPage : IDisposable
     private LogTail? _tail;
     private int? _externalPid;
 
+    // Automation
+    private readonly CrashRestartPolicy _crashPolicy = new();
+    private DateTime? _nextDailyRestart;
+    private string? _dailyRestartSetting;
+    private bool _dailyRestartWarned;
+    private DateTime _lastUniverseBackup = DateTime.Now;
+    private bool _automaticRestartPending;
+
     private readonly TextBlock _status = Ui.Text("", "sublabel").WithId("console/status");
     private readonly Button _start = Ui.Button("Start", "fab", "IconPlay").WithId("console/start");
     private readonly Button _stop = Ui.Button("Stop", "text", "IconStop").WithId("console/stop");
@@ -95,7 +108,8 @@ internal sealed class ServerPage : IDisposable
         _serverDirectory = serverDirectory;
         _runner = new ServerRunner(serverDirectory, ExecutableName);
         _runner.LineReceived += _incoming.Enqueue;
-        _runner.StateChanged += _ => Dispatcher.UIThread.Post(UpdateState);
+        _runner.StateChanged += state => Dispatcher.UIThread.Post(() => OnStateChanged(state));
+        _runner.Exited += (code, requested) => Dispatcher.UIThread.Post(() => _ = OnExitedAsync(code, requested));
 
         _start.Click += async (_, _) => await StartAsync();
         _stop.Click += async (_, _) => await StopAsync();
@@ -149,6 +163,12 @@ internal sealed class ServerPage : IDisposable
     };
 
     internal IReadOnlyList<LogLine> VisibleLines => _visible;
+
+    /// <summary>The public address LMP detected ("Detected NAT addresses: ..."), once it has logged it. Shown on the Connect page.</summary>
+    public string? PublicAddress { get; private set; }
+
+    /// <summary>When the next scheduled daily restart is due, or null if none is set.</summary>
+    public DateTime? NextDailyRestart => _nextDailyRestart;
     /// <summary>Hard kill, no backup. Only for tests and emergencies.</summary>
     internal void Kill() => _runner.Kill();
     internal ServerState State => _runner.State;
@@ -172,13 +192,14 @@ internal sealed class ServerPage : IDisposable
     }
 
     /// <summary>Start button: offers to save unsaved changes, warns about config errors, checks the .NET runtime, then starts the server.</summary>
-    internal async Task StartAsync()
+    /// <param name="automatic">An auto-restart: no questions asked about unsaved changes or config errors.</param>
+    internal async Task StartAsync(bool automatic = false)
     {
         var session = _host.Session;
         if (session == null || _runner.IsActive || _externalPid != null)
             return;
 
-        if (session.IsDirty)
+        if (!automatic && session.IsDirty)
         {
             var choice = await Dialogs.ChooseAsync(_host, "Unsaved changes",
                 "You have config changes that aren't saved yet. LMP only reads its config when it starts.",
@@ -189,23 +210,22 @@ internal sealed class ServerPage : IDisposable
                 return;
         }
 
-        var errors = session.Validate().Count(i => i.Severity == Severity.Error);
+        var errors = automatic ? 0 : session.Validate().Count(i => i.Severity == Severity.Error);
         if (errors > 0 && !await Dialogs.ConfirmAsync(_host, "Config has problems",
                 $"{errors} setting(s) have errors, so the server may refuse to load them. Start anyway?", "Start anyway"))
             return;
 
         if (DotNetRuntime.Check(_serverDirectory) is { Installed: false } runtime)
         {
-            if (await Dialogs.ChooseAsync(_host, $".NET {runtime.Major} Runtime needed",
-                    $"This LMP server needs the .NET {runtime.Major} Runtime, which isn't installed on this PC. " +
-                    "Install it, then press Start again.", "Open download page", "Cancel") == 0)
-                Ui.Open(SettingsPage.DotNet6Download);
-            return;
+            await OfferRuntimeInstallAsync(runtime.Major);
+            if (DotNetRuntime.Check(_serverDirectory) is { Installed: false })
+                return;
         }
 
         try
         {
-            _runner.Start();
+            _lastUniverseBackup = DateTime.Now;
+            _runner.Start(ExtraArguments);
         }
         catch (Exception e) when (e is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
@@ -246,6 +266,159 @@ internal sealed class ServerPage : IDisposable
         await StartAsync();
     }
 
+    /// <summary>Offers to install a missing .NET runtime with winget, or opens the download page.</summary>
+    internal async Task OfferRuntimeInstallAsync(int major)
+    {
+        var choice = await Dialogs.ChooseAsync(_host, $".NET {major} Runtime needed",
+            $"This LMP server needs the .NET {major} Runtime, which isn't installed on this PC. " +
+            "LUNA EVO can install it with Windows' package manager (winget); Windows will ask for permission.",
+            "Install it now", "Open download page", "Cancel");
+        if (choice == 0)
+        {
+            _incoming.Enqueue(LogLine.FromManager($"Installing the .NET {major} Runtime with winget..."));
+            var ok = await RuntimeInstaller.InstallAsync(major);
+            _incoming.Enqueue(LogLine.FromManager(ok ? $".NET {major} installed." : "winget couldn't install it. Opening the download page instead."));
+            if (!ok)
+                Ui.Open(SettingsPage.DotNet6Download);
+        }
+        else if (choice == 1)
+        {
+            Ui.Open(SettingsPage.DotNet6Download);
+        }
+        UpdateState();
+    }
+
+    /// <summary>
+    /// Daily restart: warns players in chat a minute before, then does a clean restart. Runs every second from
+    /// the timer; tests call it with a chosen time.
+    /// </summary>
+    internal async Task CheckDailyRestartAsync(DateTime now)
+    {
+        var setting = _host.Settings.DailyRestartTime;
+        if (setting != _dailyRestartSetting || _nextDailyRestart == null)
+        {
+            _dailyRestartSetting = setting;
+            _nextDailyRestart = DailyRestart.Next(now, setting);
+            _dailyRestartWarned = false;
+        }
+        if (_nextDailyRestart is not { } due || _runner.State != ServerState.Running)
+            return;
+
+        if (!_dailyRestartWarned && now >= due - DailyRestart.Warning)
+        {
+            _dailyRestartWarned = true;
+            TrySend("/say Scheduled server restart in 1 minute. Back in a moment!");
+            _incoming.Enqueue(LogLine.FromManager($"Scheduled restart at {due:HH:mm}; players have been warned."));
+        }
+        if (now >= due)
+        {
+            _nextDailyRestart = DailyRestart.Next(now.AddMinutes(1), setting);
+            _dailyRestartWarned = false;
+            _incoming.Enqueue(LogLine.FromManager("Scheduled restart now."));
+            _host.Notify("🔄 Scheduled restart.");
+            await StopAsync(confirm: false);
+            await StartAsync(automatic: true);
+        }
+    }
+
+    /// <summary>
+    /// Scheduled Universe backup: asks LMP to "/backup now", waits a few seconds for it to write, then zips the
+    /// Universe folder. Runs from the timer; tests call it with a chosen time.
+    /// </summary>
+    internal async Task CheckUniverseBackupAsync(DateTime now, TimeSpan? settle = null)
+    {
+        var hours = _host.Settings.UniverseBackupHours;
+        if (hours <= 0 || _runner.State != ServerState.Running || now - _lastUniverseBackup < TimeSpan.FromHours(hours))
+            return;
+        _lastUniverseBackup = now;
+        TrySend("/backup now");
+        await Task.Delay(settle ?? TimeSpan.FromSeconds(5));
+        try
+        {
+            var backups = new UniverseBackups(_serverDirectory);
+            var keep = _host.Settings.UniverseBackupsToKeep;
+            var (snapshot, skipped) = await Task.Run(() =>
+            {
+                var result = backups.Create("scheduled");
+                backups.Prune(keep);
+                return result;
+            });
+            _incoming.Enqueue(LogLine.FromManager($"Universe backed up to {snapshot.Name}{(skipped > 0 ? $" ({skipped} busy files skipped)" : "")}."));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _incoming.Enqueue(LogLine.FromManager($"Universe backup failed: {e.Message}"));
+        }
+    }
+
+    /// <summary>Sends a console command if LUNA EVO is running the server (Kick/Ban buttons, backups). False if it isn't.</summary>
+    internal bool SendServerCommand(string command)
+    {
+        if (_runner.State is not (ServerState.Running or ServerState.Starting))
+            return false;
+        TrySend(command);
+        return true;
+    }
+
+    private void TrySend(string command)
+    {
+        try
+        {
+            _runner.SendCommand(command);
+        }
+        catch (InvalidOperationException)
+        {
+            // Not running any more; nothing to tell.
+        }
+    }
+
+    private void OnStateChanged(ServerState state)
+    {
+        if (state == ServerState.Running)
+        {
+            var name = _host.Session?.GetValue(LmpRules.General, "ServerName");
+            _host.Notify($"🚀 **{name}** is up.");
+        }
+        UpdateState();
+    }
+
+    private async Task OnExitedAsync(int code, bool requested)
+    {
+        var name = _host.Session?.GetValue(LmpRules.General, "ServerName");
+        if (requested || _automaticRestartPending)
+        {
+            if (!_automaticRestartPending)
+                _host.Notify($"🛑 **{name}** stopped.");
+            return;
+        }
+
+        _host.Notify($"💥 **{name}** stopped unexpectedly (exit code {code}).");
+        if (!_host.Settings.AutoRestartOnCrash)
+            return;
+        if (!_crashPolicy.ShouldRestart(DateTime.Now))
+        {
+            _incoming.Enqueue(LogLine.FromManager("The server keeps crashing (3 times in 10 minutes), so LUNA EVO stopped restarting it. Check the errors above."));
+            _host.Notify($"⚠️ **{name}** keeps crashing; auto-restart gave up.");
+            return;
+        }
+
+        _incoming.Enqueue(LogLine.FromManager($"The server stopped unexpectedly. Restarting in {CrashRestartPolicy.Delay.TotalSeconds:0} seconds..."));
+        _automaticRestartPending = true;
+        try
+        {
+            await Task.Delay(RestartDelay);
+            if (!_runner.IsActive)
+                await StartAsync(automatic: true);
+        }
+        finally
+        {
+            _automaticRestartPending = false;
+        }
+    }
+
+    /// <summary>Tests shorten this.</summary>
+    internal static TimeSpan RestartDelay { get; set; } = CrashRestartPolicy.Delay;
+
     /// <summary>Sends the command box's text to the server and remembers it in the Up/Down history.</summary>
     internal void SendCommand()
     {
@@ -272,6 +445,8 @@ internal sealed class ServerPage : IDisposable
         var added = false;
         while (_incoming.TryDequeue(out var line))
         {
+            if (line.Kind == LogKind.Debug && NetworkHelper.PublicAddressFrom(line) is { } address)
+                PublicAddress = address;
             _all.Add(line);
             if (Passes(line))
             {
@@ -530,6 +705,8 @@ internal sealed class ServerPage : IDisposable
         _ticks++;
         if (_ticks % 2 == 0)
             CheckExternal();
+        _ = CheckDailyRestartAsync(DateTime.Now);
+        _ = CheckUniverseBackupAsync(DateTime.Now);
         if (_runner.State == ServerState.Running)
             UpdateState(); // uptime
     }

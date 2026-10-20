@@ -23,6 +23,8 @@
   <ItemGroup>
     <Compile Include="..\LunaEvo.ConfigManager.Core.Tests\TestPaths.cs" Link="TestPaths.cs" />
     <Compile Include="..\LunaEvo.ConfigManager.Core.Tests\FakeServer.cs" Link="FakeServer.cs" />
+    <Compile Include="..\LunaEvo.ConfigManager.Core.Tests\FakeHttp.cs" Link="FakeHttp.cs" />
+    <Compile Include="..\LunaEvo.ConfigManager.Core.Tests\TestData.cs" Link="TestData.cs" />
   </ItemGroup>
 
   <ItemGroup>

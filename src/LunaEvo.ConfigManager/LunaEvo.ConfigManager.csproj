@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>LunaEvo.ConfigManager</AssemblyName>
     <Product>LUNA EVO Config Manager</Product>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>

@@ -3,7 +3,7 @@
 [← Meat and Potatoes](README.md) · Code: `tests/` 🧪
 
 ```powershell
-dotnet test                                             # everything (85 tests, ~30 s)
+dotnet test                                             # everything (129 tests, ~35 s)
 dotnet test tests/LunaEvo.ConfigManager.Core.Tests      # logic only (~3 s)
 dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 ```
@@ -15,6 +15,19 @@ dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 | `LunaEvo.ConfigManager.Core.Tests` | xUnit v2 | Round trips of all 13 real files, in-place edits, schema from `Server.dll`, comment parsing, every validation and greying rule, presets, dirty tracking, save/backup/prune, log parsing and tailing, runtime check, app settings, and the real `ServerRunner` against the fake server (clean stop, kill fallback, startup failure). |
 | `LunaEvo.ConfigManager.Tests` | xUnit v3 + Avalonia.Headless | The real `MainWindow`, without a screen: **every tab and every control** edited, saved and re-read; reset everywhere; error badges blocking save; greying across tabs; the list editor; backups; close prompts; the Server Console (start, commands, filters, stop, restart, log files, summary cards); the Settings page (presets, wheel, hex, theme, backups to keep, about). |
 | `FakeLmpServer` | console app | Not tests: a stand-in `Server.exe`. |
+
+0.3 added: `SetupTests` (release feed, versions, install/update/zip-slip, generated config read by **LMP's own classes**,
+object lists), `LiveModsOpsTests` (website JSON, cfg parser, GameData scan, restart policy and schedule, Discord,
+network, profiles, Universe backups), and `NewFeatureTests` (wizard, updater, Players + Kick, object list editor,
+GameData import, review dialog, profiles, Universe restore, Connect, auto-restart giving up, daily restart, scheduled
+backup, Discord test message).
+
+## No network in tests
+
+`FakeHttp` (an `HttpMessageHandler`) serves canned responses by URL and records every request. `UiHarness` routes the
+whole app through it (`Core.Http.Override`), so GitHub, LMP's website and Discord are all fake, and unknown URLs get a
+404. `TestData.ReleasesJson()` is a GitHub releases response shaped like LMP's; `TestData.MakeServerZip()` builds a zip
+shaped like LMP's download from the fixture binaries.
 
 ## Fixtures (`tests/Fixtures/`) ⚠️
 
@@ -35,6 +48,7 @@ fish!` before exiting with 0.
 |---|---|
 | `--fatal` | A startup failure followed by LMP's wait on stdin. |
 | `--ignore-ctrl-c` | A hung server, to test the kill fallback. |
+| `--crash` | Exits with code 3 shortly after starting, to test auto-restart. (UI tests set `ServerPage.ExtraArguments`.) |
 
 It also implements the Ctrl+C helper (`ConsoleControl.RunHelper`), because the test host can't play that role.
 `FakeServer.CreateServerFolder()` copies its build to a temp folder; UI tests add LMP's `Server.dll` next to it, so
@@ -57,6 +71,9 @@ public void My_feature_works()
 
 - Find controls by **AutomationId** (see [04](04-App-UI.md#generated-controls)).
 - `ui.WaitFor(condition, "what")` pumps the UI until something asynchronous happens (server output, state changes).
+- `ui.Await(task)` waits for an async app method. ⚠️ **Never** use `.Result` or `.GetAwaiter().GetResult()` in a UI
+  test: the awaited code needs the UI thread to continue, so blocking it deadlocks (this hung a test run for 10 minutes once).
+- `Dialogs.PromptResponder` answers text prompts (kick reason, profile name).
 - Dialogs are answered automatically: `ui.ConfirmDialogs = false` picks Cancel; `ui.Answer = (title, buttons) => index`
   picks a specific button; `ui.DialogsShown` lists what appeared.
 - Each harness uses temp configs and a temp settings file, so tests never touch your real files or preferences.

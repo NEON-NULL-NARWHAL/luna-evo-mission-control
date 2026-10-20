@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.0 (2026-10-20)
+
+### Added
+- **Setup wizard**: downloads the LMP server from GitHub, writes its config from a few questions (private by
+  default), checks for and installs the .NET runtime with winget, copies LUNA EVO into the folder and opens it.
+- **LMP updates**: checks GitHub when a server opens; one-click update that keeps Config, Universe, logs and Plugins
+  and backs up the old version.
+- **Players** page: live players, vessels and subspaces from LMP's website JSON, with Kick/Ban.
+- **Connect** page: addresses to share (LAN, VPN/mesh, internet), server list and UPnP status, a Windows Firewall
+  rule, and a port-listening check.
+- **Profiles & Backups** page: config profiles; Universe backups with restore.
+- **Import from GameData**: fill mod control (parts, resources, plugins with SHA-256, expansions) from a KSP install.
+- Editors for the plugin and mandatory-part lists (previously read-only).
+- **Automation**: restart after a crash (gives up after 3 in 10 minutes), daily restart with an in-game warning,
+  scheduled Universe backups.
+- **Discord** webhook notifications (up, stopped, crashed, joined, left) with a test button.
+- **Review changes before saving** (old → new values).
+- Welcome page with "Set up a new server".
+
+### Fixed
+- A setting missing from an older config file was treated as modified, which could keep a file marked as unsaved.
+
 ## 0.2.0 (2026-10-20)
 
 ### Added

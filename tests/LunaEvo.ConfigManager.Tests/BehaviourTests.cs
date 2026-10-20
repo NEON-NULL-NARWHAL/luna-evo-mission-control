@@ -169,7 +169,7 @@ public class BehaviourTests
         Assert.False(DirtyDot(ui, General).IsVisible);
         Assert.False(ui.Find<Button>("save").IsEnabled);
         Assert.StartsWith("Saved", ui.Find<TextBlock>("status/save").Text);
-        Assert.Empty(ui.DialogsShown);
+        Assert.Equal(["Review changes"], ui.DialogsShown);
     }
 
     [AvaloniaFact]
@@ -202,7 +202,7 @@ public class BehaviourTests
         try
         {
             var texts = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
-            Assert.Contains("Open your LMP server", texts);
+            Assert.Contains("Welcome to LUNA EVO", texts);
             Assert.Contains(texts, t => t.Contains("No Server.dll found"));
             Assert.Null(window.Session);
         }

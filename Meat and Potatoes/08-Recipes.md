@@ -55,6 +55,18 @@ box (that's how chips work), never send directly.
    `AddHeading("Section")` and `AddNav("key", new TextBlock { Text = "Name" }, page.View)`.
 3. Test with `ui.OpenTab("key")`.
 
+## Add a Discord notification
+
+Call `_host.Notify("emoji **text**")` from wherever the event happens (see `ServerPage.OnStateChanged` and
+`OnExitedAsync`). It does nothing if no webhook is set and never throws. Mention it in [13](13-Automation.md).
+
+## Add a question to the setup wizard
+
+1. Add a control field in `SetupWizard` (copy `_maxPlayers` or a `Toggle(...)`) with an id `wizard/<name>`.
+2. Add a row in the constructor's group 2 with `Ui.Row(label, description, control)`.
+3. Add its value to `Choices()` as `[(file, setting)] = value`; `ConfigGenerator` does the rest.
+4. Assert it in `NewFeatureTests.Wizard_downloads_lmp_writes_the_config_and_opens_the_server`.
+
 ## Change colours or styles
 
 - Fixed colours (error, warning, log chat/network): the theme dictionaries in `App.axaml`.

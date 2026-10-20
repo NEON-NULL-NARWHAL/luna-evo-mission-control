@@ -136,7 +136,20 @@ public static class LmpSchemaLoader
         }
 
         var enumValues = type.IsEnum ? Enum.GetNames(type) : Array.Empty<string>();
-        return new SettingDefinition(property.Name, kind, TypeName(type), description, defaultValue, enumValues, min, max, maxLength);
+        var definition = new SettingDefinition(property.Name, kind, TypeName(type), description, defaultValue, enumValues, min, max, maxLength);
+        if (kind == SettingKind.ObjectList)
+        {
+            // XmlSerializer writes List<DllFile> as <DllFile> elements whose children are DllFile's properties.
+            var item = type.GetGenericArguments()[0];
+            definition = definition with
+            {
+                ItemElement = item.Name,
+                ItemFields = item.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p => p.CanRead && p.CanWrite).OrderBy(p => p.MetadataToken).Select(p => p.Name).ToList(),
+                DefaultValue = "",
+            };
+        }
+        return definition;
     }
 
     private static string TypeName(Type type) =>
@@ -156,8 +169,15 @@ public static class LmpSchemaLoader
                 ? SettingKind.MultilineText
                 : SettingKind.Text;
         if (type == typeof(List<string>)) return SettingKind.StringList;
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>) && IsSimpleRecord(type.GetGenericArguments()[0]))
+            return SettingKind.ObjectList;
         return SettingKind.Unsupported;
     }
+
+    /// <summary>A class with a parameterless constructor and only string properties, like LMP's DllFile.</summary>
+    private static bool IsSimpleRecord(Type type) =>
+        type.IsClass && type.GetConstructor(Type.EmptyTypes) != null &&
+        type.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanWrite).All(p => p.PropertyType == typeof(string));
 
     private static (decimal Min, decimal Max) IntegerRange(Type type) => type switch
     {

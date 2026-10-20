@@ -13,7 +13,7 @@ namespace LunaEvo.ConfigManager.Core;
 public sealed class ConfigSession
 {
     private readonly Dictionary<string, ConfigFile> _files = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, string> _originals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string?> _originals = new(StringComparer.Ordinal);
     private readonly HashSet<string> _dirtyFiles = new(StringComparer.OrdinalIgnoreCase);
 
     private ConfigSession(string serverDirectory, string configDirectory, LmpSchema schema)
@@ -85,6 +85,41 @@ public sealed class ConfigSession
         UpdateDirty(fileName);
     }
 
+    /// <summary>Items of an object list setting (LMPModControl.xml's plugin and mandatory-part lists), or empty.</summary>
+    public IReadOnlyList<IReadOnlyDictionary<string, string>> GetObjectList(string fileName, string setting) =>
+        _files.TryGetValue(fileName, out var file) ? file.GetObjectList(setting) ?? [] : [];
+
+    /// <summary>Replaces an object list setting's items in memory.</summary>
+    public void SetObjectList(string fileName, string setting, IEnumerable<IReadOnlyDictionary<string, string>> items)
+    {
+        var file = RequireFile(fileName);
+        var definition = Schema.Find(fileName)?.Find(setting)
+            ?? throw new ArgumentException($"Unknown setting {fileName}/{setting}");
+        if (definition is not { Kind: SettingKind.ObjectList, ItemElement: { } itemElement })
+            throw new ArgumentException($"{setting} isn't an object list.");
+
+        var rows = items.ToList();
+        if (ObjectListText(rows, definition.ItemFields) == ObjectListText(file.GetObjectList(setting) ?? [], definition.ItemFields))
+            return;
+        file.SetObjectList(setting, itemElement, definition.ItemFields, rows, definition.Description);
+        UpdateDirty(fileName);
+    }
+
+    /// <summary>One entry per changed setting in the dirty files, for "review before saving".</summary>
+    public IReadOnlyList<Change> GetChanges()
+    {
+        var changes = new List<Change>();
+        foreach (var fileName in _dirtyFiles.Order(StringComparer.OrdinalIgnoreCase))
+        foreach (var setting in Schema.Find(fileName)?.Settings ?? [])
+        {
+            if (!IsModified(fileName, setting.Name))
+                continue;
+            _originals.TryGetValue(Key(fileName, setting.Name), out var before);
+            changes.Add(new Change(fileName, setting.Name, setting.Kind, before ?? "", Snapshot(_files[fileName], setting) ?? ""));
+        }
+        return changes;
+    }
+
     /// <summary>A file is dirty while any of its settings differs from disk, so changing a value back un-dirties it.</summary>
     private void UpdateDirty(string fileName)
     {
@@ -98,7 +133,8 @@ public sealed class ConfigSession
     /// <summary>True if the value differs from what was on disk when the file was loaded or last saved.</summary>
     public bool IsModified(string fileName, string setting)
     {
-        var current = _files.TryGetValue(fileName, out var file) ? Snapshot(file, setting) : null;
+        var definition = Schema.Find(fileName)?.Find(setting);
+        var current = _files.TryGetValue(fileName, out var file) && definition != null ? Snapshot(file, definition) : null;
         return _originals.TryGetValue(Key(fileName, setting), out var original) ? current != original : current != null;
     }
 
@@ -151,12 +187,21 @@ public sealed class ConfigSession
 
     private void TakeSnapshot(string fileName, ConfigFile file)
     {
+        // Null (setting missing from the file) stays null, so it doesn't count as "modified" later.
         foreach (var setting in Schema.Find(fileName)?.Settings ?? [])
-            _originals[Key(fileName, setting.Name)] = Snapshot(file, setting.Name) ?? "";
+            _originals[Key(fileName, setting.Name)] = Snapshot(file, setting);
     }
 
-    private static string? Snapshot(ConfigFile file, string setting) =>
-        file.GetList(setting) is { Count: > 0 } list ? string.Join("\n", list) : file.GetValue(setting);
+    /// <summary>A comparable text form of a setting's value in the file; null if the file doesn't have it.</summary>
+    private static string? Snapshot(ConfigFile file, SettingDefinition setting) => setting.Kind switch
+    {
+        SettingKind.StringList => file.GetList(setting.Name) is { } list ? string.Join("\n", list) : null,
+        SettingKind.ObjectList => file.GetObjectList(setting.Name) is { } rows ? ObjectListText(rows, setting.ItemFields) : null,
+        _ => file.GetValue(setting.Name),
+    };
+
+    private static string ObjectListText(IEnumerable<IReadOnlyDictionary<string, string>> rows, IReadOnlyList<string> fields) =>
+        string.Join("\n", rows.Select(row => string.Join(" | ", fields.Select(f => row.TryGetValue(f, out var v) ? v : ""))));
 
     private ConfigFile RequireFile(string fileName) =>
         _files.TryGetValue(fileName, out var file)
@@ -165,3 +210,6 @@ public sealed class ConfigSession
 
     private static string Key(string fileName, string setting) => fileName + "/" + setting;
 }
+
+/// <summary>One changed setting: its value on disk and in memory (lists one item per line).</summary>
+public sealed record Change(string FileName, string Setting, SettingKind Kind, string Before, string After);

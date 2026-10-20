@@ -62,7 +62,7 @@ public class SchemaTests
         var parts = modControl.Find("AllowedParts")!;
         Assert.Equal(SettingKind.StringList, parts.Kind);
         Assert.Contains("mk1pod", parts.DefaultValue.Split('\n'));
-        Assert.Equal(SettingKind.Unsupported, modControl.Find("MandatoryPlugins")!.Kind);
+        Assert.Equal(SettingKind.ObjectList, modControl.Find("MandatoryPlugins")!.Kind);
     }
 
     [Theory]

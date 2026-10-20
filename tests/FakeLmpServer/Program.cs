@@ -7,6 +7,7 @@
 // LUNA EVO's server control without starting a real, networked server.
 //   --ignore-ctrl-c   ignore Ctrl+C (tests the kill fallback)
 //   --fatal           fail during startup and wait on stdin like LMP does
+//   --crash           exit with code 3 shortly after starting (tests auto-restart)
 using System.Text;
 using LunaEvo.ConfigManager.Core.Server;
 
@@ -45,6 +46,13 @@ if (args.Contains("--fatal"))
 }
 
 Log("LMP", "All systems up and running. Поехали!");
+
+if (args.Contains("--crash"))
+{
+    await Task.Delay(300);
+    Log("Fatal", "Simulated crash");
+    return 3;
+}
 
 _ = Task.Run(async () =>
 {
