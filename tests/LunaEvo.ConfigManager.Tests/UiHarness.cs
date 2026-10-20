@@ -41,6 +41,8 @@ internal sealed class UiHarness : IDisposable
         JoinPage.StartKsp = (_, _) => throw new InvalidOperationException("A test tried to start KSP without faking it.");
         ModImportPanel.PickSharePath = _ => throw new InvalidOperationException("A test opened a save dialog without faking it.");
         MainWindow.ShowDesktopNotification = (title, message, alert) => Notifications.Add((title, message, alert));
+        CraftsPage.PickExportPath = (_, _) => throw new InvalidOperationException("A test opened a save dialog without faking it.");
+        CraftsPage.PickImportPath = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
         MainWindow.CurrentExe = null; // the test host must never be "updated"
         MainWindow.StartNewVersion = (_, _) => throw new InvalidOperationException("A test tried to restart the app without faking it.");
         Dialogs.Responder = (title, _, buttons) =>

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 (2026-10-20)
+
+### Added
+- **Crafts** page (rail → Play): your KSP craft designs (every save, VAB and SPH) and, with a server open, the
+  server's LMP craft library. **Export** any craft to a `.lunacraft` file (KSP's own `.craft`, its thumbnail and its
+  parts list) to send to friends; **Import** one into a KSP save or the server's library, with a check of which of its
+  parts your GameData doesn't have. Never overwrites an existing craft.
+
 ## 0.6.1 (2026-10-20)
 
 ### Added

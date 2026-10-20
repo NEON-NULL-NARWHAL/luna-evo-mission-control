@@ -127,4 +127,46 @@ internal static class TestData
             Release("v0.1.0", false, [Asset(AppExeUrl.Replace("v9.9.9", "v0.1.0"), exe.Length, "sha256:" + sha)]),
         });
     }
+
+    /// <summary>A KSP craft file as KSP writes it (Kerbal X: 4 parts, one from a mod).</summary>
+    public const string KerbalX = """
+        ship = Kerbal X
+        version = 1.12.5
+        description = A classic
+        type = VAB
+        PART
+        {
+        	part = mk1pod.v2_4294967296
+        	pos = 0,15,0
+        }
+        PART
+        {
+        	part = Size3To2Adapter.v2_4294960000
+        }
+        PART
+        {
+        	part = Size3To2Adapter.v2_4294950000
+        }
+        PART
+        {
+        	part = MyMod.Wheel_4294940000
+        }
+        """;
+
+    private static string Temp(string name) =>
+        Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "LunaEvoTests", name + "-" + Guid.NewGuid().ToString("N"))).FullName;
+
+    /// <summary>A KSP folder with a save "career" holding Kerbal X in the VAB, and its thumbnail.</summary>
+    public static string KspWithCraft()
+    {
+        var ksp = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "LunaEvoTests", "craftksp-" + Guid.NewGuid().ToString("N"))).FullName;
+        var vab = Directory.CreateDirectory(Path.Combine(ksp, "saves", "career", "Ships", "VAB")).FullName;
+        File.WriteAllText(Path.Combine(ksp, "saves", "career", "persistent.sfs"), "GAME\n{\n}\n");
+        File.WriteAllText(Path.Combine(vab, "Kerbal X.craft"), KerbalX);
+        Directory.CreateDirectory(Path.Combine(ksp, "thumbs"));
+        File.WriteAllBytes(Path.Combine(ksp, "thumbs", "career_VAB_Kerbal X.png"), [0x89, 0x50, 0x4E, 0x47]);
+        File.WriteAllText(Path.Combine(ksp, "KSP_x64.exe"), "");
+        Directory.CreateDirectory(Path.Combine(ksp, "GameData")); // empty: every part counts as missing
+        return ksp;
+    }
 }

@@ -34,6 +34,7 @@ Every source file starts with a short header pointing back here, like this:
 | 16 | [Player history, alerts and bans](16-Players-History-And-Alerts.md) | change what's recorded about players, the alerts, or the ban list |
 | 17 | [Notifications](17-Notifications.md) | add a notification, or change Windows or Discord delivery |
 | 18 | [Updating LUNA EVO itself](18-Updating-LUNA-EVO.md) | ship a release (`release.ps1`), or change how the app updates itself |
+| 19 | [Sharing crafts](19-Sharing-Crafts.md) | work on the Crafts page, the .lunacraft format, or craft import/export |
 
 ## 🔣 Legend
 
@@ -104,6 +105,7 @@ Symbols used in the map below and throughout these chapters:
 | **Mods/** | | *Mod control from a KSP install* ([12](12-Mod-Control-From-GameData.md)) |
 | 🧠 | `Mods/KspConfigParser.cs` | Reads KSP `.cfg` ConfigNode files. |
 | ⭐🧠🔌⚠️ | `Mods/GameDataScanner.cs` | Parts, resources, plugins (SHA-256) and expansions from GameData, like LMP's client. |
+| 🧠🔌 | `Mods/CraftShare.cs` | Craft designs: find (KSP saves, LMP craft library), export to .lunacraft, import with a part check. See [19](19-Sharing-Crafts.md). |
 | 🧠🔌 | `Mods/ModCheck.cs` | Checks a GameData scan against an LMPModControl.xml, mirroring LMP's client check. |
 | **Ops/** | | *Keeping it running* ([13](13-Automation.md)) |
 | 🧠 | `Ops/Restarts.cs` | Crash-restart policy (gives up after 3 in 10 min) and daily restart times. |
@@ -138,6 +140,7 @@ Symbols used in the map below and throughout these chapters:
 | 🖥️ | `SettingsPage.cs` | The LUNA EVO Settings page (colour wheel, behaviour, about). |
 | 🎨 | `ThemeManager.cs` | Generates the palette from one accent colour and applies it live. |
 | 🖥️ | `Ui.cs` | Helpers for building styled controls in code. |
+| 🖥️🔌 | `CraftsPage.cs` | The Crafts page: list, export, import. |
 | 🖥️ | `TabSet.cs` | Tabs inside a page (Server settings, Players, Join, Settings). Pages stay in the visual tree; only visibility changes. |
 | 🖥️ | `Dialogs.cs` | Message boxes (with a hook so tests can answer them). |
 | 🎨 | `Assets/` | `icon.png`/`icon.ico`, and `Fonts/` (JetBrains Mono plus its OFL licence). |
@@ -147,8 +150,8 @@ Symbols used in the map below and throughout these chapters:
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (145 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
-| 🧪🖥️ | `LunaEvo.ConfigManager.Tests/` | Headless UI tests: the real window, clicked through like a user (69 tests). |
+| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (152 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪🖥️ | `LunaEvo.ConfigManager.Tests/` | Headless UI tests: the real window, clicked through like a user (71 tests). |
 | ⭐🧪 | `LunaEvo.ConfigManager.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |

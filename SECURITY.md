@@ -51,6 +51,9 @@ addresses**, even though LMP's own log lines contain them. It stays next to your
   worst that does is a wrong history entry or a false alert, never a command.
 - **Unban edits LMP's ban list** only while the server is stopped, after backing it up.
 - **The mod check** reads files only; it never changes your GameData.
+- **Craft files from friends** (`.lunacraft`, 0.7) are opened as data: only `craft.craft`, `manifest.json` and
+  `thumbnail.png` are accepted (nothing else is ever unpacked), 20 MB at most, and the craft must parse. Imports go
+  only into a KSP save's Ships folder or the server's craft library, and never overwrite.
 
 ## Audit 2 (0.4.1, October 2026)
 

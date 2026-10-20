@@ -34,6 +34,7 @@ public sealed class MainWindow : Window
     internal const string ProfilesKey = "profiles";
     internal const string SettingsKey = "settings";
     internal const string JoinKey = "join";
+    internal const string CraftsKey = "crafts";
     internal const string ServerSettingsKey = "serverSettings";
     internal const string ModControlFile = "LMPModControl.xml";
 
@@ -62,6 +63,7 @@ public sealed class MainWindow : Window
     private readonly Dictionary<string, (Button Nav, Control Page)> _pages = [];
     private readonly SettingsPage _settingsPage;
     private readonly JoinPage _joinPage;
+    private readonly CraftsPage _craftsPage;
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
@@ -163,6 +165,7 @@ public sealed class MainWindow : Window
 
         _settingsPage = new SettingsPage(this);
         _joinPage = new JoinPage(this);
+        _craftsPage = new CraftsPage(this);
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
         AppUpdater.CleanUp(CurrentExe);
@@ -198,6 +201,7 @@ public sealed class MainWindow : Window
     internal ModImportPanel? ModImport => _modImport;
     internal SetupWizard? Wizard { get; private set; }
     internal JoinPage Join => _joinPage;
+    internal CraftsPage Crafts => _craftsPage;
 
     /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>
     internal AppUpdate? AvailableAppUpdate { get; private set; }
@@ -504,6 +508,9 @@ public sealed class MainWindow : Window
             case PlayersKey:
                 _ = _players?.PollAsync();
                 break;
+            case CraftsKey:
+                _craftsPage.Refresh();
+                break;
         }
     }
 
@@ -671,6 +678,7 @@ public sealed class MainWindow : Window
     {
         AddHeading("Play");
         AddNav(JoinKey, new TextBlock { Text = "Join a server" }, _joinPage.View);
+        AddNav(CraftsKey, new TextBlock { Text = "Crafts" }, _craftsPage.View);
     }
 
     private void AddLunaEvoSection()

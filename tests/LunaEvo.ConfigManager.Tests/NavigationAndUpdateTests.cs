@@ -19,7 +19,7 @@ public class NavigationAndUpdateTests
     {
         using var ui = new UiHarness();
         var rail = RailButtons(ui);
-        Assert.Equal(["nav/console", "nav/players", "nav/connect", "nav/serverSettings", "nav/LMPModControl.xml", "nav/profiles", "nav/join", "nav/settings"], rail);
+        Assert.Equal(["nav/console", "nav/players", "nav/connect", "nav/serverSettings", "nav/LMPModControl.xml", "nav/profiles", "nav/join", "nav/crafts", "nav/settings"], rail);
 
         ui.OpenTab(MainWindow.ConsolePage);
         Assert.Null(ui.TryFind<Button>("nav/WarpSettings.xml")); // not in the rail any more
@@ -56,6 +56,30 @@ public class NavigationAndUpdateTests
         ui.Session.SetValue("MasterServerSettings.xml", "RegisterWithMasterServer", "false");
         ui.Window.RefreshAll();
         Assert.False(ui.Find<Border>("console/exposure").IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void Crafts_are_exported_and_imported_into_the_servers_library()
+    {
+        using var ui = new UiHarness();
+        var ksp = TestData.KspWithCraft();
+        ui.Window.UpdateSettings(s => s with { KspFolder = ksp });
+        ui.OpenTab(MainWindow.CraftsKey);
+        Assert.NotNull(ui.Find<Border>("crafts/row/KSP save career/Kerbal X"));
+
+        var file = Path.Combine(Path.GetTempPath(), "LunaEvoTests", Guid.NewGuid().ToString("N"), "Kerbal X.lunacraft");
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        CraftsPage.PickExportPath = (_, _) => Task.FromResult<string?>(file);
+        ui.Await(ui.Window.Crafts.ExportAsync(Core.Mods.CraftShare.InKsp(ksp)[0], ksp));
+        Assert.True(File.Exists(file));
+
+        CraftsPage.PickImportPath = _ => Task.FromResult<string?>(file);
+        ui.Answer = (title, buttons) => title.StartsWith("Import") ? buttons.ToList().IndexOf("Add to the server's library") : null;
+        ui.Await(ui.Window.Crafts.ImportAsync());
+
+        Assert.True(File.Exists(Path.Combine(ui.ServerDirectory, "Universe", "Crafts", "Shared", "VAB", "Kerbal X.craft")));
+        Assert.Contains("aren't in your GameData", ui.Find<TextBlock>("crafts/result").Text); // the fake KSP has no parts
+        Assert.NotNull(ui.Find<Border>("crafts/row/Server library (Shared)/Kerbal X"));
     }
 
     [AvaloniaFact]
