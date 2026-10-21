@@ -66,7 +66,8 @@ Symbols used in the map below and throughout these chapters:
 | 📦 | `release.ps1` | Ships a version: tests, exe, GitHub release with notes. See [18](18-Updating-LUNA-EVO.md). |
 | | `README.md` | The front page. |
 | | `CHANGELOG.md` | What changed in each version. |
-| | `SECURITY.md` | What the app touches, both audits, how to report a problem. |
+| | `QUICKSTART.md` | The short version of the README for users: host, play, mods, troubleshooting, linking back to the full sections. Keep its `README.md#...` links in step when README headings change. |
+| | `SECURITY.md` | What the app touches, every audit (newest first), how to report a problem. |
 | | `LICENSE` | GPL-3.0. |
 | ⚠️ | `.gitattributes` | Keeps `tests/Fixtures` byte-for-byte (CRLF, no BOM); the round-trip tests depend on it. |
 | | `.gitignore` | Build output, `dist/`, backups, and dev settings. |

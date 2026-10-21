@@ -14,7 +14,7 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 
 **Version 2.0.1** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
-**[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Find and join](#join-a-friends-server)** · **[Mods with CKAN](#using-the-ckan-page)** · **[No open ports](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
+**[⚡ Quickstart](QUICKSTART.md)** · **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Find and join](#join-a-friends-server)** · **[Mods with CKAN](#using-the-ckan-page)** · **[No open ports](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
 </div>
 
@@ -29,6 +29,9 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 > the project owner. [Who did what, and how it was checked.](#how-this-app-was-made-ai-disclosure)
 
 ## At a glance
+
+In a hurry? **[⚡ Quickstart](QUICKSTART.md)** gets you hosting, playing or modded in a few steps, with links back to
+the full guides below.
 
 | | | |
 |---|---|---|
@@ -418,6 +421,7 @@ luna-evo-mission-control/
 ├── docs/screenshots/
 ├── publish.ps1               📦 builds the single-file exe
 ├── release.ps1               📦 ships a version: tests, exe, GitHub release (the in-app updater picks it up)
+├── QUICKSTART.md             ⚡ the short version: host, play, mods, troubleshooting
 ├── SECURITY.md               🔒 what LUNA EVO touches, every audit, how to report a problem
 └── CHANGELOG.md
 ```
