@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.1 (2026-10-21)
+
+### Changed
+- **The GitHub repository is now [`luna-evo-mission-control`](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control)**
+  (it was `luna-evo-multiplayer-config-manager`). Old links, clones and every older copy's update check are
+  redirected by GitHub; checked against the live API with the updater built with the old name.
+- LUNA EVO checks for updates at the new name. README links, badges and the file tree, and the maintainer docs,
+  use it.
+- `SECURITY.md` names the current Windows startup entry and log folder.
+
 ## 2.0.0 (2026-10-21)
 
 **LUNA EVO Config Manager is now LUNA EVO Mission Control.** It hosts, finds, mods and joins servers now, not just

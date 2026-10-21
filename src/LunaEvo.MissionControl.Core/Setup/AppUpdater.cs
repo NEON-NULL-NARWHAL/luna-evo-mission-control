@@ -24,7 +24,9 @@ public sealed class AppUpdateUnavailableException(string message) : Exception(me
 /// </summary>
 public sealed class AppUpdater(HttpClient http)
 {
-    public const string Repository = "NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager";
+    // Renamed from luna-evo-multiplayer-config-manager in 2.0.1. GitHub redirects the old name (API and downloads),
+    // which is how copies from before then keep finding updates; checked against the live API after the rename.
+    public const string Repository = "NEON-NULL-NARWHAL/luna-evo-mission-control";
     public const string ReleasesUrl = $"https://api.github.com/repos/{Repository}/releases?per_page=20";
     public const string ReleasesPage = $"https://github.com/{Repository}/releases";
     public const string ExeName = "LunaEvo.MissionControl.exe";

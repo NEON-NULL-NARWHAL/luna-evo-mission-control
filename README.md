@@ -6,12 +6,12 @@
 
 **Host, find and join [Luna Multiplayer](https://github.com/LunaMultiplayer/LunaMultiplayer) (LMP) servers for Kerbal Space Program: set up and run your own server without touching a config file or a console window, browse public servers, and get your game modded with CKAN and straight into a server.**
 
-[![Latest release](https://img.shields.io/github/v/release/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager?label=download)](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest)
-[![Tests](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/actions/workflows/tests.yml/badge.svg)](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/actions/workflows/tests.yml)
+[![Latest release](https://img.shields.io/github/v/release/NEON-NULL-NARWHAL/luna-evo-mission-control?label=download)](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases/latest)
+[![Tests](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/actions/workflows/tests.yml/badge.svg)](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/actions/workflows/tests.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 2.0.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 2.0.1** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Join a friend](#join-a-friends-server)** · **[No open ports (Tailscale)](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
@@ -35,7 +35,7 @@
 
 ## Download
 
-**[⬇️ Download the latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest)**:
+**[⬇️ Download the latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases/latest)**:
 `LunaEvo.MissionControl.exe`, one file for Windows 10/11 (x64), nothing to install. Put it next to your LMP
 `Server.exe`, or anywhere if you're setting up a new server or just joining one. The exe isn't code-signed yet, so
 Windows SmartScreen may ask you to confirm the first time (**More info → Run anyway**). Each release lists the exe's
@@ -166,7 +166,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 
 ## Getting started
 
-Get `LunaEvo.MissionControl.exe` from the [latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest),
+Get `LunaEvo.MissionControl.exe` from the [latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases/latest),
 or build it with `publish.ps1` (see [Build it](#build-it)). It's a single file with nothing to install.
 
 - **No server yet?** Follow [Set up a new server](#set-up-a-new-server-step-by-step) below. It takes about two minutes.
@@ -409,11 +409,11 @@ Command-line options: `--server <folder>` (contains Server.dll), `--config <fold
 ### Repository layout
 
 ```
-ConfigManager/
+luna-evo-mission-control/
 ├── Meat and Potatoes/        📖 the maintainer's guide: start here
 ├── src/
 │   ├── LunaEvo.MissionControl.Core/   🧠 all the logic, no UI: schema, XML editing, validation, server control,
-│   │                                    setup & updates, live data, GameData scanning, automation, joining, joining
+│   │                                    setup & updates, live data, GameData scanning, automation, joining
 │   └── LunaEvo.MissionControl/        🖥️ the Avalonia desktop app
 ├── tests/
 │   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (161)

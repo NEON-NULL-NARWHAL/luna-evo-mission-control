@@ -7,7 +7,8 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 
 ## House rules (don't skip)
 
-- `LunaMultiplayer/` is read-only reference. All code goes in `ConfigManager/`.
+- `LunaMultiplayer/` is read-only reference. All code goes in this repository (`luna-evo-mission-control`; the
+  owner's local folder is still called `ConfigManager/`).
 - Never test against the live server or the owner's real KSP; use `tests/Fixtures`, the fake server, or the demo copy.
 - Never commit real passwords, IPs, player names or user paths. The repo is **public**.
 - Every change gets tests; `dotnet test` must be green (CI runs it on every push).

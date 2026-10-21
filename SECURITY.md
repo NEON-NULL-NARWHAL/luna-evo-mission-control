@@ -25,7 +25,7 @@ response time.
 | **Your KSP install** | Join page: "Launch KSP and join" or "Add to LMP's server list" | Starts `KSP_x64.exe` and edits LMP's own `settings.xml` server list (backed up first, and never while KSP is running). "Check my mods" only reads your GameData. |
 | **Discord** (`discord.com`) | Only if you save a webhook (App settings → Notifications) | HTTPS posts of the notifications. The URL is stored encrypted for your Windows account (DPAPI) and never shown again; posts can't mention anyone. |
 | **Windows notifications** | App settings → Notifications (on by default) | Shown on this PC only. |
-| **Windows startup list** (`HKCU\...\Run`) | Only while Home server mode is on | One entry, "LUNA EVO Config Manager", for your user only; removed when you switch the mode off. |
+| **Windows startup list** (`HKCU\...\Run`) | Only while Home server mode is on | One entry, "LUNA EVO Mission Control" ("LUNA EVO Config Manager" before 2.0, removed on upgrade), for your user only; removed when you switch the mode off. |
 | **CKAN and the LMP client** (GitHub) | CKAN page and App settings → Downloads; setup wizard step 3 if switched on | The same verified download as LMP's server: GitHub only, SHA-256 checked (and again where it's stored or before unpacking). Nothing unverified. The client is unpacked with size and stay-inside checks, only into `GameData/LunaMultiplayer` (and `000_Harmony` if missing). |
 | **CKAN's command line** (`ckan.exe`: LUNA EVO's verified copy, or your own if you chose one) | CKAN page → Install with CKAN, after you confirm | `ckan update` and `ckan install <mod names>` for the KSP install you pick, never while KSP or CKAN has it open. Only mod names and versions from a list are passed (a `.ckan` file itself never is). CKAN then downloads from its own catalog. |
 | **LMP's master servers** (`ms.lmp.dasskelett.dev`, `lmp.nightshade.fun`, and their nightly lists) | Server browser: the first time you open it, and Refresh | One HTTPS GET each for the public list (LMP's own `/json`). Read with an 8 MB cap; names and descriptions cut and cleaned; only IP addresses accepted; a server's website link opens only if it's http(s). Joining a listed server is the Join page's usual check (DNS, pings, its LMP website). |
@@ -44,6 +44,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.0.1 | GitHub repository renamed to `luna-evo-mission-control` | - | Old API and download URLs redirect (checked live, including with the updater built with the old name) | 282 |
 | 2.0.0 | Renamed to LUNA EVO Mission Control (exe, settings folder, startup entry; old copies still update) | **Audit 9** (I1-I8) | Old-name update path and settings migration tested; the published exe started from the demo copy | 282 |
 | 1.4.0 | Server browser, simple mode, quick edits from the console cards, allowing a player's parts, CKAN dry run | **Audit 8** (H1-H3) | The browser read 368 real public servers from LMP's master servers; Check with CKAN dry-ran a real 108-mod list on a throwaway KSP folder | 276 |
 | 1.3.1 | | **Audit 7** (G1) | The owner's own `ckan.exe` identified as official v1.36.4; the export of their real install matched the original modpack they installed it from (same 108 mods) | 260 |
@@ -96,7 +97,7 @@ player's parts, the CKAN dry run, the error log).
 | # | Severity | Finding | Fix |
 |---|---|---|---|
 | H1 | Medium | **Impossible port numbers could be saved.** LMP's settings only say the port is a number, so 70000 or 0 passed validation; LMP would start, fail to listen, and nobody could connect. Found by the new quick-edit test. | Game and website ports must be 1-65535 (an error, which blocks saving). |
-| H2 | Low | **Errors inside button handlers weren't logged anywhere**, and CKAN's own failures showed only "code 127". The owner's failed CKAN install left nothing to go on. | Unexpected errors go to `%APPDATA%\LunaEvo\ConfigManager\logs\errors.log` (1 MB cap) and the app carries on. The CKAN page catches everything in its flow, says what CKAN said in plain words ("CKAN doesn't know the mod X"), and has a **Check with CKAN** dry run. |
+| H2 | Low | **Errors inside button handlers weren't logged anywhere**, and CKAN's own failures showed only "code 127". The owner's failed CKAN install left nothing to go on. | Unexpected errors go to `%APPDATA%\LunaEvo\ConfigManager\logs\errors.log` (`MissionControl` since 2.0; 1 MB cap) and the app carries on. The CKAN page catches everything in its flow, says what CKAN said in plain words ("CKAN doesn't know the mod X"), and has a **Check with CKAN** dry run. |
 | H3 | Low | **Two flaky tests failed on GitHub**: one counted folders in a temp folder other tests use at the same time, one timed out waiting for the fake server on a slow runner. | The first checks only its own file; waits are three times longer on CI. |
 
 Reviewed and fine: the server browser (HTTPS, size cap, stranger-supplied text cleaned, IPs only, http(s) links only);

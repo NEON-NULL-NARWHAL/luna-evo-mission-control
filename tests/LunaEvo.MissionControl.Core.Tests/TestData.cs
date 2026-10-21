@@ -115,7 +115,7 @@ internal static class TestData
     public static string RuleDll(string path, string sha = "", string element = "DllFile") =>
         $"<{element}><Text>{Path.GetFileNameWithoutExtension(path)}</Text><FilePath>{path}</FilePath>{(element == "DllFile" ? $"<Sha>{sha}</Sha>" : "")}</{element}>";
 
-    public const string AppExeUrl = "https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/download/v9.9.9/LunaEvo.MissionControl.exe";
+    public const string AppExeUrl = "https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases/download/v9.9.9/LunaEvo.MissionControl.exe";
 
     /// <summary>"An exe": just enough to pass the MZ check (no version info, so the version check is skipped).</summary>
     public static byte[] FakeExe(string text) => System.Text.Encoding.ASCII.GetBytes("MZ" + text);
