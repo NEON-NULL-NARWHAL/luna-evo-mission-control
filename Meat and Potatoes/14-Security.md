@@ -26,7 +26,7 @@ the rules the code follows now, so new code doesn't undo them.
 | **Unpack into a staging folder, then swap.** Check entry count, total size and that every entry stays inside. | A damaged or hostile zip must never leave half a Universe behind. | `UniverseBackups.Restore` |
 | **No DTDs in XML.** `DtdProcessing.Prohibit`, no resolver. | Entity expansion in a planted file. | `ConfigFile` |
 | **Names that become folders**: no invalid characters, no Windows device names (`CON`, `NUL`, `COM1`...), at most 80 characters. | `CON` isn't a folder on Windows. | `ProfileStore.SafeName` |
-| **Settings from disk are normalised** (`null` → defaults). | Hand-edited files. | `AppSettingsStore.Load` |
+| **Settings from disk are normalized** (`null` → defaults). | Hand-edited files. | `AppSettingsStore.Load` |
 | **Tests never touch the network or KSP.** `Http.Override` = `FakeHttp`; `JoinPage.StartKsp` throws unless a test replaces it. | A test must never start a real game or hit a real server. | `UiHarness` |
 
 ## Things that look like holes but are design

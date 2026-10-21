@@ -79,7 +79,7 @@ public sealed record LiveInfoResult(bool Reachable, long? LatencyMs, ServerSnaps
 
 public static class ServerProbe
 {
-    /// <summary>The host's IP addresses, each labelled with what kind of network it's on.</summary>
+    /// <summary>The host's IP addresses, each labeled with what kind of network it's on.</summary>
     public static async Task<IReadOnlyList<ResolvedAddress>> ResolveAsync(string host, CancellationToken cancel = default)
     {
         var addresses = IPAddress.TryParse(host, out var literal)

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Stand-in for LMP's Server.exe in tests: same log format, same stdin commands, same Ctrl+C behaviour. -->
+  <!-- Stand-in for LMP's Server.exe in tests: same log format, same stdin commands, same Ctrl+C behavior. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>

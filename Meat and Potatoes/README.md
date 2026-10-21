@@ -48,11 +48,11 @@ Symbols used in the map below and throughout these chapters:
 | ⭐ | **Start here.** A good first file to read in its area. |
 | 🧠 | **Core logic.** No UI, so it can be unit-tested directly. Lives in `LunaEvo.ConfigManager.Core`. |
 | 🖥️ | **UI.** Avalonia controls and pages. Lives in `LunaEvo.ConfigManager`. |
-| 🔌 | **Touches LMP.** Reads its `Server.dll`, edits its XML, or runs its `Server.exe`. Behaviour depends on LMP's version. |
+| 🔌 | **Touches LMP.** Reads its `Server.dll`, edits its XML, or runs its `Server.exe`. Behavior depends on LMP's version. |
 | ⚠️ | **Gotcha inside.** There's a non-obvious reason for how it's written; read its comments before changing it. |
 | 🧪 | **Tests or test data.** |
 | 📦 | **Build, packaging or release.** |
-| 🎨 | **Look and feel.** Colours, fonts, styles. |
+| 🎨 | **Look and feel.** Colors, fonts, styles. |
 
 ## 🧭 Map: every folder and file
 
@@ -76,7 +76,7 @@ Symbols used in the map below and throughout these chapters:
 | | File | What it is |
 |:---:|---|---|
 | ⭐🧠 | `ConfigSession.cs` | **The heart.** Schema plus loaded files: get/set values, validate, track unsaved changes, save with backup. |
-| 🧠 | `AppSettings.cs` | LUNA EVO's own preferences (accent colour, theme, backups to keep, automation, saved servers, KSP folder, updates...) and their JSON file. |
+| 🧠 | `AppSettings.cs` | LUNA EVO's own preferences (accent color, theme, backups to keep, automation, saved servers, KSP folder, updates...) and their JSON file. |
 | 🧠 | `Http.cs` | The one `HttpClient` the app uses (GitHub, LMP's website, the Join page). Tests set `Http.Override`. |
 | 🧠🔌 | `ServerProcess.cs` | Finds a running `Server.exe` from a folder. |
 | **Schema/** | | *What settings exist* |
@@ -128,7 +128,7 @@ Symbols used in the map below and throughout these chapters:
 |:---:|---|---|
 | 📦 | `LunaEvo.ConfigManager.csproj` | App project. **The version number lives here.** |
 | ⚠️ | `Program.cs` | Entry point. First runs the Ctrl+C helper if asked, then parses options and starts Avalonia. |
-| 🎨 | `App.axaml` | **All colours, icons and styles.** Theme dictionaries (dark and light) and style classes. |
+| 🎨 | `App.axaml` | **All colors, icons and styles.** Theme dictionaries (dark and light) and style classes. |
 | | `App.axaml.cs` | Loads `App.axaml`, opens the main window. |
 | ⭐🖥️ | `MainWindow.cs` | The shell: navigation rail, pages, status area, save, close prompts. |
 | 🖥️ | `SettingRow.cs` | One generated row; picks the editor for the setting's type. |
@@ -143,14 +143,14 @@ Symbols used in the map below and throughout these chapters:
 | ⭐🖥️ | `JoinPage.cs` | Join a server (for players): check, save, check my mods, launch KSP into it. `StartKsp` is the test seam. |
 | 🖥️ | `ProfilesPage.cs` | Config profiles and Universe backups. |
 | ⭐🖥️🔌 | `ServerPage.cs` | The Server Console page. |
-| 🖥️ | `SettingsPage.cs` | The LUNA EVO Settings page (colour wheel, behaviour, about). |
-| 🎨 | `ThemeManager.cs` | Generates the palette from one accent colour and applies it live. |
+| 🖥️ | `SettingsPage.cs` | The LUNA EVO Settings page (color wheel, behavior, about). |
+| 🎨 | `ThemeManager.cs` | Generates the palette from one accent color and applies it live. |
 | 🖥️ | `Ui.cs` | Helpers for building styled controls in code. |
 | 🖥️🔌 | `CraftsPage.cs` | The Crafts page: list, export, import. |
 | 🖥️🔌⚠️ | `CkanPage.cs` | The CKAN page: status, your CKAN installs, install a mod list. See [22](22-CKAN-and-LMP-Client.md). |
 | 🖥️ | `TabSet.cs` | Tabs inside a page (Server settings, Players, Join, Settings). Pages stay in the visual tree; only visibility changes. |
 | 🖥️ | `Dialogs.cs` | Message boxes (with a hook so tests can answer them). |
-| 🎨 | `Assets/` | `icon.png`/`icon.ico`, and `Fonts/` (JetBrains Mono plus its OFL licence). |
+| 🎨 | `Assets/` | `icon.png`/`icon.ico`, and `Fonts/` (JetBrains Mono plus its OFL license). |
 | | `Properties/launchSettings.json` | `dotnet run` profiles: in-repo fixtures, or local LMP folders. |
 
 ### `tests/` 🧪
@@ -175,7 +175,7 @@ Symbols used in the map below and throughout these chapters:
 | **Session** | `ConfigSession`: one opened server, its schema, and its loaded files. |
 | **Dirty** | A file with unsaved changes. |
 | **Preset** | A `Set*()` method on an LMP settings class, e.g. GameplaySettings `SetHard()`. |
-| **Inactive** | A setting that has no effect right now (e.g. Red while rainbow is on); shown greyed out. |
+| **Inactive** | A setting that has no effect right now (e.g. Red while rainbow is on); shown grayed out. |
 | **Fixture** | Test input data checked into the repo (`tests/Fixtures`). |
 | **Headless** | Running the real Avalonia UI without a screen, for tests. |
 | **Universe** | `<server>/Universe`: the game state (vessels, kerbals, scenarios). |

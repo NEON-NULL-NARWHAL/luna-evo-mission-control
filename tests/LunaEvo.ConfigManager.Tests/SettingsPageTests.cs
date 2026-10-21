@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager.Tests/SettingsPageTests.cs
-// [Test] Accent colour, theme, behaviour settings and the about section.
+// [Test] Accent color, theme, behavior settings and the about section.
 // Used by: dotnet test
 // Guide:   Meat and Potatoes/05-Tests.md
 
@@ -16,7 +16,7 @@ using LunaEvo.ConfigManager.Core.Validation;
 
 namespace LunaEvo.ConfigManager.Tests;
 
-/// <summary>The LUNA EVO settings page: accent colour, theme, behaviour and the about section.</summary>
+/// <summary>The LUNA EVO settings page: accent color, theme, behavior and the about section.</summary>
 public class SettingsPageTests
 {
     [AvaloniaFact]
@@ -54,7 +54,7 @@ public class SettingsPageTests
         ui.Pump();
         Assert.Equal("#8E4FD1", ui.Window.Settings.AccentColor);
 
-        hex.Text = "not a colour";
+        hex.Text = "not a color";
         hex.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
         ui.Pump();
         Assert.Equal("#8E4FD1", ui.Window.Settings.AccentColor);
@@ -87,7 +87,7 @@ public class SettingsPageTests
         ui.OpenTab(MainWindow.SettingsKey);
 
         Assert.Contains($"Version {SettingsPage.AppVersion}", Texts(ui.Find<Border>("settings/appVersion")));
-        Assert.Equal("1.3.1", SettingsPage.AppVersion);
+        Assert.Equal("1.3.2", SettingsPage.AppVersion);
         Assert.Contains(Texts(ui.Find<Border>("settings/lmpVersion")), t => t.StartsWith("Version 0.29.2"));
     }
 

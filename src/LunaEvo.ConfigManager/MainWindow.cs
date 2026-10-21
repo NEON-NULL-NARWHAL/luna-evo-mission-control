@@ -275,9 +275,9 @@ public sealed class MainWindow : Window
         {
             var choice = await Dialogs.ChooseAsync(this, "Unsaved changes", "LUNA EVO restarts to update.", "Save and update", "Update without saving", "Cancel");
             if (choice == 0 && !await SaveAsync())
-                return "Update cancelled.";
+                return "Update canceled.";
             if (choice is not (0 or 1))
-                return "Update cancelled.";
+                return "Update canceled.";
         }
         var stopServer = false;
         if (_server?.IsOwnedActive == true)
@@ -287,7 +287,7 @@ public sealed class MainWindow : Window
                 "work again after the server's next restart. Or stop it first (players are disconnected).",
                 "Keep it running", "Stop the server first", "Cancel");
             if (choice is not (0 or 1))
-                return "Update cancelled.";
+                return "Update canceled.";
             stopServer = choice == 1;
         }
 
@@ -487,7 +487,7 @@ public sealed class MainWindow : Window
         if (asset.Sha256 == null && !await Dialogs.ConfirmAsync(this, "Can't verify this download",
                 $"GitHub has no checksum for {asset.Name}, so LUNA EVO can't check the file wasn't tampered with on the way. Install it anyway?",
                 "Install anyway"))
-            return "Update cancelled.";
+            return "Update canceled.";
         var zip = await new ServerInstaller(Http.Client).DownloadAsync(asset, progress, allowUnverified: asset.Sha256 == null);
         await Task.Run(() => new UniverseBackups(session.ServerDirectory).Safety("beforeupdate"));
         var result = await Task.Run(() => ServerInstaller.Install(zip, session.ServerDirectory, asset.Sha256));
@@ -982,7 +982,7 @@ public sealed class MainWindow : Window
         return true;
     }
 
-    /// <summary>"Server Name: Luna Server → LUNA EVO" lines for the review dialog; long lists are summarised.</summary>
+    /// <summary>"Server Name: Luna Server → LUNA EVO" lines for the review dialog; long lists are summarized.</summary>
     internal static string DescribeChanges(IReadOnlyList<Change> changes)
     {
         string Value(string v) => v.Length == 0 ? "(empty)" : v.Length > 40 ? v[..40] + "…" : v;

@@ -18,7 +18,7 @@ internal static class Dialogs
     /// <summary>Tests set this to answer text prompts: (title, suggested text) → typed text, or null for Cancel.</summary>
     internal static Func<string, string, string?>? PromptResponder { get; set; }
 
-    /// <summary>Asks for a line of text. Returns null if cancelled.</summary>
+    /// <summary>Asks for a line of text. Returns null if canceled.</summary>
     public static async Task<string?> PromptAsync(Window owner, string title, string message, string initial = "", string confirmText = "OK")
     {
         if (PromptResponder != null)

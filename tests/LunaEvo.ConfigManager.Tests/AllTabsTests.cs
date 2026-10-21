@@ -86,7 +86,7 @@ public class AllTabsTests
 
                 if (!editor.IsEffectivelyEnabled)
                 {
-                    // Greyed out on purpose; the reason must be shown.
+                    // Grayed out on purpose; the reason must be shown.
                     Assert.NotNull(LmpRules.InactiveReason(ui.Session, file.FileName, setting.Name));
                     greyedOut++;
                     continue;
@@ -101,7 +101,7 @@ public class AllTabsTests
             }
         }
 
-        // Everything except greyed-out, list and read-only settings.
+        // Everything except grayed-out, list and read-only settings.
         var editable = ui.Session.Schema.Files.Sum(f => f.Settings.Count(s => s.Kind is not (SettingKind.StringList or SettingKind.ObjectList or SettingKind.Unsupported)));
         Assert.Equal(editable - greyedOut, expected.Count);
         Assert.DoesNotContain(ui.Session.Validate(), i => i.Severity == Severity.Error);

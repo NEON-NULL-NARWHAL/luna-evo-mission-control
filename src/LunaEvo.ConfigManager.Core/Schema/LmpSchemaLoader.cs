@@ -129,7 +129,7 @@ public static class LmpSchemaLoader
         var kind = KindOf(type, property.Name, defaultValue);
         if (kind == SettingKind.Integer)
         {
-            // Never allow beyond what the property type can hold (e.g. byte colours are 0-255).
+            // Never allow beyond what the property type can hold (e.g. byte colors are 0-255).
             var (typeMin, typeMax) = IntegerRange(type);
             min = min is { } a ? Math.Max(a, typeMin) : typeMin;
             max = max is { } b ? Math.Min(b, typeMax) : typeMax;

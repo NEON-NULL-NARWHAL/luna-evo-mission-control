@@ -36,7 +36,7 @@ flowchart LR
 ```
 
 **The rule:** anything that can be decided without a screen lives in **Core**. The app only turns Core's answers into
-controls. That's why most behaviour is tested with plain unit tests, and the UI tests only need to check the wiring.
+controls. That's why most behavior is tested with plain unit tests, and the UI tests only need to check the wiring.
 
 ## The life of a setting
 

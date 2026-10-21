@@ -48,5 +48,5 @@ return would need.
 ## Review before saving
 
 `ConfigSession.GetChanges()` lists every changed setting with its on-disk and in-memory values;
-`MainWindow.DescribeChanges` turns it into "General › Server Name: Luna Server → LUNA EVO" lines, and summarises list
+`MainWindow.DescribeChanges` turns it into "General › Server Name: Luna Server → LUNA EVO" lines, and summarizes list
 changes ("Allowed Parts: 1 added, 531 removed") instead of dumping hundreds of part names.

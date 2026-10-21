@@ -11,7 +11,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 1.3.1** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 1.3.2** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Join a friend](#join-a-friends-server)** · **[No open ports (Tailscale)](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
@@ -23,7 +23,7 @@
 > the LMP quirks we discovered, and step-by-step recipes for common changes.
 
 > [!NOTE]
-> **Security:** downloads are checked against GitHub's SHA-256. All six security audits (0.4.0 to 1.2.1), their fixes,
+> **Security:** downloads are checked against GitHub's SHA-256. All seven security audits (0.4.0 to 1.3.1), their fixes,
 > and the versions of LMP, KSP and CKAN each release was tested with are in [`SECURITY.md`](SECURITY.md), newest first.
 
 > [!NOTE]
@@ -56,7 +56,7 @@ console window open. This app does all of that for you, and adds what a server h
 |---|---|
 | 🧙 **Setup wizard** | Pick a folder and answer a few questions (name, password, game mode, difficulty, players, port). LUNA EVO downloads the LMP server from GitHub, writes the config, checks for (and can install) the .NET runtime it needs, and opens it. Private by default: not on the public list, no router changes, until you choose. |
 | ⬆️ **LMP updates** | Tells you when a newer LMP server is out and updates it in one click, keeping your Config, Universe, logs and Plugins, and saving the old version first. |
-| ▶️ **Server Console** | Start, stop and restart, with a live colour-coded console, filters, search, commands with history and quick buttons, and a log file browser. Stops are **clean** (LMP backs up the universe), never a kill. Live **memory and CPU** of the server while it runs. |
+| ▶️ **Server Console** | Start, stop and restart, with a live color-coded console, filters, search, commands with history and quick buttons, and a log file browser. Stops are **clean** (LMP backs up the universe), never a kill. Live **memory and CPU** of the server while it runs. |
 | 👥 **Players** | Who's online, their vessels and warp subspaces, with **Kick** and **Ban** buttons (reason optional). |
 | 📜 **Player history** | Everyone who's played: last seen, sessions, time played, LMP version, and your own notes. Built from LMP's own log and live data; IP addresses are never kept. |
 | 🚨 **Alerts** | Someone guessing the admin password (LMP doesn't limit guesses) or a banned player trying to get back in shows at the top of the Players page and as a notification. |
@@ -86,8 +86,8 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | 🔍 **Always matches your server** | The settings list is read **from your server's own `Server.dll`**, so new or renamed LMP settings appear automatically. |
 | ✅ **Validation** | Limits from LMP's descriptions plus the rules it only mentions in passing (heartbeat < timeout, port clashes, case-sensitive values). Problems show inline and block saving. Short server and admin passwords get a warning, because LMP doesn't limit guesses, and one click generates a strong one. |
 | 🧾 **Review before saving** | See every change with old → new values before anything is written. Every save makes a timestamped backup. |
-| 🌗 **Greys out what doesn't apply** | Rainbow colours, Career-only funds/reputation, Career-and-Science science settings. |
-| 🎯 **Knows LMP's hidden behaviour** | Gameplay defaults follow your difficulty preset, with a warning before LMP silently switches you to *Custom*. |
+| 🌗 **Greys out what doesn't apply** | Rainbow colors, Career-only funds/reputation, Career-and-Science science settings. |
+| 🎯 **Knows LMP's hidden behavior** | Gameplay defaults follow your difficulty preset, with a warning before LMP silently switches you to *Custom*. |
 | 🧩 **Mod control, done for you** | **Import from GameData**: point it at your KSP install and it fills the allowed parts, resources, plugins (with SHA-256) and expansions, the same way LMP's in-game generator does. Every list is editable, including the plugin and mandatory-part lists. **Share these rules with players** saves a copy for friends to check their mods against. |
 
 ### Keep it running
@@ -100,7 +100,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | 🌌 **Universe backups** | Dated snapshots of the game state: on demand, every few hours, **every time the server stops**, and before every LMP update. One-click restore (which backs up first, so it's undoable). |
 | 🧹 **Vessel cleanup** | See every vessel in the Universe and remove debris, asteroids or abandoned ships in a few clicks (server stopped, backed up first, crewed ships protected). The biggest performance win a host has. |
 | 🗂️ **Config profiles** | Save the whole setup as "Career campaign" or "Sandbox chaos night" and switch in one click. |
-| 🎨 **Make it yours** | RGB colour wheel and KSP-themed presets regenerate the whole theme; dark, light or follow Windows. |
+| 🎨 **Make it yours** | RGB color wheel and KSP-themed presets regenerate the whole theme; dark, light or follow Windows. |
 | 📦 **One file** | A single self-contained `.exe`. Drop it next to `Server.exe` and it finds the server by itself. |
 | ⬆️ **Updates itself** | Checks LUNA EVO's GitHub releases on startup; **Update and restart** downloads the new version, verifies it, swaps the exe and restarts, keeping your server running if you want. |
 | 🗂️ **Tidy layout** | The rail shows the main pages only (Server Console, Players, Connect, Server settings, Mod Control, Profiles & Backups, Join, Settings). LMP's config files are tabs on one **Server settings** page, grouped Game / Network / Advanced, and the busier pages have tabs too. |
@@ -143,15 +143,15 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | ![Import from GameData](docs/screenshots/mod-import.png) | ![Plugin lists](docs/screenshots/mod-lists.png) |
 | **Import from GameData:** fill mod control from a KSP install. | **Plugin lists:** LMP's DllFile entries, editable. |
 | ![Validation](docs/screenshots/validation.png) | ![Gameplay](docs/screenshots/gameplay.png) |
-| **Validation:** errors inline, a badge on the tab and on Server settings, the count in the status area. | **Server settings:** one page, a tab per LMP config file. Career-only settings greyed out in Sandbox, with the reason. |
+| **Validation:** errors inline, a badge on the tab and on Server settings, the count in the status area. | **Server settings:** one page, a tab per LMP config file. Career-only settings grayed out in Sandbox, with the reason. |
 | ![Log files](docs/screenshots/logfiles.png) | ![Automation settings](docs/screenshots/settings-automation.png) |
-| **Log files:** every `lmpserver_*.log`, colour-coded. | **Automation & alerts:** auto-restart, daily restart, Universe backups, Windows and Discord notifications. |
+| **Log files:** every `lmpserver_*.log`, color-coded. | **Automation & alerts:** auto-restart, daily restart, Universe backups, Windows and Discord notifications. |
 | ![Join a server](docs/screenshots/join.png) | ![Join: play](docs/screenshots/join-play.png) |
 | **Join a server:** network, ping and live server info for players. | **Launch KSP and join:** straight into the server, or via LMP's list. |
 | ![Connect](docs/screenshots/connect.png) | ![First start](docs/screenshots/first-start.png) |
 | **Connect:** what to tell your friends, and what might block them. | **First start:** LMP's own startup, inside the app. |
 | ![Settings](docs/screenshots/settings.png) | ![Light theme](docs/screenshots/light.png) |
-| **LUNA EVO Settings:** colour wheel, presets, theme. | **Light theme.** |
+| **LUNA EVO Settings:** color wheel, presets, theme. | **Light theme.** |
 
 <sub>Screenshots are LUNA EVO 0.6 to 1.2 running a sandbox copy of a real LMP 0.29.2 server, with personal details removed (network addresses are replaced with examples; the players are made-up Kerbals). The setup wizard is shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
 
@@ -224,7 +224,7 @@ in-game server list and enter that address and port.
 **7. Make it yours (optional).**
 Everything else is in the rail: **Server settings** (tabs for General, Gameplay and every other LMP file) for the
 rules, **Mod Control** to import your mods, **Profiles & Backups** to save setups and snapshot the universe, and
-**LUNA EVO → Settings** for automatic restarts, scheduled backups, notifications, updates and the app's colours. Remember to **Save**, then restart the
+**LUNA EVO → Settings** for automatic restarts, scheduled backups, notifications, updates and the app's colors. Remember to **Save**, then restart the
 server for changes to take effect.
 
 **What your players need:** KSP 1.12 with the **LMP client mod of the same version** as your server. It's on the same
@@ -240,7 +240,7 @@ LUNA EVO handles both, any time:
   against GitHub's SHA-256 and kept by LUNA EVO (one copy per version, no mystery copies in Downloads).
 - **Install a mod list:** your friend or server host exports their mods from CKAN (**File → Export modpack**, a
   `.ckan` file). Paste it in, or **Load a .ckan file...**, or just type mod names one per line, pick your KSP install
-  and press **Install with CKAN**. CKAN works out the dependencies and downloads everything from its own catalogue
+  and press **Install with CKAN**. CKAN works out the dependencies and downloads everything from its own catalog
   (LUNA EVO takes only the mod names from the list, never a file's own download links). Close KSP and CKAN first.
 - **Already have CKAN?** Press **Choose ckan.exe...** and LUNA EVO uses your copy instead. It's checked against CKAN's
   official releases, so the page tells you whether it's an official build.
@@ -253,6 +253,34 @@ LUNA EVO handles both, any time:
 Setting up a server? Step 3 of the setup wizard can get CKAN and the LMP client for you.
 
 ![CKAN page](docs/screenshots/ckan.png)
+
+### Using the CKAN page
+
+Open **Play → CKAN mods** in the left rail. The page has three parts, top to bottom.
+
+**1. CKAN (which CKAN LUNA EVO uses)**
+- **Not installed?** Press **Download CKAN**. LUNA EVO gets the official `ckan.exe` from CKAN's GitHub, checks it
+  against GitHub's SHA-256 and keeps it in `%LOCALAPPDATA%\LunaEvo\Tools\CKAN`.
+- **Already have CKAN?** Press **Choose ckan.exe...** and pick yours. The page then says **Using your own CKAN** and
+  whether it's an official build ("Official CKAN v1.36.4"). **Use LUNA EVO's copy** switches back.
+- **Open CKAN** starts CKAN's normal window. If CKAN is already open, the page says so.
+
+**2. Your KSP installs (from CKAN)**
+- Every KSP install CKAN knows about, with its LMP version, how many mods CKAN installed and how many you picked.
+- **Export mod list...** saves the mods you picked as a `.ckan` file to send to friends or post for your server.
+  Leave **Exact versions** on so everyone gets the same versions; turn it off to let CKAN pick the newest compatible ones.
+- **Use as mod list** copies that install's mods into the box below, for installing them into another KSP install.
+
+**3. Install a mod list**
+1. Close KSP, and close CKAN's window if it has that install open.
+2. Put the list in the box: **Load a .ckan file...** (a modpack from a friend, or one exported above), paste a
+   `.ckan` file's text, or type mod names one per line (`#` starts a comment).
+3. Pick the KSP install in **Into this KSP install**.
+4. Press **Install with CKAN** and confirm. CKAN refreshes its catalogue, works out the dependencies and downloads
+   everything; its messages show underneath. If a mod name is unknown or doesn't fit your KSP version, CKAN stops and
+   undoes that install, and the page says so.
+
+Only mod names and versions are read from a list. Anything else in the file, such as a download link, is ignored.
 
 ![Downloads](docs/screenshots/downloads.png)
 
@@ -285,7 +313,7 @@ nobody outside your mesh can even see the server. This is how we run ours.
 1. Install [Tailscale](https://tailscale.com/download) on the server PC and sign in.
 2. Each friend installs Tailscale too, and you invite them to your tailnet (admin console → *Share* the server PC, or
    add them as users).
-3. On the server PC, open LUNA EVO's **Connect** page: the Tailscale address (`100.x.y.z`, labelled VPN or mesh) is
+3. On the server PC, open LUNA EVO's **Connect** page: the Tailscale address (`100.x.y.z`, labeled VPN or mesh) is
    in *Addresses to share*. Press **Copy** and send it to your friends. With MagicDNS on, the PC's name works too.
 4. Friends use that address on LUNA EVO's **Join a server** page (it shows "VPN or mesh network") or in LMP's own
    server list.
@@ -331,7 +359,7 @@ Everything is local except, and only when you use them:
 **GitHub** (LMP's, CKAN's and LUNA EVO's release lists and downloads, for the wizard, the CKAN page and update checks;
 the update checks can be turned off), **LMP's own website on this PC** (for the Players page), **the server you type on
 the Join page** (a DNS lookup, 4 pings and its LMP website), **CKAN** when you install a mod list (it downloads from its
-own catalogue), and **your Discord webhook** if you add one. Details are in [`SECURITY.md`](SECURITY.md).
+own catalog), and **your Discord webhook** if you add one. Details are in [`SECURITY.md`](SECURITY.md).
 
 ## For developers
 
@@ -422,10 +450,10 @@ control, and an update message being hidden by the update offer. They're documen
 **What that means for you:** treat this like any open-source project. Read the code, run the tests, and keep the backups
 it makes. The exe isn't code-signed, so Windows SmartScreen may warn the first time you run it.
 
-## Credits and licences
+## Credits and licenses
 
 - **LUNA EVO Config Manager**: GPL-3.0, see [LICENSE](LICENSE).
-- **[Luna Multiplayer](https://github.com/LunaMultiplayer/LunaMultiplayer)** by Gabriel Vazquez and contributors: MIT. LUNA EVO contains no LMP source code; it reads your server's `Server.dll` at runtime and downloads LMP's official releases. The test fixtures include LMP 0.29.2's server binaries under their MIT licence ([`tests/Fixtures/LMPServer/LMP-LICENSE.txt`](tests/Fixtures/LMPServer/LMP-LICENSE.txt)).
+- **[Luna Multiplayer](https://github.com/LunaMultiplayer/LunaMultiplayer)** by Gabriel Vazquez and contributors: MIT. LUNA EVO contains no LMP source code; it reads your server's `Server.dll` at runtime and downloads LMP's official releases. The test fixtures include LMP 0.29.2's server binaries under their MIT license ([`tests/Fixtures/LMPServer/LMP-LICENSE.txt`](tests/Fixtures/LMPServer/LMP-LICENSE.txt)).
 - **[Avalonia UI](https://avaloniaui.net/)**: MIT.
 - **[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono)** font: SIL Open Font License 1.1 ([`Assets/Fonts/OFL.txt`](src/LunaEvo.ConfigManager/Assets/Fonts/OFL.txt)).
 - **Material Symbols** icons by Google: Apache 2.0.

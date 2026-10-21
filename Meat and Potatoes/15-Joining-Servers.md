@@ -12,7 +12,7 @@ server before joining, then start KSP straight into it. It works with no server 
 |---|---|
 | **Server** | The address box. `ServerAddress.Parse` takes `host`, `host:port`, `[ipv6]:port` and `lmp://host:port`. The live info port (default 8900) is separate, because it's TCP and the game port is UDP. |
 | **My servers** | `AppSettings.SavedServers` (`SavedServer(Name, Host, Port, WebsitePort)`). Named after the server when its live info answered. **Passwords are never saved.** |
-| **Network** | `ServerProbe.ResolveAsync` (DNS) labelled by `ServerProbe.Kind`: This PC, Local network, VPN or mesh (`100.64.0.0/10`, Tailscale/CGNAT), Internet. `PingAsync`: 4 ICMP pings, average and best. "No replies" doesn't mean the server is down, since many PCs drop pings. |
+| **Network** | `ServerProbe.ResolveAsync` (DNS) labeled by `ServerProbe.Kind`: This PC, Local network, VPN or mesh (`100.64.0.0/10`, Tailscale/CGNAT), Internet. `PingAsync`: 4 ICMP pings, average and best. "No replies" doesn't mean the server is down, since many PCs drop pings. |
 | **Server info** | `ServerProbe.LiveInfoAsync`: `GET http://host:8900/`, the same LMP website JSON as the Players page ([11](11-Live-Players.md)), 5-second timeout. Name, players/max, mode and difficulty, password yes/no, mod control, warp mode, description. |
 | **Players online / Vessels in game** | From the same JSON. Asteroids and comets are left out (`Ui.ListedVessels`); vessel lines use the shared `Ui.DescribeVessel` (type · body · altitude). |
 | **Play** | KSP folder (found by `KspLauncher.FindKsp` in your Steam libraries, or remembered from last time), the LMP client version (`LmpClient.dll` ProductVersion), password, **Launch KSP and join**, **Add to LMP's server list**. |

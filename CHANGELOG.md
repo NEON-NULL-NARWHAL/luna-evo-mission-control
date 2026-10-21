@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.2 (2026-10-20)
+
+### Changed
+- Spelling: American English throughout the app and docs (color, behavior, catalog, canceled, minimized...).
+- README: a step-by-step **Using the CKAN page** section; the security note now counts all seven audits.
+
 ## 1.3.1 (2026-10-20)
 
 Seventh audit, with real-world CKAN checks; details in `SECURITY.md`.
@@ -8,7 +14,7 @@ Seventh audit, with real-world CKAN checks; details in `SECURITY.md`.
 - Mod lists with "one of these mods" choices (`any_of`) now say they were skipped instead of dropping them silently.
 
 ### Checked
-- Your own `ckan.exe` is recognised as official CKAN 1.36.4; exporting a real 108-mod install matched the original
+- Your own `ckan.exe` is recognized as official CKAN 1.36.4; exporting a real 108-mod install matched the original
   modpack it was installed from.
 
 ## 1.3.0 (2026-10-20)
@@ -49,7 +55,7 @@ Sixth security audit, a sweep of the whole codebase; details in `SECURITY.md`.
   (moved from Settings → Downloads, which now links to it).
 - **Install a mod list:** paste a `.ckan` modpack (CKAN → File → Export modpack) or mod names one per line, or load a
   `.ckan` file, pick the KSP install, and CKAN downloads and installs them, with its messages shown as it goes. Only the
-  mod names and versions are taken from the list; CKAN installs them from its own catalogue (a file's own download
+  mod names and versions are taken from the list; CKAN installs them from its own catalog (a file's own download
   link is never used). Refuses while KSP or CKAN has that install open.
 
 ### Changed
@@ -141,8 +147,8 @@ Third security audit; details in `SECURITY.md`.
   and pick a result to open its tab and scroll to it.
 - **Chat announcements** (Settings → Automation & alerts): one per line, "minutes then message", sent as `/say`
   while LUNA EVO runs the server (at least every 5 minutes, counted from when the server starts).
-- **Home server mode** (Settings → Behaviour): one switch for an always-on host PC. LUNA EVO starts with Windows
-  minimised to the notification area, starts the server by itself, hides to the notification area instead of quitting
+- **Home server mode** (Settings → Behavior): one switch for an always-on host PC. LUNA EVO starts with Windows
+  minimized to the notification area, starts the server by itself, hides to the notification area instead of quitting
   (right-click the icon → Quit), and keeps the PC from sleeping while the server runs. The Windows startup entry is
   per-user (no admin) and is removed when you switch it off.
 
@@ -150,7 +156,7 @@ Third security audit; details in `SECURITY.md`.
 
 ### Added
 - **Automatic Universe backups** every time LUNA EVO stops the server (right after LMP's own final save; the last 5
-  are kept) and before every LMP update. They're labelled `onstop` / `beforeupdate` on the Profiles & Backups page,
+  are kept) and before every LMP update. They're labeled `onstop` / `beforeupdate` on the Profiles & Backups page,
   are pruned separately, and never push out your manual backups.
 
 ## 0.7.0 (2026-10-20)
@@ -185,7 +191,7 @@ Third security audit; details in `SECURITY.md`.
   Control, Profiles & Backups, Join a server, Settings. LMP's config files are tabs on the Server settings page,
   grouped Game / Network / Advanced, with error badges on the tabs and on the rail entry.
 - Tabs on the busier pages: Players (Online now / History / Bans, alerts above), LUNA EVO Settings (Appearance /
-  Behaviour / Automation & alerts / Updates / About), Join (Server / My servers / Check my mods, Play always shown).
+  Behavior / Automation & alerts / Updates / About), Join (Server / My servers / Check my mods, Play always shown).
 
 ## 0.5.0 (2026-10-20)
 
@@ -273,9 +279,9 @@ Second security audit; details in `SECURITY.md`.
 
 ### Added
 - **Server Console** page: start, stop (clean, via Ctrl+C, so LMP makes its backup) and restart the LMP server;
-  summary cards; live colour-coded console with filters, search, follow, copy and clear; command box with history
+  summary cards; live color-coded console with filters, search, follow, copy and clear; command box with history
   and quick commands; log file browser; follows and can stop a server started outside the app; .NET 6 runtime check.
-- **LUNA EVO Settings** page: accent colour wheel with RGB/hex and presets, dark/light/system theme, behaviour options
+- **LUNA EVO Settings** page: accent color wheel with RGB/hex and presets, dark/light/system theme, behavior options
   (reopen last server, backups to keep, console lines, stop timeout, confirm stop), about (versions, runtime), folders, links.
 - `--settings <file>` for a portable settings file.
 - Old config backups are pruned (20 kept by default).
@@ -288,5 +294,5 @@ Second security audit; details in `SECURITY.md`.
 ## 0.1.0 (2026-10-20)
 
 - First version: GUI generated from LMP's own `Server.dll`; in-place XML editing that preserves every byte;
-  validation from LMP's descriptions plus cross-setting rules; greyed-out settings; difficulty-preset defaults;
+  validation from LMP's descriptions plus cross-setting rules; grayed-out settings; difficulty-preset defaults;
   reset per setting; timestamped backups; mod-control list editor with dedupe; NOMM-inspired look; single-file exe.

@@ -14,7 +14,7 @@ Thanks for helping. LUNA EVO is a small hobby project by two friends; issues and
 - **Never test against a live server or a real KSP install.** Use `tests/Fixtures`, the fake server
   (`tests/FakeLmpServer`), or a copy.
 - **No personal data in the repo:** passwords, IP addresses, player names, paths with user names. Screenshots come
-  from a sanitised demo copy.
+  from a sanitized demo copy.
 - **Match the surrounding code:** every source file starts with a `// LUNA EVO · <path>` header pointing to its guide
   chapter, and every control gets an AutomationId with `.WithId(...)`.
 - **Security first** for anything that downloads, parses outside data, starts a process or stores a secret: see

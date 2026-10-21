@@ -20,7 +20,7 @@ Values are formatted the way `XmlSerializer` writes them (`FormatValue`): `true`
 
 ### `SettingsSchema.cs`
 
-Plain records with no behaviour beyond lookups:
+Plain records with no behavior beyond lookups:
 `SettingDefinition(Name, Kind, ClrTypeName, Description, DefaultValue, EnumValues, Min, Max, MaxLength)` and
 `SettingsFileSchema(FileName, RootElement, Settings, Presets)` with `DefaultFor(setting, presetName)`.
 
@@ -32,9 +32,9 @@ Plain records with no behaviour beyond lookups:
 |---|---|
 | `Load(path)` | Detects the encoding **from the bytes** (BOM, or a zero byte for UTF-16), not from the declaration. LMP 0.29 writes `encoding="utf-16"` on UTF-8 files, and `XDocument.Load` throws on that. |
 | `GetValue` / `GetList` | Element text, or the `<string>` children of a list. `null` if the element isn't in the file. |
-| `SetValue(name, value, comment)` | Changes the text; adds the element (with its comment, LMP style) before the closing tag if missing. Normalises `\r\n` to `\n` (the line endings are restored on render). |
+| `SetValue(name, value, comment)` | Changes the text; adds the element (with its comment, LMP style) before the closing tag if missing. Normalizes `\r\n` to `\n` (the line endings are restored on render). |
 | `SetList` | Rewrites the `<string>` children with LMP's indentation; empty lists become `<X></X>` like LMP writes. |
-| `Render()` / `Save()` | The original text before and after the root element is kept verbatim; the root is re-serialised and the file's own line endings re-applied. **An unchanged file saves byte-for-byte**, and a test enforces it for all 13 real files. |
+| `Render()` / `Save()` | The original text before and after the root element is kept verbatim; the root is re-serialized and the file's own line endings re-applied. **An unchanged file saves byte-for-byte**, and a test enforces it for all 13 real files. |
 
 ### `BackupService`
 

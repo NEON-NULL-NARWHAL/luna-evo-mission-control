@@ -35,7 +35,7 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 7. **Commit email**: switch `git config user.email` (repo-local) to the GitHub noreply address. Ask the owner first.
 
 - ~~Two notification-area icons~~ (0.9.0: `DesktopNotifier` removes its icon `ShowFor` after each notification).
-  Untested on real Windows: whether the notification centre keeps the entry after the icon goes.
+  Untested on real Windows: whether the notification center keeps the entry after the icon goes.
 
 ## CKAN (next steps; 1.1.0 did downloads, instances and launch options, 1.2.0 the CKAN page and mod lists: [22](22-CKAN-and-LMP-Client.md))
 

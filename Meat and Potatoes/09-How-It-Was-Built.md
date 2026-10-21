@@ -16,7 +16,7 @@ reads screenshots of it. Each feature went roughly like this:
 2. **Claude read the real source** before designing anything. For server control it read LMP 0.29.2's `MainServer.cs`,
    `CommandHandler.cs`, `WinExitSignal.cs` and `BaseLogger.cs`, and found there's no stop command and that the log
    format is fixed.
-3. **Decisions that belonged to the owner were asked**, not assumed: desktop vs web panel, .NET version, licence,
+3. **Decisions that belonged to the owner were asked**, not assumed: desktop vs web panel, .NET version, license,
    repo visibility, commit name.
 4. **Claude wrote the code and the tests together**, ran them, and fixed what failed.
 5. **Claude checked the real thing**: launched the built exe, drove it with Windows UI Automation, and looked at
@@ -29,7 +29,7 @@ Real mistakes, all made by the AI and caught by the process, not by luck:
 
 | Found by | Mistake | Fix |
 |---|---|---|
-| Round-trip test | Saving added an extra `\r` to every line (`XElement` already writes platform newlines). | Normalise before re-applying the file's line endings. |
+| Round-trip test | Saving added an extra `\r` to every line (`XElement` already writes platform newlines). | Normalize before re-applying the file's line endings. |
 | Probe against real files | LMP's files claim UTF-16 but are UTF-8; `XDocument.Load` throws. | Decode bytes ourselves. |
 | Server runner tests | Using `SetConsoleCtrlHandler(NULL, TRUE)` made *later* servers ignore Ctrl+C. | Helper process. |
 | Repro program | Attaching the app to the server's console killed the app. | Helper process. |
@@ -52,7 +52,7 @@ Real mistakes, all made by the AI and caught by the process, not by luck:
 
 ## Guidelines we followed (keep following them)
 
-- **Read before you change.** LMP's behaviour comes from its source, not from guesses. Link the file you learned from.
+- **Read before you change.** LMP's behavior comes from its source, not from guesses. Link the file you learned from.
 - **Test what matters for real.** Files are compared byte-for-byte; the server runner starts a real (fake) process;
   the UI tests click the real window.
 - **Never test against the live server.** Use `tests/Fixtures`, the fake server, or a sandbox copy with networking off.

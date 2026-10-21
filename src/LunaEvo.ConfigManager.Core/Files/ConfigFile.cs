@@ -142,7 +142,7 @@ public sealed class ConfigFile
 
     public string Render()
     {
-        // XmlWriter turns \n into the platform newline, so normalise before applying the file's own.
+        // XmlWriter turns \n into the platform newline, so normalize before applying the file's own.
         var body = Root.ToString(SaveOptions.DisableFormatting).Replace("\r\n", "\n");
         if (_crlf)
             body = body.Replace("\n", "\r\n");

@@ -36,7 +36,7 @@ is on), else the welcome page.
   entry ("Mod Control"). Tab buttons keep the old ids (`nav/GeneralSettings.xml`), so automation and tests still find them.
 - **Badges**: red count = errors in that file (on the tab, and the total on "Server settings"); green dot = unsaved
   changes. The Server Console item shows a dot while the server runs.
-- **`TabSet`** gives a page tabs: `Strip` (the buttons; `AddLabel` starts a labelled row) and `Content` (the pages).
+- **`TabSet`** gives a page tabs: `Strip` (the buttons; `AddLabel` starts a labeled row) and `Content` (the pages).
   Every page stays in the visual tree with `IsVisible` toggled, so state survives switching and UI tests can find
   controls on any tab. Note: a hidden tab isn't laid out, so its text isn't in the visual tree until it's shown; open
   the tab before reading text from it. Used by Server settings, Players, Join and LUNA EVO Settings.
@@ -50,7 +50,7 @@ is on), else the welcome page.
 | `SettingRow` | One setting row | Editor by `SettingKind`. Number boxes have **no Min/Max** on purpose: the control would silently clamp a bad value from the file instead of flagging it. Passwords use `PasswordChar` plus a reveal button. Descriptions that only repeat the name are hidden. |
 | `ListEditor` | One list group (mod control) | Items are `Entry(index, text, isDuplicate)` so identical names can be selected one at a time. |
 | `ServerPage` | The Server Console | See [03](03-Server-Control.md). |
-| `SettingsPage` | LUNA EVO Settings | Colour wheel (`ColorView`, ring shape), presets, theme, behaviour, automation, notifications ([17](17-Notifications.md)), LMP updates, about, folders, links. |
+| `SettingsPage` | LUNA EVO Settings | Color wheel (`ColorView`, ring shape), presets, theme, behavior, automation, notifications ([17](17-Notifications.md)), LMP updates, about, folders, links. |
 | `ObjectListEditor` | One record list (plugins, mandatory parts) | See [12](12-Mod-Control-From-GameData.md). |
 | `ModImportPanel` | Import from GameData | See [12](12-Mod-Control-From-GameData.md). |
 | `SetupWizard` | Set up a new server | Shown from the welcome page. See [10](10-Setup-and-Updates.md). |
@@ -64,14 +64,14 @@ these IDs, so **keep them stable** and give new controls one.
 
 ## Look and feel 🎨
 
-The design follows **NOMM** (Nuclear Option Mod Manager): Material 3 colours from a seed, JetBrains Mono everywhere,
+The design follows **NOMM** (Nuclear Option Mod Manager): Material 3 colors from a seed, JetBrains Mono everywhere,
 a navigation rail with pill selection, the main action as a big button at the bottom of the rail, and settings as
 rounded groups of rows with a muted description line.
 
-- **`App.axaml` is the single home of the look**: colour resources for Dark and Light, icon geometries, and style
+- **`App.axaml` is the single home of the look**: color resources for Dark and Light, icon geometries, and style
   classes such as `headline`, `label`, `sublabel`, `group`, `row`, `nav`, `fab`, `text`, `chip`, `card`, `badge`,
-  `banner`, and log kinds (`Error`, `Chat`...). Code only adds classes; it never sets colours.
-- **`ThemeManager.Palette(accent, dark)`** derives every colour from the accent's hue and saturation at fixed lightness
+  `banner`, and log kinds (`Error`, `Chat`...). Code only adds classes; it never sets colors.
+- **`ThemeManager.Palette(accent, dark)`** derives every color from the accent's hue and saturation at fixed lightness
   steps (the neutrals get a faint tint of the same hue). `Apply` swaps the brushes into the theme dictionaries and
   sets Fluent's own accent, so everything using `DynamicResource` recolours live.
 - The **font** is set app-wide in `Program.BuildAvaloniaApp` (`FontManagerOptions.DefaultFamilyName`).

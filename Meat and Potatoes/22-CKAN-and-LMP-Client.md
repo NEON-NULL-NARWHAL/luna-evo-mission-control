@@ -34,7 +34,7 @@ ckan install --headless --no-recommends --gamedir <ksp> Mod1 Mod2=1.2.3 ...
 split over several commands if the list wouldn't fit one Windows command line. Output streams into the page.
 
 - **Never `install -c <their file>`:** a `.ckan` can have its own `download` URL, which CKAN would install as-is
-  (audit 5, E1). Names only, from CKAN's catalogue.
+  (audit 5, E1). Names only, from CKAN's catalog.
 - **Not our own metapackage either:** tried with the real ckan.exe 1.36.4; it works, but CKAN keeps the metapackage in
   its installed list and skips it next time ("already installed"), so it goes stale after the second list.
 - CKAN's exit code is the result; unknown mod names make it fail (non-zero) and it undoes that install.

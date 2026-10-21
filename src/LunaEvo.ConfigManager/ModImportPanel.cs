@@ -26,7 +26,7 @@ internal sealed class ModImportPanel
     private readonly TextBlock _result = Ui.Text("", "sublabel").WithId("modimport/result");
     private readonly TextBlock _shareResult = Ui.Text("", "sublabel").WithId("modimport/shareResult");
 
-    /// <summary>Tests replace the save dialog: returns the chosen path, or null if cancelled.</summary>
+    /// <summary>Tests replace the save dialog: returns the chosen path, or null if canceled.</summary>
     internal static Func<MainWindow, Task<string?>> PickSharePath { get; set; } = async host =>
         (await host.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {

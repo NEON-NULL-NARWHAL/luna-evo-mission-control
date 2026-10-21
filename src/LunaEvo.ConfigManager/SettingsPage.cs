@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager/SettingsPage.cs
-// [UI] The LUNA EVO Settings page: colour wheel, theme, behaviour options, versions, folders, links.
+// [UI] The LUNA EVO Settings page: color wheel, theme, behavior options, versions, folders, links.
 // Used by: MainWindow
 // Guide:   Meat and Potatoes/04-App-UI.md
 
@@ -18,7 +18,7 @@ using LunaEvo.ConfigManager.Core.Setup;
 
 namespace LunaEvo.ConfigManager;
 
-/// <summary>The "LUNA EVO" page: the app's own preferences (appearance, behaviour) and an about section.</summary>
+/// <summary>The "LUNA EVO" page: the app's own preferences (appearance, behavior) and an about section.</summary>
 internal sealed class SettingsPage
 {
     public const string LmpRepository = "https://github.com/LunaMultiplayer/LunaMultiplayer";
@@ -41,7 +41,7 @@ internal sealed class SettingsPage
     private readonly TextBlock _announceResult = Ui.Text("", "sublabel").WithId("settings/announceResult");
     private readonly Dictionary<string, StackPanel> _tabPages = new()
     {
-        ["look"] = new(), ["behaviour"] = new(), ["automation"] = new(), ["updates"] = new(), ["downloads"] = new(), ["about"] = new(),
+        ["look"] = new(), ["behavior"] = new(), ["automation"] = new(), ["updates"] = new(), ["downloads"] = new(), ["about"] = new(),
     };
     private readonly TextBlock _dailyResult = Ui.Text("", "sublabel").WithId("settings/dailyResult");
     private readonly TextBox _webhook = new TextBox { Width = 420, PasswordChar = '•' }.WithId("settings/discordWebhook");
@@ -111,7 +111,7 @@ internal sealed class SettingsPage
         page.Children.Add(stored);
         page.Children.Add(new Border { Height = 14 });
         _tabs.Add("look", "Appearance", _tabPages["look"]);
-        _tabs.Add("behaviour", "Behaviour", _tabPages["behaviour"]);
+        _tabs.Add("behavior", "Behavior", _tabPages["behavior"]);
         _tabs.Add("automation", "Automation & alerts", _tabPages["automation"]);
         _tabs.Add("updates", "Updates", _tabPages["updates"]);
         _tabs.Add("downloads", "Downloads", _tabPages["downloads"]);
@@ -127,7 +127,7 @@ internal sealed class SettingsPage
 
         // Appearance
         var (appearance, look, _) = Ui.Group("Appearance");
-        look.Children.Add(Ui.Row("Accent colour", "Pick any colour on the wheel, or type a hex code. The whole theme is generated from it.", _hex));
+        look.Children.Add(Ui.Row("Accent color", "Pick any color on the wheel, or type a hex code. The whole theme is generated from it.", _hex));
         var wheelRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Thickness(12, 4, 12, 12) };
         wheelRow.Children.Add(_wheel);
         var presets = new StackPanel
@@ -142,8 +142,8 @@ internal sealed class SettingsPage
         look.Children.Add(Ui.Row("Theme", "Dark like NOMM, light, or follow Windows.", _theme));
         _tabPages["look"].Children.Add(appearance);
 
-        // Behaviour
-        var (behaviour, rows, _) = Ui.Group("Behaviour");
+        // Behavior
+        var (behavior, rows, _) = Ui.Group("Behavior");
         rows.Children.Add(Ui.Row("Open the last server on startup", "When LUNA EVO isn't sitting next to Server.exe, reopen the folder you used last.",
             Toggle("settings/openLast", s => s.OpenLastServer, (s, v) => s with { OpenLastServer = v })));
         rows.Children.Add(Ui.Row("Config backups to keep", $"Older folders in Config/{BackupService.BackupFolderName} are deleted after each save. 0 keeps them all.",
@@ -156,7 +156,7 @@ internal sealed class SettingsPage
             Toggle("settings/confirmStop", s => s.ConfirmStop, (s, v) => s with { ConfirmStop = v })));
         rows.Children.Add(Ui.Row("Review changes before saving", "Shows a list of what's about to change, with old and new values.",
             Toggle("settings/reviewChanges", s => s.ReviewChangesBeforeSave, (s, v) => s with { ReviewChangesBeforeSave = v })));
-        _tabPages["behaviour"].Children.Add(behaviour);
+        _tabPages["behavior"].Children.Add(behavior);
 
         // Home server mode
         var (home, homeBody, _) = Ui.Group("Home server mode");
@@ -168,16 +168,16 @@ internal sealed class SettingsPage
             var on = homeToggle.IsChecked == true;
             var registered = HomeServer.SetStartWithWindows(on, MainWindow.CurrentExe, _host.SettingsPath, _host.SettingsPath != AppSettingsStore.DefaultPath);
             _homeResult.Text = !on ? "Off. LUNA EVO no longer starts with Windows." :
-                registered ? "On. LUNA EVO starts with Windows, minimised, and starts the server." :
+                registered ? "On. LUNA EVO starts with Windows, minimized, and starts the server." :
                 "On, except starting with Windows: only the downloaded LUNA EVO exe can do that (not a development build).";
             _host.OnServerStatusChanged(); // keep-awake follows straight away
         };
         homeBody.Children.Add(Ui.Row("Run as a home server",
-            "For a PC that hosts all the time: starts with Windows minimised to the notification area, starts the server by itself, " +
+            "For a PC that hosts all the time: starts with Windows minimized to the notification area, starts the server by itself, " +
             "closing the window hides it there instead of quitting (right-click the icon to quit), and the PC doesn't go to sleep while the server runs.",
             homeToggle));
         homeBody.Children.Add(new Border { Padding = new Thickness(12, 0, 12, 10), Child = _homeResult });
-        _tabPages["behaviour"].Children.Add(home);
+        _tabPages["behavior"].Children.Add(home);
 
         // Server automation
         var (automation, auto, _) = Ui.Group("Server automation");
@@ -410,7 +410,7 @@ internal sealed class SettingsPage
         }
     }
 
-    /// <summary>Switches to a tab: "look", "behaviour", "automation", "updates", "downloads" or "about".</summary>
+    /// <summary>Switches to a tab: "look", "behavior", "automation", "updates", "downloads" or "about".</summary>
     internal void ShowTab(string key) => _tabs.Select(key);
 
     /// <summary>The "LUNA EVO updates" rows: up to date, or the new version with Update and restart.</summary>

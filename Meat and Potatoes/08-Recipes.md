@@ -17,7 +17,7 @@ Step-by-step guides for the changes you're most likely to make. Each ends with *
    `Severity.Error` blocks saving; `Warning` doesn't. A `null` setting makes it a banner for the whole file.
 3. Add a test in `tests/LunaEvo.ConfigManager.Core.Tests/ConfigSessionTests.cs` (copy `Heartbeat_must_be_lower_than_timeout`).
 
-## Grey out a setting that doesn't apply
+## Gray out a setting that doesn't apply
 
 1. In `LmpRules.InactiveReason`, return a short reason when it has no effect:
    ```csharp
@@ -67,10 +67,10 @@ Follow [14 · Security](14-Security.md#checklist-for-new-code): trusted host, si
 3. Add its value to `Choices()` as `[(file, setting)] = value`; `ConfigGenerator` does the rest.
 4. Assert it in `NewFeatureTests.Wizard_downloads_lmp_writes_the_config_and_opens_the_server`.
 
-## Change colours or styles
+## Change colors or styles
 
-- Fixed colours (error, warning, log chat/network): the theme dictionaries in `App.axaml`.
-- Colours derived from the accent: `ThemeManager.Palette` (lightness steps per role).
+- Fixed colors (error, warning, log chat/network): the theme dictionaries in `App.axaml`.
+- Colors derived from the accent: `ThemeManager.Palette` (lightness steps per role).
 - A new look for something: add a style class in `App.axaml` (`<Style Selector="Border.myThing">`) and
   `control.Classes.Add("myThing")` in code.
 

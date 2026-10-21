@@ -107,7 +107,7 @@ internal sealed class CkanPage
         var (list, listBody, _) = Ui.Group("Install a mod list");
         listBody.Children.Add(Ui.Row("Mods to install",
             "From a friend or a server host: a CKAN modpack (.ckan) or mod names. LUNA EVO reads only the mod names and versions " +
-            "and CKAN installs them from its own catalogue (a file's own download links are never used).", null));
+            "and CKAN installs them from its own catalog (a file's own download links are never used).", null));
         listBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 6, Children = { _list, load } });
         listBody.Children.Add(Ui.Row("Into this KSP install", "Close KSP and CKAN's window for this install first.", _target));
         listBody.Children.Add(new StackPanel { Margin = new Thickness(12, 4, 12, 12), Spacing = 6, Children = { _install, _result, _log } });
@@ -347,7 +347,7 @@ internal sealed class CkanPage
         }
         var names = string.Join(", ", mods.Take(12).Select(m => m.Identifier)) + (mods.Count > 12 ? $" and {mods.Count - 12} more" : "");
         if (!await Dialogs.ConfirmAsync(_host, $"Install {mods.Count} mod(s) with CKAN?",
-                $"Into {ksp}: {names}. CKAN works out the dependencies and downloads everything from its catalogue. " +
+                $"Into {ksp}: {names}. CKAN works out the dependencies and downloads everything from its catalog. " +
                 (problems.Count > 0 ? string.Join(" ", problems) : ""), "Install"))
             return;
 
@@ -365,7 +365,7 @@ internal sealed class CkanPage
         });
         try
         {
-            _result.Text = "Refreshing CKAN's catalogue...";
+            _result.Text = "Refreshing CKAN's catalog...";
             await RunCkan(ckan, CkanModList.UpdateArguments(ksp), Line);
             _result.Text = $"Installing {mods.Count} mod(s)...";
             var exit = 0;

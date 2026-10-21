@@ -254,7 +254,7 @@ public sealed record CkanMod(string Identifier, string? Version = null);
 /// Safety: a .ckan file can carry its own <c>download</c> URL, and CKAN would fetch and install whatever is there (KSP
 /// then runs any DLL in GameData). So the user's file is <b>never</b> passed to CKAN. Only identifiers (checked against
 /// CKAN's identifier rules) and versions are read out and passed as <c>ckan install Mod Mod=version</c>, so CKAN
-/// installs them from its own catalogue. (Not a metapackage of our own: CKAN would keep it in its list, stale after
+/// installs them from its own catalog. (Not a metapackage of our own: CKAN would keep it in its list, stale after
 /// the next list. Checked with ckan.exe 1.36.4.)
 /// </para>
 /// </summary>
@@ -290,7 +290,7 @@ public static partial class CkanModList
                 if (choices > 0)
                     problems.Add($"{choices} \"one of these\" choice(s) (any_of) skipped; install those in CKAN.");
                 if (json.RootElement.TryGetProperty("download", out _))
-                    problems.Add("This .ckan file has its own download link; it's ignored. Only its list of mods is used, from CKAN's catalogue.");
+                    problems.Add("This .ckan file has its own download link; it's ignored. Only its list of mods is used, from CKAN's catalog.");
             }
             catch (JsonException e)
             {
@@ -371,7 +371,7 @@ public static partial class CkanModList
         return JsonSerializer.Serialize(pack, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    /// <summary>`ckan update`: refresh CKAN's catalogue for this install.</summary>
+    /// <summary>`ckan update`: refresh CKAN's catalog for this install.</summary>
     public static IReadOnlyList<string> UpdateArguments(string kspFolder) => ["update", "--headless", "--gamedir", kspFolder];
 
     /// <summary>

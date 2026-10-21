@@ -6,7 +6,7 @@
 
 We read LMP's source (`Server/MainServer.cs`, `Command/CommandHandler.cs`, `LmpCommon/BaseLogger.cs`) to learn this:
 
-| Thing | LMP behaviour | What we do |
+| Thing | LMP behavior | What we do |
 |---|---|---|
 | Output | Every line is `[HH:mm:ss][Type]: message`, time in **UTC**. Types: `LMP`, `Info`, `Debug`, `Warning`, `Error`, `Fatal`, `Chat`, `NetworkDebug`, `VerboseNetwork`. | `LogLine.Parse`; untagged lines (stack traces) inherit the kind above them. Our own lines are UTC too. |
 | Commands | Reads stdin lines. `/name args` runs a command; text without a slash is broadcast as chat. At most one command per 500 ms. | `ServerRunner.SendCommand` writes a line (newlines flattened). Quick commands come from LMP 0.29.2's `RegisterCommands`. |

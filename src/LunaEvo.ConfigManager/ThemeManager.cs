@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager/ThemeManager.cs
-// [UI] Turns one accent colour into the whole light/dark palette and applies it live.
+// [UI] Turns one accent color into the whole light/dark palette and applies it live.
 // Used by: MainWindow, SettingsPage
 // Guide:   Meat and Potatoes/04-App-UI.md
 
@@ -12,7 +12,7 @@ using Avalonia.Themes.Fluent;
 namespace LunaEvo.ConfigManager;
 
 /// <summary>
-/// Generates the whole palette from one accent colour, like NOMM's Material "seed colour": primaries keep the
+/// Generates the whole palette from one accent color, like NOMM's Material "seed color": primaries keep the
 /// accent's hue and saturation at fixed lightness steps, and the neutrals get a faint tint of the same hue.
 /// </summary>
 internal static class ThemeManager
@@ -26,7 +26,7 @@ internal static class ThemeManager
         ("Eve purple", "#8E4FD1"),
         ("Minmus mint", "#3FC7A4"),
         ("Jool lime", "#A6C93A"),
-        ("Mun grey", "#8A9099"),
+        ("Mun gray", "#8A9099"),
     ];
 
     /// <summary>Parses "#RRGGBB", or returns the fallback.</summary>
@@ -68,7 +68,7 @@ internal static class ThemeManager
         }
     }
 
-    /// <summary>The brush colours for one theme, keyed by the resource names used in App.axaml.</summary>
+    /// <summary>The brush colors for one theme, keyed by the resource names used in App.axaml.</summary>
     public static Dictionary<string, Color> Palette(Color accent, bool dark)
     {
         var hsl = accent.ToHsl();

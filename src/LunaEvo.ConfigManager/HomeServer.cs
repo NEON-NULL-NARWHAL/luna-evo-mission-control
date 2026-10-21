@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager/HomeServer.cs
-// [UI] Home server mode's Windows bits: start at login (minimised), and keep the PC awake while the server runs.
+// [UI] Home server mode's Windows bits: start at login (minimized), and keep the PC awake while the server runs.
 // Used by: MainWindow, SettingsPage
 // Guide:   Meat and Potatoes/13-Automation.md
 

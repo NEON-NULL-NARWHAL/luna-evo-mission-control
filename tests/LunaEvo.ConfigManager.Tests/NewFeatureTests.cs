@@ -171,7 +171,7 @@ public class NewFeatureTests
         Assert.Equal("mymod/plugins/mymod.dll", Assert.Single(ui.Session.GetObjectList(file, "OptionalPlugins"))["FilePath"]);
         Assert.StartsWith("Found 1 parts, 1 resources, 1 plugins and 1 expansions", ui.Find<TextBlock>("modimport/result").Text);
 
-        // The review dialog summarises list changes instead of dumping hundreds of part names.
+        // The review dialog summarizes list changes instead of dumping hundreds of part names.
         var review = MainWindow.DescribeChanges(ui.Session.GetChanges());
         var before = ConfigFile.Load(Path.Combine(ui.ConfigDirectory, file)).GetList("AllowedParts")!.Distinct().Count(); // 531: the file has 16 duplicates
         Assert.Contains($"LMP Mod Control › Allowed Parts: 1 added, {before} removed", review);

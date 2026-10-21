@@ -1,9 +1,9 @@
 // LUNA EVO · FakeLmpServer/Program.cs
-// [Test] A pretend LMP Server.exe for tests: same log format, stdin commands and Ctrl+C behaviour.
+// [Test] A pretend LMP Server.exe for tests: same log format, stdin commands and Ctrl+C behavior.
 // Used by: ServerRunnerTests, ServerConsoleTests
 // Guide:   Meat and Potatoes/05-Tests.md
 
-// Mimics LMP 0.29.2's console behaviour (MainServer.cs, CommandHandler.cs, BaseLogger.cs) closely enough to test
+// Mimics LMP 0.29.2's console behavior (MainServer.cs, CommandHandler.cs, BaseLogger.cs) closely enough to test
 // LUNA EVO's server control without starting a real, networked server.
 //   --ignore-ctrl-c   ignore Ctrl+C (tests the kill fallback)
 //   --fatal           fail during startup and wait on stdin like LMP does

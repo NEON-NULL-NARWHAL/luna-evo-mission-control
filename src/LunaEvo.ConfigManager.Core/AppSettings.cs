@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager.Core/AppSettings.cs
-// [Core] LUNA EVO's own preferences (accent colour, theme, last server, backups to keep...) and where they're saved.
+// [Core] LUNA EVO's own preferences (accent color, theme, last server, backups to keep...) and where they're saved.
 // Used by: MainWindow, SettingsPage
 // Guide:   Meat and Potatoes/04-App-UI.md
 
@@ -13,7 +13,7 @@ public sealed record AppSettings
 {
     public const string DefaultAccent = "#3FAE2A";
 
-    /// <summary>Seed colour the whole palette is generated from, as #RRGGBB.</summary>
+    /// <summary>Seed color the whole palette is generated from, as #RRGGBB.</summary>
     public string AccentColor { get; init; } = DefaultAccent;
 
     /// <summary>"Dark", "Light" or "System".</summary>
@@ -64,7 +64,7 @@ public sealed record AppSettings
     public string Announcements { get; init; } = "";
 
     /// <summary>
-    /// Home server mode: start with Windows (minimised to the notification area), start the server by itself, hide to
+    /// Home server mode: start with Windows (minimized to the notification area), start the server by itself, hide to
     /// the notification area instead of quitting, and keep the PC awake while the server runs.
     /// </summary>
     public bool HomeServerMode { get; init; }

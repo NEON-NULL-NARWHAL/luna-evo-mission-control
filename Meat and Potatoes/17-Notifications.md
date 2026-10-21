@@ -15,7 +15,7 @@ LUNA EVO Settings → Notifications. It never throws.
 ## Windows
 
 `DesktopNotifier` uses the notification-area balloon (`Shell_NotifyIcon`, `NIF_INFO`), which Windows 10 and 11 show
-as a normal notification and keep in the notification centre. No NuGet package or app registration. The app name it
+as a normal notification and keep in the notification center. No NuGet package or app registration. The app name it
 shows comes from the exe's **FileDescription** (`<AssemblyTitle>` in the csproj). The icon is added on the first
 notification and removed when the window closes. Alerts use the warning icon. Not on Windows: nothing happens.
 

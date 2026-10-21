@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager.Core/Validation/LmpRules.cs
-// [Core] Rules that span settings or files: heartbeat < timeout, port clashes, greyed-out settings, difficulty presets.
+// [Core] Rules that span settings or files: heartbeat < timeout, port clashes, grayed-out settings, difficulty presets.
 // Used by: ConfigSession.Validate, SettingRow
 // Guide:   Meat and Potatoes/02-Core.md
 

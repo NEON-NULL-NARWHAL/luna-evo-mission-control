@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the six security audits (0.4.0 to 1.2.1) found and changed, newest first, and which real
+what the seven security audits (0.4.0 to 1.3.1) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
@@ -27,7 +27,7 @@ response time.
 | **Windows notifications** | Settings → Notifications (on by default) | Shown on this PC only. |
 | **Windows startup list** (`HKCU\...\Run`) | Only while Home server mode is on | One entry, "LUNA EVO Config Manager", for your user only; removed when you switch the mode off. |
 | **CKAN and the LMP client** (GitHub) | CKAN page and Settings → Downloads; setup wizard step 3 if switched on | The same verified download as LMP's server: GitHub only, SHA-256 checked (and again where it's stored or before unpacking). Nothing unverified. The client is unpacked with size and stay-inside checks, only into `GameData/LunaMultiplayer` (and `000_Harmony` if missing). |
-| **CKAN's command line** (`ckan.exe`: LUNA EVO's verified copy, or your own if you chose one) | CKAN page → Install with CKAN, after you confirm | `ckan update` and `ckan install <mod names>` for the KSP install you pick, never while KSP or CKAN has it open. Only mod names and versions from a list are passed (a `.ckan` file itself never is). CKAN then downloads from its own catalogue. |
+| **CKAN's command line** (`ckan.exe`: LUNA EVO's verified copy, or your own if you chose one) | CKAN page → Install with CKAN, after you confirm | `ckan update` and `ckan install <mod names>` for the KSP install you pick, never while KSP or CKAN has it open. Only mod names and versions from a list are passed (a `.ckan` file itself never is). CKAN then downloads from its own catalog. |
 | **Crafts from friends** | Crafts page → Import | Read as data with size limits; written only into a KSP save's Ships folder or the server's craft library, never overwriting. |
 
 LUNA EVO has no telemetry, no accounts and no server of its own.
@@ -71,7 +71,7 @@ their own `ckan.exe`, their KSP install's CKAN data, and the original modpack (`
 |---|---|---|---|
 | G1 | Low (correctness) | **`any_of` entries in a mod list** ("one of these mods", allowed by CKAN's format) were dropped without a word. | Counted and reported ("N choice(s) skipped; install those in CKAN"). A `min_version` is treated as "no exact version". |
 
-Checked for real: the owner's `ckan.exe` is recognised as official CKAN v1.36.4 (SHA-256 matches GitHub) and runs with
+Checked for real: the owner's `ckan.exe` is recognized as official CKAN v1.36.4 (SHA-256 matches GitHub) and runs with
 its input closed; importing the original modpack reads all 108 mods with no problems; exporting the install gives the
 same 108 mods (it pins the installed versions, the original pins none, and every one is in CKAN's `registry.json`),
 re-imports identically, and contains no user name. Not done: installing all 108 mods for real (many GB); the command
@@ -84,7 +84,7 @@ per path and never blocks the window.
 
 - **Your own ckan.exe** (CKAN page → Already have CKAN?) is run because you chose it: it must be a Windows program
   (`.exe`, `MZ`), and LUNA EVO compares its SHA-256 with GitHub's digests for CKAN's official releases and says
-  whether it matches ("Official CKAN v1.36.4") or not. A copy that doesn't match is still used, clearly labelled.
+  whether it matches ("Official CKAN v1.36.4") or not. A copy that doesn't match is still used, clearly labeled.
   If it's moved or deleted, LUNA EVO's own verified copy is used again.
 - **Exported mod lists are written fresh**, never copied: CKAN's own `installed-<instance>.ckan` has your **Windows
   user name** as its author. The export has only mod names, versions (optional) and the KSP version range, so it's
@@ -119,7 +119,7 @@ the older hot paths for robustness and wasted work.
 
 | # | Severity | Finding | Fix |
 |---|---|---|---|
-| E1 | High (design) | **A `.ckan` file can carry its own `download` URL** (and `install_to` paths). Handing a pasted file to `ckan install -c` would let whoever wrote it put any DLL into GameData, and KSP runs every DLL there. | The file is **never passed to CKAN**. Only mod identifiers (CKAN's own rule: letters, digits, `-`, `_`, not starting with `-`, so none can read as an option) and versions (`[A-Za-z0-9.:+_~-]`) are read out and passed as `ckan install Mod Mod=version` with `--headless --no-recommends`, so everything comes from CKAN's catalogue. At most 2,000 mods; arguments go through `ArgumentList`, never a shell. Checked with the real ckan.exe 1.36.4 on a throwaway KSP folder. |
+| E1 | High (design) | **A `.ckan` file can carry its own `download` URL** (and `install_to` paths). Handing a pasted file to `ckan install -c` would let whoever wrote it put any DLL into GameData, and KSP runs every DLL there. | The file is **never passed to CKAN**. Only mod identifiers (CKAN's own rule: letters, digits, `-`, `_`, not starting with `-`, so none can read as an option) and versions (`[A-Za-z0-9.:+_~-]`) are read out and passed as `ckan install Mod Mod=version` with `--headless --no-recommends`, so everything comes from CKAN's catalog. At most 2,000 mods; arguments go through `ArgumentList`, never a shell. Checked with the real ckan.exe 1.36.4 on a throwaway KSP folder. |
 | E2 | Medium | **`settings.json` was written in place**: a crash or power cut mid-write could leave it half-written, losing saved servers and the Discord webhook. | Written to `settings.json.tmp`, then swapped in. |
 | E3 | Low | Mod-list install could run while CKAN had the install open (two writers on CKAN's registry). | Refused while `CKAN/registry.locked` names a live process (or can't be read); a lock left by a closed CKAN doesn't block. Also refused while KSP runs. |
 | E4 | Low (efficiency) | The Players history was rebuilt every 5 s, announcements parsed every second, the Join auto-refresh repeated DNS and four pings every 10 s, and every mod check / craft import re-read thousands of GameData files. | Redraw only on change (tracker version, ban file time, search, online list); parse once per change; auto-refresh reads only live info; GameData scans reused for 2 minutes. |
@@ -206,7 +206,7 @@ history** (no real passwords, IP addresses, player names or user paths).
 | A3 | Medium | **Universe restore deleted the current Universe before unpacking.** A damaged or hostile backup zip would leave a half-restored Universe (the safety snapshot made it recoverable, but by hand). No size limits on unpacking. | Unpacks into a staging folder with file-count, size and stay-inside checks, and only then swaps it in. |
 | A4 | Low | **XML files could contain a DTD**, allowing entity expansion (bounded by .NET to 10 million characters). | DTDs are refused; LMP's files never have one. |
 | A5 | Low | **A profile named `CON`, `NUL`, `COM1`...** maps to a Windows device, not a folder. | Such names get a suffix; names are capped at 80 characters. |
-| A6 | Low | **A hand-edited LUNA EVO settings file with `null` values** could cause errors later. | Values are normalised on load. |
+| A6 | Low | **A hand-edited LUNA EVO settings file with `null` values** could cause errors later. | Values are normalized on load. |
 | A7 | Low | **Plugin hashing read whole DLLs into memory.** | Streamed. |
 
 How they were checked: `SecurityRound2Tests` covers oversized and long-text live info, escaping and damaged Universe

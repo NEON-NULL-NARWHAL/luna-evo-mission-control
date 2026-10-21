@@ -245,7 +245,7 @@ internal sealed class ServerPage : IDisposable
         UpdateState();
     }
 
-    /// <returns>False if the user cancelled.</returns>
+    /// <returns>False if the user canceled.</returns>
     internal async Task<bool> StopAsync(bool confirm = true)
     {
         if (!IsRunning)
