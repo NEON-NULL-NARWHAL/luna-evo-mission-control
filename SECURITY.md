@@ -7,9 +7,9 @@ software each version was tested against.
 
 ## Reporting a problem
 
-Please **don't** open a public issue for a security problem. Message a maintainer privately on GitHub
-([@NEON-NULL-NARWHAL](https://github.com/NEON-NULL-NARWHAL)). (GitHub's private **Report a vulnerability** form isn't
-switched on for this repository yet; see audit 10, J8.) Include what you did, what happened, and the LUNA EVO version
+Please **don't** open a public issue for a security problem. Use GitHub's private
+**[Security → Report a vulnerability](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/security/advisories/new)**
+on this repository, or message a maintainer ([@NEON-NULL-NARWHAL](https://github.com/NEON-NULL-NARWHAL)). Include what you did, what happened, and the LUNA EVO version
 (LUNA EVO App settings → About). We'll reply as soon as we can. This is a two-person hobby project, so there's no fixed
 response time.
 
@@ -87,8 +87,8 @@ the real services.
 | J5 | Low | **players.json was rewritten for every online player every 5 seconds** (each website poll), for days on a home server. Ban reasons and clients' version strings were stored at any length. | "Last seen" alone is written at most once a minute; real changes still at once. Text is capped. |
 | J6 | Low | **The LMP server installer checked for unsafe paths while extracting**, so a bad entry could leave a half-updated server, and **its size limit trusted the sizes the zip claims**. (Downloads are SHA-256 checked, so this needs an unverified old release you agreed to.) | Every path is checked before anything is written; the bytes actually written are counted. |
 | J7 | Low | **A netsh that didn't answer within 5 s** made the firewall-rule check throw. | Treated as "don't know". |
-| J8 | Low | **The repository's GitHub security features were off**: secret scanning, push protection, Dependabot alerts and private vulnerability reporting, so "Report a vulnerability" (below) wasn't actually there. | Needs the owner's OK to switch on (they're free for public repos). Until then, report privately by messaging a maintainer. |
-| J9 | Info | The Core tests use **xunit 2.9.3, marked legacy** (the UI tests are on xunit v3). Test-only. | Suggested: move them to xunit v3. |
+| J8 | Low | **The repository's GitHub security features were off**: secret scanning, push protection, Dependabot alerts and private vulnerability reporting, so "Report a vulnerability" (below) wasn't actually there. | Switched on with the owner's OK after 2.1.1: secret scanning with push protection, Dependabot alerts and security updates, and private vulnerability reporting. GitHub reported no alerts. |
+| J9 | Info | The Core tests used **xunit 2.9.3, marked legacy** (the UI tests are on xunit v3). Test-only. | Moved to xunit v3 after 2.1.1. |
 
 Checked and fine: every background event (server output, state, exit, player events) reaches the UI through the
 dispatcher; the self-update swap (SHA-256 checked twice, a Windows program, rename with rollback); the firewall rule

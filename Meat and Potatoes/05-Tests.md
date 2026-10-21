@@ -31,6 +31,9 @@ install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, 
 damaged (the current Universe must survive), DTDs refused, Windows device names as profile names, weak-password
 warnings, and a hand-edited settings file full of nulls.
 
+Both test projects use **xunit v3** (the Core tests moved from the legacy xunit 2.9.3 after 2.1.1; v3 test projects
+are `<OutputType>Exe</OutputType>`). Coverage still works with `--collect:"XPlat Code Coverage"`.
+
 2.1.1 (audit 10) added `FuzzTests` (every parser of outside text, 1,500 seeded mutations each; a parser may only throw
 what it documents, and the seed is fixed so a failure reproduces), `CodeHygieneTests` (no `/// <summary>` left above
 another one: the sign of code inserted between a member and its comment) and `SupportCoverageTests` (`ErrorLog`,

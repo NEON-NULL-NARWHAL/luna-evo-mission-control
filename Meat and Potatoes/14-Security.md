@@ -50,6 +50,13 @@ Player names and chat come from other people's game clients. Read only LMP's own
 match names with LMP's rule (`A-Z a-z 0-9 - _`), escape them before sending anywhere (Discord), and never store
 their IP addresses (`PlayerTracker`).
 
+## The repository's own protection
+
+Switched on in GitHub (audit 10, J8): secret scanning with **push protection** (a push containing a token or key is
+refused), **Dependabot** alerts and security updates (a pull request when a package has a known vulnerability), and
+**private vulnerability reporting** (Security → Report a vulnerability). Keep them on; check the Security tab when
+GitHub emails about an alert.
+
 ## Checklist for new code
 
 - Anything downloaded: trusted host, size limit, hash.
