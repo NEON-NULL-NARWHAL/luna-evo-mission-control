@@ -285,6 +285,60 @@ public class NavigationAndUpdateTests
     }
 
     [AvaloniaFact]
+    public void Ckan_page_uses_your_own_ckan_exe_and_exports_and_reuses_mod_lists()
+    {
+        using var ui = new UiHarness(openServer: false);
+        var bytes = TestData.FakeExe("ckan");
+        ui.Web.Text(Core.Setup.CkanTools.ReleasesUrl, TestData.CkanReleasesJson(bytes));
+        var own = Path.Combine(Path.GetTempPath(), "LunaEvoTests", Guid.NewGuid().ToString("N"), "ckan.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(own)!);
+        File.WriteAllBytes(own, bytes);
+        var ksp = TestData.FakeKsp();
+        Directory.CreateDirectory(Path.Combine(ksp, "CKAN"));
+        File.WriteAllText(Path.Combine(ksp, "CKAN", "installed-Modded.ckan"),
+            "{ \"author\": \"somebody\", \"depends\": [ { \"name\": \"MechJeb2\", \"version\": \"2.14.3.0\" }, { \"name\": \"Scatterer\" } ] }");
+        Directory.CreateDirectory(Core.Setup.CkanTools.ConfigFolder);
+        File.WriteAllText(Path.Combine(Core.Setup.CkanTools.ConfigFolder, "config.json"),
+            "{ \"GameInstances\": [ { \"Name\": \"Modded\", \"Path\": " + System.Text.Json.JsonSerializer.Serialize(ksp) + " } ] }");
+        CkanPage.PickCkanExe = _ => Task.FromResult<string?>(own);
+        var exportPath = Path.Combine(Path.GetDirectoryName(own)!, "Modded mods.ckan");
+        CkanPage.PickExportPath = (_, suggested) =>
+        {
+            Assert.Equal("Modded mods.ckan", suggested);
+            return Task.FromResult<string?>(exportPath);
+        };
+        var runs = new List<string>();
+        CkanPage.RunCkan = (exe, _, _) =>
+        {
+            runs.Add(exe);
+            return Task.FromResult(0);
+        };
+
+        ui.OpenTab(MainWindow.CkanKey);
+        ui.Await(ui.Window.Ckan.ChooseOwnAsync());
+        ui.Pump();
+        Assert.Equal(own, ui.Window.Settings.CkanExePath);
+        Assert.True(Visible(ui, "Using your own CKAN"));
+        Assert.Contains(Texts(ui.Window), t => t.Contains("Official CKAN v1.36.4"));
+
+        Assert.True(ui.Find<Button>("ckan/export/Modded").IsEnabled);
+        ui.Await(ui.Window.Ckan.ExportAsync(new Core.Setup.CkanInstance("Modded", ksp))); // what the button runs, awaited
+        var exported = File.ReadAllText(exportPath);
+        Assert.Contains("MechJeb2", exported);
+        Assert.DoesNotContain("somebody", exported);
+
+        ui.Click(ui.Find<Button>("ckan/use/Modded"));
+        Assert.Contains("Scatterer", ui.Find<TextBox>("ckan/list").Text);
+        ui.Await(ui.Window.Ckan.InstallListAsync());
+        Assert.All(runs, exe => Assert.Equal(own, exe)); // your copy, not LUNA EVO's
+        Assert.Equal(2, runs.Count);
+
+        ui.Click(ui.Find<Button>("ckan/forgetExe"));
+        Assert.Null(ui.Window.Settings.CkanExePath);
+        Assert.True(Visible(ui, "Not installed"));
+    }
+
+    [AvaloniaFact]
     public void Ckan_page_refuses_while_ckan_has_the_install_open()
     {
         using var ui = new UiHarness(openServer: false);

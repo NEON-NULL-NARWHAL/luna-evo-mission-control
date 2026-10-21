@@ -50,6 +50,18 @@ split over several commands if the list wouldn't fit one Windows command line. O
   then moves the new one in.
 - **Never replaces an existing `000_Harmony`**: other mods share it, and CKAN may manage a newer one.
 
+## Your own ckan.exe, exporting lists (1.3.0)
+
+- `AppSettings.CkanExePath`: a ckan.exe the user picked (`CkanTools.LooksLikeExe`: `.exe` + `MZ`). `CkanPage.CkanExe`
+  prefers it while the file exists, else LUNA EVO's newest copy. `CkanTools.IdentifyAsync` hashes it and looks for
+  that SHA-256 among CKAN's GitHub releases (prereleases too, last 30): the page shows "Official CKAN vX" or that it
+  can't vouch for it. Checked once per path per session.
+- `CkanModList.InstalledList(ksp)`: the newest `CKAN/installed-*.ckan` (CKAN rewrites it on every change; only the
+  mods the user picked, not auto-installed dependencies) plus `ksp_version_min/max`.
+- `CkanModList.Export(mods, name, kspMin, kspMax, exactVersions)`: a fresh metapackage. **Never copy CKAN's file**: its
+  `author` is the Windows user name. Name it "<install> mod list": CKAN registers an imported metapackage under that
+  name. Checked for real: the owner's 108-mod list exports and re-parses; ckan.exe 1.36.4 installs an export with `-c`.
+
 ## Where it shows up
 
 - **CKAN page (Play → CKAN mods, 1.2.0):** status (LUNA EVO's copy and version, CKAN open?), copies (download latest,

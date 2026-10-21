@@ -371,7 +371,10 @@ internal sealed class SettingsPage
     internal static string Friendly(string path)
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return path.StartsWith(local, StringComparison.OrdinalIgnoreCase) ? "%LOCALAPPDATA%" + path[local.Length..] : path;
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return path.StartsWith(local + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ? "%LOCALAPPDATA%" + path[local.Length..]
+            : home.Length > 3 && path.StartsWith(home + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ? "%USERPROFILE%" + path[home.Length..]
+            : path;
     }
 
     private void ShowClientVersion()

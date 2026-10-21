@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0 (2026-10-20)
+
+### Added
+- **Use the CKAN you already have:** CKAN page → **Choose ckan.exe...**. LUNA EVO uses it for mod lists and says
+  whether it's an official CKAN build (its SHA-256 compared with GitHub's). **Use LUNA EVO's copy** switches back.
+- **Export mod list...** for every CKAN install: the mods you picked there, as a `.ckan` file to send to friends (they
+  install it on this page, or in CKAN with File → Install from .ckan). Exact versions optional. Written fresh, so your
+  Windows user name (in CKAN's own file) isn't in it.
+- **Use as mod list:** copy one install's mods into the list box, to install them into another.
+
+### Changed
+- `SECURITY.md` lists audits newest first again, with the 1.3.0 notes on top.
+- Paths under your user folder show as `%USERPROFILE%\...` (for example a ckan.exe in Downloads).
+
 ## 1.2.1 (2026-10-20)
 
 Sixth security audit, a sweep of the whole codebase; details in `SECURITY.md`.

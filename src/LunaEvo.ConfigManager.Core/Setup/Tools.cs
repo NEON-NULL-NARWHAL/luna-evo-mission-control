@@ -62,6 +62,32 @@ public static class CkanTools
         return target;
     }
 
+    /// <summary>
+    /// For a ckan.exe the user already had: true if it looks like a Windows program called *.exe. It's the user's own
+    /// choice to run it; <see cref="IdentifyAsync"/> says whether it's an official build.
+    /// </summary>
+    public static bool LooksLikeExe(string path)
+    {
+        try
+        {
+            if (!path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
+                return false;
+            using var stream = File.OpenRead(path);
+            return stream.ReadByte() == 'M' && stream.ReadByte() == 'Z';
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The official CKAN release whose ckan.exe has exactly this file's SHA-256 (GitHub's digest), or null.</summary>
+    public static async Task<string?> IdentifyAsync(HttpClient http, string exe, CancellationToken cancel = default)
+    {
+        var sha = await Task.Run(() => ServerInstaller.Sha256Of(exe), cancel);
+        return (await AvailableAsync(http, includePrereleases: true, cancel)).FirstOrDefault(r => r.Exe.Sha256 == sha).Release?.Tag;
+    }
+
     /// <summary>Removes a downloaded CKAN version. CKAN's own data (instances, downloads cache) isn't touched.</summary>
     public static void Remove(string version)
     {
@@ -276,6 +302,64 @@ public static partial class CkanModList
         if (unique.Count > MaxMods)
             problems.Add($"Only the first {MaxMods} of {unique.Count} mods are used.");
         return (unique.Take(MaxMods).ToList(), problems);
+    }
+
+    /// <summary>
+    /// The mods you chose in this install (CKAN keeps them in CKAN/installed-&lt;instance&gt;.ckan; dependencies CKAN
+    /// added by itself aren't in it), and the KSP versions it says they're for. Null if CKAN hasn't written one.
+    /// </summary>
+    public static (IReadOnlyList<CkanMod> Mods, string? KspMin, string? KspMax)? InstalledList(string kspFolder)
+    {
+        try
+        {
+            var folder = System.IO.Path.Combine(kspFolder, "CKAN");
+            var file = Directory.Exists(folder)
+                ? new DirectoryInfo(folder).GetFiles("installed-*.ckan").OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault()
+                : null;
+            if (file == null || file.Length > MaxListBytes)
+                return null;
+            var text = File.ReadAllText(file.FullName);
+            var (mods, _) = Parse(text);
+            using var json = JsonDocument.Parse(text);
+            string? Version(string name) =>
+                json.RootElement.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String && v.GetString() is { Length: < 30 } s && VersionText().IsMatch(s) ? s : null;
+            return (mods, Version("ksp_version_min"), Version("ksp_version_max"));
+        }
+        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    public const int MaxListBytes = 5 * 1024 * 1024;
+
+    /// <summary>
+    /// A .ckan mod list to share, written by LUNA EVO: a CKAN metapackage with only the mods (and, with
+    /// <paramref name="exactVersions"/>, their versions) and the KSP range. Not a copy of CKAN's own file, which has your
+    /// Windows user name as its author. CKAN can install it (File → Install from .ckan), and so can LUNA EVO.
+    /// </summary>
+    public static string Export(IReadOnlyList<CkanMod> mods, string name, string? kspMin = null, string? kspMax = null, bool exactVersions = true)
+    {
+        var id = new string(name.Select(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' ? c : '-').ToArray()).Trim('-');
+        var pack = new Dictionary<string, object?>
+        {
+            ["spec_version"] = "v1.6",
+            ["identifier"] = id.Length > 0 && char.IsAsciiLetterOrDigit(id[0]) ? id : "LunaEvoModList",
+            ["name"] = name,
+            ["abstract"] = "Mod list exported by LUNA EVO",
+            ["author"] = "LUNA EVO",
+            ["version"] = DateTime.UtcNow.ToString("yyyy.MM.dd.HH.mm.ss"),
+            ["license"] = "unknown",
+            ["kind"] = "metapackage",
+        };
+        if (kspMin != null)
+            pack["ksp_version_min"] = kspMin;
+        if (kspMax != null)
+            pack["ksp_version_max"] = kspMax;
+        pack["depends"] = mods.Select(m => exactVersions && m.Version is { Length: > 0 }
+            ? new Dictionary<string, string> { ["name"] = m.Identifier, ["version"] = m.Version }
+            : new Dictionary<string, string> { ["name"] = m.Identifier }).ToList();
+        return JsonSerializer.Serialize(pack, new JsonSerializerOptions { WriteIndented = true });
     }
 
     /// <summary>`ckan update`: refresh CKAN's catalogue for this install.</summary>

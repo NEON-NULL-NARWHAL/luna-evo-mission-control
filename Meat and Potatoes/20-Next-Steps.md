@@ -42,7 +42,8 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 - **Share the server's modpack:** the host's `<ksp>/CKAN/installed-<instance>.ckan` (Connect page, invite, Kystack).
   Players compare by mod name using `<ksp>/CKAN/registry.json` (`installed_modules`).
 - ~~**Install missing mods with CKAN.**~~ (done in 1.2.0: CKAN page → Install a mod list, names only, never `-c`.)
-  Next: fill the list straight from a server's shared modpack, and show which mods are already installed.
+  1.3.0 added Export mod list / Use as mod list per install and using your own ckan.exe.
+  Next: share the host's export through Connect/invites, and show which mods are already installed.
 - **Kystack server browser** (see the conversation notes): own LMP master server (`LmpMasterServer`, Docker), PR to
   LMP's `MasterServersList.txt`, a web list with "Join with LUNA EVO" links.
 

@@ -57,6 +57,9 @@ public sealed record AppSettings
     /// <summary>KSP's folder, if it isn't in a Steam library LUNA EVO can find.</summary>
     public string? KspFolder { get; init; }
 
+    /// <summary>A ckan.exe the user already had, used instead of LUNA EVO's own copies. Null: LUNA EVO's newest copy.</summary>
+    public string? CkanExePath { get; init; }
+
     /// <summary>"Every N minutes, say this" lines (Announcements.Parse), sent while LUNA EVO runs the server.</summary>
     public string Announcements { get; init; } = "";
 

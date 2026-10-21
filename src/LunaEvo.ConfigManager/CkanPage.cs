@@ -1,5 +1,6 @@
 // LUNA EVO · LunaEvo.ConfigManager/CkanPage.cs
-// [UI] CKAN: is it installed and used, your CKAN installs, and "install a mod list" (paste or load a .ckan, CKAN downloads it).
+// [UI] CKAN: which ckan.exe is used (LUNA EVO's copy or your own), your CKAN installs (export their mod lists), and
+//      "install a mod list" (paste or load a .ckan, CKAN downloads it).
 // Used by: MainWindow
 // Guide:   Meat and Potatoes/22-CKAN-and-LMP-Client.md
 
@@ -30,7 +31,29 @@ internal sealed class CkanPage
             FileTypeFilter = [new FilePickerFileType("CKAN mod list") { Patterns = ["*.ckan"] }],
         })).FirstOrDefault()?.TryGetLocalPath();
 
-    internal const int MaxListBytes = 5 * 1024 * 1024;
+    /// <summary>Tests replace the open dialog for "use a ckan.exe I already have": → chosen exe, or null.</summary>
+    internal static Func<MainWindow, Task<string?>> PickCkanExe { get; set; } = async host =>
+        (await host.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose your ckan.exe",
+            FileTypeFilter = [new FilePickerFileType("CKAN") { Patterns = ["*.exe"] }],
+        })).FirstOrDefault()?.TryGetLocalPath();
+
+    /// <summary>Tests replace the save dialog for exports: (suggested file name) → chosen path, or null.</summary>
+    internal static Func<MainWindow, string, Task<string?>> PickExportPath { get; set; } = async (host, suggested) =>
+        (await host.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export mod list",
+            SuggestedFileName = suggested,
+            DefaultExtension = "ckan",
+            FileTypeChoices = [new FilePickerFileType("CKAN mod list") { Patterns = ["*.ckan"] }],
+        }))?.TryGetLocalPath();
+
+    internal const int MaxListBytes = CkanModList.MaxListBytes;
+
+    // What GitHub says about the user's own ckan.exe: path → "official vX" / "not an official build" / "couldn't check".
+    private readonly Dictionary<string, string> _ownChecks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly CheckBox _exactVersions = new CheckBox { Content = "Exact versions", IsChecked = true }.WithId("ckan/exactVersions");
 
     private readonly MainWindow _host;
     private readonly StackPanel _status = new() { Spacing = 2 };
@@ -77,6 +100,10 @@ internal sealed class CkanPage
         statusBody.Children.Add(_status);
         var (installs, installsBody, _) = Ui.Group("Your KSP installs (from CKAN)");
         installsBody.Children.Add(_installs);
+        installsBody.Children.Add(Ui.Row("Exports",
+            "Export mod list writes the mods you picked in that install (CKAN adds their dependencies by itself) as a .ckan file to send to " +
+            "friends; they install it here or in CKAN (File → Install from .ckan). Exact versions: everyone gets the same versions. " +
+            "Your Windows user name, which CKAN's own file has, isn't in it.", _exactVersions));
         var (list, listBody, _) = Ui.Group("Install a mod list");
         listBody.Children.Add(Ui.Row("Mods to install",
             "From a friend or a server host: a CKAN modpack (.ckan) or mod names. LUNA EVO reads only the mod names and versions " +
@@ -105,8 +132,9 @@ internal sealed class CkanPage
 
     public Control View { get; }
 
-    /// <summary>The newest CKAN copy LUNA EVO has, or null.</summary>
-    internal static string? CkanExe => CkanTools.Installed().FirstOrDefault().Exe;
+    /// <summary>The user's own ckan.exe if they chose one (and it's still there), else LUNA EVO's newest copy, or null.</summary>
+    internal string? CkanExe =>
+        _host.Settings.CkanExePath is { } own && File.Exists(own) ? own : CkanTools.Installed().FirstOrDefault().Exe;
 
     public void Refresh()
     {
@@ -114,18 +142,43 @@ internal sealed class CkanPage
         var installed = CkanTools.Installed();
         var download = Ui.Button(installed.Count == 0 ? "Download CKAN" : "Get the latest CKAN", "fab").WithId("ckan/download");
         download.Click += async (_, _) => await DownloadAsync();
+        var choose = Ui.Button("Choose ckan.exe...", "text", "IconFolder").WithId("ckan/chooseExe");
+        choose.Click += async (_, _) => await ChooseOwnAsync();
+        if (_host.Settings.CkanExePath is { } ownExe)
+        {
+            var exists = File.Exists(ownExe);
+            var open = Ui.Button("Open CKAN", "text").WithId("ckan/open");
+            open.IsEnabled = exists;
+            open.Click += (_, _) => _result.Text = StartCkan(ownExe) ? "CKAN is starting." : "CKAN didn't start.";
+            var stop = Ui.Button("Use LUNA EVO's copy", "text").WithId("ckan/forgetExe");
+            stop.Click += (_, _) =>
+            {
+                _host.UpdateSettings(s => s with { CkanExePath = null });
+                Refresh();
+            };
+            var check = !exists ? "It isn't there any more, so LUNA EVO's own copy is used." : _ownChecks.GetValueOrDefault(ownExe, "Checking it against CKAN's releases...");
+            _status.Children.Add(Ui.Row("Using your own CKAN", $"{SettingsPage.Friendly(ownExe)} · {check}",
+                new StackPanel { Orientation = Orientation.Horizontal, Children = { open, stop } }).WithId("ckan/state"));
+            if (exists && !_ownChecks.ContainsKey(ownExe))
+                _ = CheckOwnAsync(ownExe);
+        }
         if (installed.Count == 0)
         {
-            _status.Children.Add(Ui.Row("Not installed", "LUNA EVO hasn't downloaded CKAN yet. It needs CKAN to install mod lists.", download).WithId("ckan/state"));
+            if (_host.Settings.CkanExePath == null)
+                _status.Children.Add(Ui.Row("Not installed", "LUNA EVO hasn't downloaded CKAN yet. It needs CKAN to install mod lists.", download).WithId("ckan/state"));
+            else
+                _status.Children.Add(Ui.Row("LUNA EVO's own copy", "None downloaded.", download));
         }
         else
         {
             var (version, exe) = installed[0];
-            var open = Ui.Button("Open CKAN", "text").WithId("ckan/open");
+            var mine = _host.Settings.CkanExePath == null;
+            var open = Ui.Button("Open CKAN", "text").WithId(mine ? "ckan/open" : "ckan/openOwnCopy");
             open.Click += (_, _) => _result.Text = StartCkan(exe) ? $"CKAN {version} is starting." : "CKAN didn't start.";
-            _status.Children.Add(Ui.Row($"Installed: CKAN {version}",
-                $"LUNA EVO uses this copy for mod lists. Kept in {SettingsPage.Friendly(Path.GetDirectoryName(exe)!)}, checked against GitHub's SHA-256.",
-                new StackPanel { Orientation = Orientation.Horizontal, Children = { open, download } }).WithId("ckan/state"));
+            _status.Children.Add(Ui.Row(mine ? $"Installed: CKAN {version}" : $"LUNA EVO's copy: CKAN {version}",
+                (mine ? "LUNA EVO uses this copy for mod lists. " : "Not used while your own CKAN is chosen. ") +
+                $"Kept in {SettingsPage.Friendly(Path.GetDirectoryName(exe)!)}, checked against GitHub's SHA-256.",
+                new StackPanel { Orientation = Orientation.Horizontal, Children = { open, download } }).WithId(mine ? "ckan/state" : "ckan/ownCopy"));
             foreach (var (older, _) in installed.Skip(1))
             {
                 var remove = Ui.Button("Remove", "text").WithId("ckan/remove/" + older);
@@ -142,6 +195,8 @@ internal sealed class CkanPage
             process.Dispose();
         if (running.Length > 0)
             _status.Children.Add(Ui.Row("CKAN is open right now", "Close it before installing a mod list into the install it has open.", null).WithId("ckan/running"));
+        if (_host.Settings.CkanExePath == null)
+            _status.Children.Add(Ui.Row("Already have CKAN?", "Point LUNA EVO at your ckan.exe and it uses that one instead (it's checked against CKAN's official releases).", choose));
 
         _installs.Children.Clear();
         var instances = CkanTools.Instances();
@@ -149,7 +204,21 @@ internal sealed class CkanPage
         {
             var lmp = Core.Join.KspLauncher.ClientVersion(instance.Path) is { } v ? $"LMP {v}" : "no LMP";
             var mods = CkanModList.InstalledCount(instance.Path) is { } n ? $"{n} mods through CKAN" : "no CKAN mod list";
-            _installs.Children.Add(Ui.Row(instance.Name, $"{instance.Path} · {lmp} · {mods}{(CkanModList.IsLocked(instance.Path) ? " · open in CKAN" : "")}", null)
+            var picked = CkanModList.InstalledList(instance.Path);
+            var export = Ui.Button("Export mod list...", "text").WithId("ckan/export/" + instance.Name);
+            var use = Ui.Button("Use as mod list", "text").WithId("ckan/use/" + instance.Name);
+            export.IsEnabled = use.IsEnabled = picked is { Mods.Count: > 0 };
+            export.Click += async (_, _) => await ExportAsync(instance);
+            use.Click += (_, _) =>
+            {
+                if (CkanModList.InstalledList(instance.Path) is not { } list)
+                    return;
+                _list.Text = CkanModList.Export(list.Mods, instance.Name + " mod list", list.KspMin, list.KspMax, _exactVersions.IsChecked == true);
+                _result.Text = $"{list.Mods.Count} mod(s) from {instance.Name} are in the list below. Pick where to install them.";
+            };
+            var chosen = picked is { } p ? $" · {p.Mods.Count} picked by you" : "";
+            _installs.Children.Add(Ui.Row(instance.Name, $"{instance.Path} · {lmp} · {mods}{chosen}{(CkanModList.IsLocked(instance.Path) ? " · open in CKAN" : "")}",
+                    new StackPanel { Orientation = Orientation.Horizontal, Children = { use, export } })
                 .WithId("ckan/instance/" + instance.Name));
         }
         if (instances.Count == 0)
@@ -162,6 +231,63 @@ internal sealed class CkanPage
         _target.ItemsSource = targets;
         _target.SelectedItem = selected != null && targets.Contains(selected) ? selected : targets.FirstOrDefault();
         _install.IsEnabled = !_busy;
+    }
+
+    /// <summary>"Already have CKAN?": remember the chosen ckan.exe and check it against CKAN's releases.</summary>
+    internal async Task ChooseOwnAsync()
+    {
+        if (await PickCkanExe(_host) is not { } exe)
+            return;
+        if (!CkanTools.LooksLikeExe(exe))
+        {
+            _result.Text = "That isn't a Windows program (.exe).";
+            return;
+        }
+        _host.UpdateSettings(s => s with { CkanExePath = exe });
+        _ownChecks.Remove(exe);
+        var check = CheckOwnAsync(exe); // marks it "checking" before Refresh, so Refresh doesn't start a second check
+        Refresh();
+        await check;
+    }
+
+    private async Task CheckOwnAsync(string exe)
+    {
+        _ownChecks[exe] = "Checking it against CKAN's releases...";
+        string result;
+        try
+        {
+            result = await CkanTools.IdentifyAsync(Http.Client, exe) is { } tag
+                ? $"Official CKAN {tag} (matches GitHub's SHA-256)."
+                : "Not one of CKAN's recent official builds, so LUNA EVO can't vouch for it. It's still used, as you chose it.";
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or IOException or UnauthorizedAccessException)
+        {
+            result = "Couldn't check it against CKAN's releases right now.";
+        }
+        _ownChecks[exe] = result;
+        Refresh();
+    }
+
+    /// <summary>Export mod list: the install's own picks, as a clean .ckan LUNA EVO writes.</summary>
+    internal async Task ExportAsync(CkanInstance instance)
+    {
+        if (CkanModList.InstalledList(instance.Path) is not { Mods.Count: > 0 } list)
+        {
+            _result.Text = $"CKAN hasn't written a mod list for {instance.Name} yet. Open it in CKAN once.";
+            return;
+        }
+        var name = new string(instance.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c).ToArray());
+        if (await PickExportPath(_host, $"{name} mods.ckan") is not { } path)
+            return;
+        try
+        {
+            await File.WriteAllTextAsync(path, CkanModList.Export(list.Mods, instance.Name + " mod list", list.KspMin, list.KspMax, _exactVersions.IsChecked == true));
+            _result.Text = $"Exported {list.Mods.Count} mod(s) from {instance.Name} to {SettingsPage.Friendly(path)}.";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _result.Text = "Couldn't save the mod list: " + e.Message;
+        }
     }
 
     internal async Task DownloadAsync()
@@ -216,7 +342,7 @@ internal sealed class CkanPage
         }
         if (CkanExe is not { } ckan)
         {
-            _result.Text = "Download CKAN first (above).";
+            _result.Text = "Download CKAN first, or choose the ckan.exe you have (above).";
             return;
         }
         var names = string.Join(", ", mods.Take(12).Select(m => m.Identifier)) + (mods.Count > 12 ? $" and {mods.Count - 12} more" : "");

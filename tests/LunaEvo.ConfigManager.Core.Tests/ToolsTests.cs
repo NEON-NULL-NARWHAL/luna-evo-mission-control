@@ -173,4 +173,51 @@ public class ToolsTests
         Assert.Equal("second", AppSettingsStore.Load(path).KspFolder);
         Assert.False(File.Exists(path + ".tmp"));
     }
+    [Fact]
+    public void Exports_an_installs_own_picks_without_the_windows_user_name()
+    {
+        var ksp = Temp("ksp");
+        Directory.CreateDirectory(Path.Combine(ksp, "CKAN"));
+        File.WriteAllText(Path.Combine(ksp, "CKAN", "installed-My KSP.ckan"), """
+            { "spec_version": "v1.6", "identifier": "installed-My-KSP", "author": "somebody", "kind": "metapackage",
+              "ksp_version_min": "1.8", "ksp_version_max": "1.12",
+              "depends": [ { "name": "B9PartSwitch", "version": "v2.21.0.4" }, { "name": "MechJeb2" } ] }
+            """);
+        var list = CkanModList.InstalledList(ksp)!.Value;
+        Assert.Equal([new CkanMod("B9PartSwitch", "v2.21.0.4"), new CkanMod("MechJeb2")], list.Mods);
+        Assert.Equal(("1.8", "1.12"), (list.KspMin, list.KspMax));
+
+        var exported = CkanModList.Export(list.Mods, "My KSP", list.KspMin, list.KspMax);
+        Assert.DoesNotContain("somebody", exported);
+        using var json = System.Text.Json.JsonDocument.Parse(exported);
+        Assert.Equal("My-KSP", json.RootElement.GetProperty("identifier").GetString());
+        Assert.Equal("metapackage", json.RootElement.GetProperty("kind").GetString());
+        Assert.Equal("1.12", json.RootElement.GetProperty("ksp_version_max").GetString());
+        Assert.Equal(list.Mods, CkanModList.Parse(exported).Mods); // it imports back the same
+
+        Assert.DoesNotContain("v2.21.0.4", CkanModList.Export(list.Mods, "x", exactVersions: false));
+        Assert.Null(CkanModList.InstalledList(Temp("nockan")));
+    }
+
+    [Fact]
+    public async Task Says_whether_your_own_ckan_exe_is_an_official_build()
+    {
+        var exe = TestData.FakeExe("ckan 1.36.4");
+        var folder = Temp("ownckan");
+        var path = Path.Combine(folder, "ckan.exe");
+        File.WriteAllBytes(path, exe);
+        var http = new FakeHttp().Text(CkanTools.ReleasesUrl, TestData.CkanReleasesJson(exe));
+
+        Assert.True(CkanTools.LooksLikeExe(path));
+        Assert.Equal("v1.36.4", await CkanTools.IdentifyAsync(http.Client, path));
+
+        var other = Path.Combine(folder, "other.exe");
+        File.WriteAllBytes(other, TestData.FakeExe("something else"));
+        Assert.Null(await CkanTools.IdentifyAsync(http.Client, other));
+
+        var notExe = Path.Combine(folder, "notes.exe");
+        File.WriteAllText(notExe, "hello");
+        Assert.False(CkanTools.LooksLikeExe(notExe));
+        Assert.False(CkanTools.LooksLikeExe(Path.Combine(folder, "missing.exe")));
+    }
 }

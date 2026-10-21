@@ -47,6 +47,8 @@ internal sealed class UiHarness : IDisposable
         CkanPage.StartCkan = _ => throw new InvalidOperationException("A test tried to start CKAN without faking it.");
         CkanPage.RunCkan = (_, _, _) => throw new InvalidOperationException("A test tried to run CKAN without faking it.");
         CkanPage.PickModList = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
+        CkanPage.PickCkanExe = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
+        CkanPage.PickExportPath = (_, _) => throw new InvalidOperationException("A test opened a save dialog without faking it.");
         Core.Setup.CkanTools.Root = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "ckan-" + Guid.NewGuid().ToString("N"));
         Core.Setup.CkanTools.ConfigFolder = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "ckancfg-" + Guid.NewGuid().ToString("N"));
         MainWindow.CurrentExe = null; // the test host must never be "updated"
