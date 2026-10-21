@@ -23,6 +23,7 @@ internal static class DesktopNotifier
     private static IntPtr _icon;
     private static bool _added;
     private static Timer? _removal;
+    private static readonly Lock Gate = new(); // the removal timer runs on another thread
 
     /// <summary>How long the icon stays after a notification (Windows shows the banner for about 5 seconds).</summary>
     public static TimeSpan ShowFor { get; set; } = TimeSpan.FromSeconds(10);
@@ -34,6 +35,12 @@ internal static class DesktopNotifier
     {
         if (!OperatingSystem.IsWindows() || _window == IntPtr.Zero)
             return;
+        lock (Gate)
+            ShowLocked(title, message, warning);
+    }
+
+    private static void ShowLocked(string title, string message, bool warning)
+    {
         var data = NewData();
         if (!_added)
         {
@@ -53,6 +60,12 @@ internal static class DesktopNotifier
 
     /// <summary>Removes the notification-area icon. Called when the app closes.</summary>
     public static void Remove()
+    {
+        lock (Gate)
+            RemoveLocked();
+    }
+
+    private static void RemoveLocked()
     {
         if (!_added || !OperatingSystem.IsWindows())
             return;

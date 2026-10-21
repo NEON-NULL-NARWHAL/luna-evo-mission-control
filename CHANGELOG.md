@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1 (2026-10-20)
+
+Fourth security audit (the 1.0 review); details in `SECURITY.md`.
+
+### Security
+- Vessel cleanup removes nothing unless its Universe backup copied every file (a locked file used to be skipped while
+  the removal went ahead).
+- The Windows-notifications icon is shown and removed under a lock (its removal timer runs on another thread).
+
 ## 1.0.0 (2026-10-20)
 
 **LUNA EVO 1.0.** Everything a home LMP host needs, from first download to an always-on server: setup wizard, every

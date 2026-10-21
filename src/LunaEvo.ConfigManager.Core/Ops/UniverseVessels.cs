@@ -77,7 +77,13 @@ public static class UniverseVessels
         if (targets.Any(t => !t.StartsWith(folder, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("Only vessels in this server's Universe can be removed.");
         var backups = new UniverseBackups(serverDirectory);
-        var (snapshot, _) = backups.Create("beforecleanup", compression: CompressionLevel.Fastest);
+        var (snapshot, skipped) = backups.Create("beforecleanup", compression: CompressionLevel.Fastest);
+        if (skipped > 0)
+        {
+            // An incomplete backup can't undo the removal, so remove nothing.
+            File.Delete(snapshot.Path);
+            throw new IOException($"{skipped} Universe file(s) couldn't be read for the backup (is something using them?), so nothing was removed.");
+        }
         backups.Prune(5, "beforecleanup");
         foreach (var target in targets)
             File.Delete(target);

@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the three security audits (0.4.0, 0.4.1, 0.8.1) found and changed.
+what the four security audits (0.4.0, 0.4.1, 0.8.1, 1.0.1) found and changed.
 
 ## Reporting a problem
 
@@ -56,6 +56,21 @@ addresses**, even though LMP's own log lines contain them. It stays next to your
 - **Craft files from friends** (`.lunacraft`, 0.7) are opened as data: only `craft.craft`, `manifest.json` and
   `thumbnail.png` are accepted (nothing else is ever unpacked), 20 MB at most, and the craft must parse. Imports go
   only into a KSP save's Ships folder or the server's craft library, and never overwrite.
+
+## Audit 4 (1.0.1, October 2026)
+
+The 1.0 review: vessel cleanup, server health, invites and the notification icon's timer, plus the usual re-checks
+(NuGet packages: no known vulnerabilities; the whole git history: no passwords, IP addresses, player names or user
+paths).
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| D1 | Medium | **Vessel cleanup deleted vessels even if its safety backup had skipped files** (a file another program had open is skipped, not copied). The "undo" could then be missing data. | If the backup couldn't read every Universe file, the incomplete backup is deleted and **nothing is removed**; the page says why. Tested with a locked vessel file. |
+| D2 | Low | **The notification icon's removal timer ran on another thread** with no lock, so a notification arriving at the same moment could lose its icon (and not show). | One lock around showing and removing. |
+
+Reviewed and fine: vessel cleanup only removes files inside this server's `Universe/Vessels`, only while the server is
+stopped, never crewed vessels in a bulk selection; server health only reads the server's own process; the invite
+never contains the password or your internet address (it prefers your VPN/mesh address, then your home network).
 
 ## Audit 3 (0.8.1, October 2026)
 

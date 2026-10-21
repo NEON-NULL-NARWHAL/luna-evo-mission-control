@@ -336,6 +336,13 @@ public class LiveModsOpsTests
         using (var zip = System.IO.Compression.ZipFile.OpenRead(backup.Path))
             Assert.Contains(zip.Entries, e => e.FullName == "Vessels/b2.txt"); // the removed ones are in the backup
 
+        // If the backup can't read everything, nothing is removed.
+        var path = Path.Combine(server, "Universe", "Vessels", "a1.txt");
+        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None))
+            Assert.Throws<IOException>(() => UniverseVessels.Remove(server, UniverseVessels.List(server).Where(v => v.Id == "d4")));
+        Assert.Contains(UniverseVessels.List(server), v => v.Id == "d4");
+        Assert.Single(new UniverseBackups(server).List(), s => s.Label == "beforecleanup"); // the incomplete one was deleted
+
         var elsewhere = new UniverseVessel("x", "x", "Debris", "", 1, 1, [], Path.Combine(Path.GetTempPath(), "x.txt"));
         Assert.Throws<InvalidOperationException>(() => UniverseVessels.Remove(server, [elsewhere]));
     }
