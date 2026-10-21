@@ -182,4 +182,18 @@ internal static class TestData
         Vessel("c3", "Stage with Bob", "Debris", "Bob Kerman");
         Vessel("d4", "Ast. ABC-123", "SpaceObject");
     }
+
+    public const string CkanExeUrl = "https://github.com/KSP-CKAN/CKAN/releases/download/v1.36.4/ckan.exe";
+
+    /// <summary>CKAN's GitHub releases: a new one with a checksummed ckan.exe, an old one without.</summary>
+    public static string CkanReleasesJson(byte[] exe)
+    {
+        var sha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(exe));
+        object Release(string tag, string? digest) => new
+        {
+            tag_name = tag, prerelease = false, draft = false, html_url = "https://github.com/KSP-CKAN/CKAN", published_at = "2026-10-01T00:00:00Z", body = "",
+            assets = new[] { new { name = "ckan.exe", browser_download_url = CkanExeUrl.Replace("v1.36.4", tag), size = exe.Length, digest } },
+        };
+        return System.Text.Json.JsonSerializer.Serialize(new[] { Release("v1.36.4", "sha256:" + sha), Release("v1.36.0", null) });
+    }
 }

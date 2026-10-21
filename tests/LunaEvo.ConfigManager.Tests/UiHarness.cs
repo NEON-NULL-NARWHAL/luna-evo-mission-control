@@ -44,6 +44,9 @@ internal sealed class UiHarness : IDisposable
         CraftsPage.PickExportPath = (_, _) => throw new InvalidOperationException("A test opened a save dialog without faking it.");
         CraftsPage.PickImportPath = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
         HomeServer.ApplyStartWithWindows = (_, _) => throw new InvalidOperationException("A test touched the Windows startup list without faking it.");
+        SettingsPage.StartCkan = _ => throw new InvalidOperationException("A test tried to start CKAN without faking it.");
+        Core.Setup.CkanTools.Root = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "ckan-" + Guid.NewGuid().ToString("N"));
+        Core.Setup.CkanTools.ConfigFolder = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "ckancfg-" + Guid.NewGuid().ToString("N"));
         MainWindow.CurrentExe = null; // the test host must never be "updated"
         MainWindow.StartNewVersion = (_, _) => throw new InvalidOperationException("A test tried to restart the app without faking it.");
         Dialogs.Responder = (title, _, buttons) =>

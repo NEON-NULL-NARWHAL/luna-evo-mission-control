@@ -213,6 +213,7 @@ public sealed class MainWindow : Window
     internal SetupWizard? Wizard { get; private set; }
     internal JoinPage Join => _joinPage;
     internal CraftsPage Crafts => _craftsPage;
+    internal SettingsPage SettingsPageForTests => _settingsPage;
 
     /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>
     internal AppUpdate? AvailableAppUpdate { get; private set; }

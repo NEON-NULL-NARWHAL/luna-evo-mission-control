@@ -25,6 +25,7 @@ response time.
 | **Discord** (`discord.com`) | Only if you save a webhook (Settings → Notifications) | HTTPS posts of the notifications. The URL is stored encrypted for your Windows account (DPAPI) and never shown again; posts can't mention anyone. |
 | **Windows notifications** | Settings → Notifications (on by default) | Shown on this PC only. |
 | **Windows startup list** (`HKCU\...\Run`) | Only while Home server mode is on | One entry, "LUNA EVO Config Manager", for your user only; removed when you switch the mode off. |
+| **CKAN and the LMP client** (GitHub) | Settings → Downloads; setup wizard step 3 if switched on | The same verified download as LMP's server: GitHub only, SHA-256 checked (and again where it's stored or before unpacking). Nothing unverified. The client is unpacked with size and stay-inside checks, only into `GameData/LunaMultiplayer` (and `000_Harmony` if missing). |
 | **Crafts from friends** | Crafts page → Import | Read as data with size limits; written only into a KSP save's Ships folder or the server's craft library, never overwriting. |
 
 LUNA EVO has no telemetry, no accounts and no server of its own.

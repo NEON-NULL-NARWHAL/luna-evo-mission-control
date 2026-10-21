@@ -41,7 +41,7 @@ internal sealed class SettingsPage
     private readonly TextBlock _announceResult = Ui.Text("", "sublabel").WithId("settings/announceResult");
     private readonly Dictionary<string, StackPanel> _tabPages = new()
     {
-        ["look"] = new(), ["behaviour"] = new(), ["automation"] = new(), ["updates"] = new(), ["about"] = new(),
+        ["look"] = new(), ["behaviour"] = new(), ["automation"] = new(), ["updates"] = new(), ["downloads"] = new(), ["about"] = new(),
     };
     private readonly TextBlock _dailyResult = Ui.Text("", "sublabel").WithId("settings/dailyResult");
     private readonly TextBox _webhook = new TextBox { Width = 420, PasswordChar = '•' }.WithId("settings/discordWebhook");
@@ -114,7 +114,14 @@ internal sealed class SettingsPage
         _tabs.Add("behaviour", "Behaviour", _tabPages["behaviour"]);
         _tabs.Add("automation", "Automation & alerts", _tabPages["automation"]);
         _tabs.Add("updates", "Updates", _tabPages["updates"]);
+        _tabs.Add("downloads", "Downloads", _tabPages["downloads"]);
         _tabs.Add("about", "About", _tabPages["about"]);
+        BuildDownloads();
+        _tabs.Changed += key =>
+        {
+            if (key == "downloads")
+                _ = RefreshDownloadsAsync();
+        };
         page.Children.Add(_tabs.Strip);
         page.Children.Add(_tabs.Content);
 
@@ -294,7 +301,160 @@ internal sealed class SettingsPage
 
     public Control View { get; }
 
-    /// <summary>Switches to a tab: "look", "behaviour", "automation", "updates" or "about".</summary>
+    // ---- Downloads: CKAN and the LMP client, any time after setup, any version
+
+    /// <summary>Tests replace this so CKAN is never started: (ckan.exe) → started.</summary>
+    internal static Func<string, bool> StartCkan { get; set; } = exe =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe)! }) != null;
+
+    private readonly StackPanel _ckanRows = new() { Spacing = 2 };
+    private readonly TextBlock _ckanStatus = Ui.Text("", "sublabel").WithId("settings/ckanStatus");
+    private readonly ComboBox _clientKsp = new ComboBox { MinWidth = 360 }.WithId("settings/clientKsp");
+    private readonly ComboBox _clientVersion = new ComboBox { MinWidth = 200 }.WithId("settings/clientVersion");
+    private readonly TextBlock _clientStatus = Ui.Text("", "sublabel").WithId("settings/clientStatus");
+    private IReadOnlyList<LmpRelease> _lmpReleases = [];
+
+    private void BuildDownloads()
+    {
+        var page = _tabPages["downloads"];
+        _ckanStatus.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
+        _clientStatus.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
+
+        var (ckan, ckanBody, _) = Ui.Group("CKAN (KSP mod manager)");
+        var getCkan = Ui.Button("Download the latest CKAN", "fab").WithId("settings/ckanDownload");
+        getCkan.Click += async (_, _) => await DownloadCkanAsync();
+        ckanBody.Children.Add(Ui.Row("LUNA EVO's CKAN copies",
+            "The official ckan.exe from CKAN's GitHub releases, checked against GitHub's SHA-256, kept per version in " +
+            CkanTools.Root + ". One known copy instead of several in Downloads; keep older versions if you need them.", null));
+        ckanBody.Children.Add(_ckanRows);
+        ckanBody.Children.Add(new StackPanel { Margin = new Thickness(12, 4, 12, 12), Spacing = 6, Children = { getCkan, _ckanStatus } });
+        getCkan.HorizontalAlignment = HorizontalAlignment.Left;
+        page.Children.Add(ckan);
+
+        var (client, clientBody, _) = Ui.Group("LMP client mod");
+        var install = Ui.Button("Install into this KSP", "fab").WithId("settings/clientInstall");
+        install.HorizontalAlignment = HorizontalAlignment.Left;
+        install.Click += async (_, _) => await InstallClientAsync();
+        _clientKsp.SelectionChanged += (_, _) => ShowClientVersion();
+        clientBody.Children.Add(Ui.Row("KSP install", "Your KSP folders, including every install CKAN manages.", _clientKsp));
+        clientBody.Children.Add(Ui.Row("LMP version", "Players need the same LMP version as the server. Your LMP settings (server list) are kept; the old version is backed up.", _clientVersion));
+        clientBody.Children.Add(new StackPanel { Margin = new Thickness(12, 4, 12, 12), Spacing = 6, Children = { install, _clientStatus } });
+        page.Children.Add(client);
+    }
+
+    /// <summary>Re-reads the CKAN copies and KSP installs, and loads the LMP versions from GitHub.</summary>
+    internal async Task RefreshDownloadsAsync()
+    {
+        _ckanRows.Children.Clear();
+        foreach (var (version, exe) in CkanTools.Installed())
+        {
+            var open = Ui.Button("Open", "text").WithId("settings/ckanOpen/" + version);
+            open.Click += (_, _) => _ckanStatus.Text = StartCkan(exe) ? $"CKAN {version} is starting." : "CKAN didn't start.";
+            var remove = Ui.Button("Remove", "text").WithId("settings/ckanRemove/" + version);
+            remove.Click += async (_, _) =>
+            {
+                CkanTools.Remove(version);
+                await RefreshDownloadsAsync();
+            };
+            _ckanRows.Children.Add(Ui.Row($"CKAN {version}", exe, new StackPanel { Orientation = Orientation.Horizontal, Children = { open, remove } }));
+        }
+        if (_ckanRows.Children.Count == 0)
+            _ckanRows.Children.Add(Ui.Row("None downloaded yet", "CKAN installs and updates KSP mods; LUNA EVO uses it to get you a server's mods.", null));
+
+        var folders = new List<string>();
+        void Add(string? folder)
+        {
+            if (folder != null && Core.Join.KspLauncher.IsKspFolder(folder) && !folders.Contains(folder, StringComparer.OrdinalIgnoreCase))
+                folders.Add(folder);
+        }
+        Add(_host.Settings.KspFolder);
+        Add(Core.Join.KspLauncher.FindKsp());
+        foreach (var instance in CkanTools.Instances())
+            Add(instance.Path);
+        var selected = _clientKsp.SelectedItem as string;
+        _clientKsp.ItemsSource = folders;
+        _clientKsp.SelectedItem = selected != null && folders.Contains(selected) ? selected : folders.FirstOrDefault();
+        ShowClientVersion();
+
+        if (_lmpReleases.Count == 0)
+        {
+            try
+            {
+                _lmpReleases = (await LmpReleaseFeed.GetAllAsync(Http.Client, LmpReleaseFeed.ReleasesUrl, _host.Settings.IncludeLmpPrereleases))
+                    .Where(r => LmpClientInstaller.ClientAsset(r) is { Sha256: not null }).ToList();
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+            {
+                _clientStatus.Text = "Couldn't reach GitHub for LMP's versions.";
+            }
+            var server = _host.Session?.Schema.ServerVersion;
+            _clientVersion.ItemsSource = _lmpReleases.Select(r => r.Tag).ToList();
+            // The open server's version first: that's the one players need.
+            _clientVersion.SelectedItem = _lmpReleases.FirstOrDefault(r => server != null && server.StartsWith(r.Tag, StringComparison.OrdinalIgnoreCase))?.Tag
+                                          ?? _lmpReleases.FirstOrDefault()?.Tag;
+        }
+    }
+
+    private void ShowClientVersion()
+    {
+        if (_clientKsp.SelectedItem is not string ksp)
+        {
+            _clientStatus.Text = "No KSP install found. Set your KSP folder on the Join page.";
+            return;
+        }
+        _clientStatus.Text = Core.Join.KspLauncher.ClientVersion(ksp) is { } version ? $"This KSP has LMP {version}." : "LMP isn't installed in this KSP yet.";
+    }
+
+    internal async Task DownloadCkanAsync()
+    {
+        _ckanStatus.Text = "Asking GitHub for CKAN's releases...";
+        try
+        {
+            var available = await CkanTools.AvailableAsync(Http.Client);
+            if (available.Count == 0)
+            {
+                _ckanStatus.Text = "No verifiable CKAN release found on GitHub.";
+                return;
+            }
+            var (release, exe) = available[0];
+            // Progress<T> reports arrive later than the result; ignore any that land after it.
+            var done = false;
+            var progress = new Progress<double>(p => { if (!done) _ckanStatus.Text = $"Downloading CKAN {release.Tag}... {p:P0}"; });
+            var path = await CkanTools.DownloadAsync(Http.Client, release, exe, progress);
+            done = true;
+            _ckanStatus.Text = $"CKAN {release.Tag} downloaded and verified: {path}";
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or DownloadVerificationException or IOException or UnauthorizedAccessException)
+        {
+            _ckanStatus.Text = "Couldn't download CKAN: " + e.Message;
+        }
+        await RefreshDownloadsAsync();
+    }
+
+    internal async Task InstallClientAsync()
+    {
+        if (_clientKsp.SelectedItem is not string ksp || _lmpReleases.FirstOrDefault(r => r.Tag == _clientVersion.SelectedItem as string) is not { } release ||
+            LmpClientInstaller.ClientAsset(release) is not { Sha256: { } sha } asset)
+        {
+            _clientStatus.Text = "Pick a KSP install and an LMP version first.";
+            return;
+        }
+        try
+        {
+            var done = false;
+            var progress = new Progress<double>(p => { if (!done) _clientStatus.Text = $"Downloading LMP {release.Tag}... {p:P0}"; });
+            var zip = await new ServerInstaller(Http.Client).DownloadAsync(asset, progress, allowUnverified: false);
+            done = true;
+            var backup = await Task.Run(() => LmpClientInstaller.Install(zip, ksp, sha));
+            _clientStatus.Text = $"Installed LMP {release.Tag} into {ksp}." + (backup != null ? $" The previous version is in {backup}." : "");
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or DownloadVerificationException or IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException)
+        {
+            _clientStatus.Text = "Couldn't install: " + e.Message;
+        }
+    }
+
+    /// <summary>Switches to a tab: "look", "behaviour", "automation", "updates", "downloads" or "about".</summary>
     internal void ShowTab(string key) => _tabs.Select(key);
 
     /// <summary>The "LUNA EVO updates" rows: up to date, or the new version with Update and restart.</summary>
@@ -316,8 +476,11 @@ internal sealed class SettingsPage
             {
                 install.IsEnabled = false;
                 _appStatus.Text = "Downloading...";
-                var progress = new Progress<double>(p => _appStatus.Text = $"Downloading... {p:P0}");
-                _appStatus.Text = await _host.UpdateAppAsync(progress);
+                var done = false; // late progress reports must not overwrite the result
+                var progress = new Progress<double>(p => { if (!done) _appStatus.Text = $"Downloading... {p:P0}"; });
+                var message = await _host.UpdateAppAsync(progress);
+                done = true;
+                _appStatus.Text = message;
                 install.IsEnabled = true;
             };
             var notes = update.Release.Notes.Trim();

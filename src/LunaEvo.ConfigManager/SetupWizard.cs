@@ -32,6 +32,8 @@ internal sealed class SetupWizard
     private readonly ToggleSwitch _website = Toggle("wizard/website", true);
     private readonly ToggleSwitch _modControl = Toggle("wizard/modControl", false);
     private readonly ToggleSwitch _copyApp = Toggle("wizard/copyApp", true);
+    private readonly ToggleSwitch _getCkan = Toggle("wizard/getCkan", false);
+    private readonly ToggleSwitch _getClient = Toggle("wizard/getClient", false);
     private readonly Button _install = Ui.Button("Download and set up", "fab", "IconPlay").WithId("wizard/install");
     private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 1, Height = 6, IsVisible = false };
     private readonly StackPanel _log = new() { Spacing = 2 };
@@ -76,7 +78,14 @@ internal sealed class SetupWizard
         serverBody.Children.Add(Ui.Row("Live player info", "Turns on LMP's website for this PC only, so LUNA EVO can show who's playing.", _website));
         serverBody.Children.Add(Ui.Row("Put LUNA EVO in the server folder", "So double-clicking it there opens this server straight away.", _copyApp));
 
-        var (go, goBody, _) = Ui.Group("3 · Set it up");
+        var (play, playBody, _) = Ui.Group("3 · Also for playing (optional)");
+        playBody.Children.Add(Ui.Row("Download CKAN", "The KSP mod manager, verified and kept by LUNA EVO (Settings → Downloads has it too, any time).", _getCkan));
+        var ksp = Core.Join.KspLauncher.FindKsp();
+        playBody.Children.Add(Ui.Row("Install the matching LMP client into my KSP",
+            ksp != null ? $"The same LMP version as this server, into {ksp}. Your LMP settings are kept." : "No KSP found in your Steam libraries; use Settings → Downloads later.", _getClient));
+        _getClient.IsEnabled = ksp != null;
+
+        var (go, goBody, _) = Ui.Group("4 · Set it up");
         goBody.Children.Add(new StackPanel { Margin = new Thickness(12), Spacing = 10, Children = { _install, _progress, _log } });
 
         View = new ScrollViewer
@@ -91,7 +100,7 @@ internal sealed class SetupWizard
                     Ui.Text("Set up a new LMP server", "headline"),
                     Ui.Text("Answer a few questions and LUNA EVO downloads Luna Multiplayer's server and configures it. Nothing starts until you press Start.", "sublabel"),
                     new Border { Height = 12 },
-                    where, server, go,
+                    where, server, play, go,
                 },
             },
         };
@@ -116,6 +125,39 @@ internal sealed class SetupWizard
         {
             _version.PlaceholderText = "Couldn't reach GitHub";
             Log($"Couldn't load LMP's releases: {e.Message}. Check the internet connection.");
+        }
+    }
+
+    /// <summary>The optional extras: CKAN and the matching LMP client. A failure here never fails the server setup.</summary>
+    private async Task GetPlayerToolsAsync(LmpRelease release)
+    {
+        if (_getCkan.IsChecked == true)
+        {
+            try
+            {
+                Log("Downloading CKAN...");
+                var available = await CkanTools.AvailableAsync(Http.Client);
+                Log(available.Count == 0 ? "No verifiable CKAN release found; skipped." :
+                    $"CKAN {available[0].Release.Tag} downloaded and verified: {await CkanTools.DownloadAsync(Http.Client, available[0].Release, available[0].Exe)}");
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or DownloadVerificationException or IOException or UnauthorizedAccessException)
+            {
+                Log($"CKAN wasn't downloaded ({e.Message}). Try Settings → Downloads later.");
+            }
+        }
+        if (_getClient.IsChecked == true && Core.Join.KspLauncher.FindKsp() is { } ksp && LmpClientInstaller.ClientAsset(release) is { Sha256: { } sha } client)
+        {
+            try
+            {
+                Log($"Installing the LMP {release.Tag} client into {ksp}...");
+                var zip = await new ServerInstaller(Http.Client).DownloadAsync(client, null, allowUnverified: false);
+                await Task.Run(() => LmpClientInstaller.Install(zip, ksp, sha));
+                Log("LMP client installed (checksum verified).");
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException or DownloadVerificationException or IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException)
+            {
+                Log($"The LMP client wasn't installed ({e.Message}). Try Settings → Downloads later.");
+            }
         }
     }
 
@@ -173,6 +215,8 @@ internal sealed class SetupWizard
                     Log(await RuntimeInstaller.InstallAsync(runtime.Major) ? "Installed." : $"That didn't work; get it from {SettingsPage.DotNet6Download}");
                 }
             }
+
+            await GetPlayerToolsAsync(release);
 
             Log("Done! Opening your server.");
             _host.Open(folder, null);

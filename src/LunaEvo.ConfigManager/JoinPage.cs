@@ -12,6 +12,7 @@ using LunaEvo.ConfigManager.Core;
 using LunaEvo.ConfigManager.Core.Join;
 using LunaEvo.ConfigManager.Core.Live;
 using LunaEvo.ConfigManager.Core.Mods;
+using LunaEvo.ConfigManager.Core.Setup;
 
 namespace LunaEvo.ConfigManager;
 
@@ -48,6 +49,24 @@ internal sealed class JoinPage : IDisposable
     private readonly StackPanel _modResults = new() { Spacing = 2 };
     private string? _autoModRules;
     private readonly TabSet _tabs = new("join/tab");
+    private readonly WrapPanel _ckanInstances = new();
+
+    /// <summary>One button per KSP install CKAN manages, to pick it as the KSP to launch.</summary>
+    internal void ShowCkanInstances()
+    {
+        _ckanInstances.Children.Clear();
+        foreach (var instance in CkanTools.Instances())
+        {
+            var pick = Ui.Button($"CKAN: {instance.Name}", "chip").WithId("join/ckan/" + instance.Name);
+            pick.Margin = new Thickness(0, 0, 6, 6);
+            pick.Click += (_, _) =>
+            {
+                _ksp.Text = instance.Path;
+                RememberKsp();
+            };
+            _ckanInstances.Children.Add(pick);
+        }
+    }
     private ServerAddress? _server;
     private LiveInfoResult? _live;
     private bool _checking;
@@ -135,7 +154,8 @@ internal sealed class JoinPage : IDisposable
         kspRow.Children.Add(browse);
         kspRow.Children.Add(_ksp);
         playBody.Children.Add(Ui.Row("Kerbal Space Program", null, null));
-        playBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 4, Children = { kspRow, _kspStatus } });
+        playBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 4, Children = { kspRow, _kspStatus, _ckanInstances } });
+        ShowCkanInstances();
         playBody.Children.Add(Ui.Row("Server password", "Leave empty if the server has none. It's only given to LMP, never kept by LUNA EVO.", _password));
         playBody.Children.Add(new StackPanel
         {
@@ -360,7 +380,8 @@ internal sealed class JoinPage : IDisposable
         if (mode == JoinMode.PickFromList && !listed)
             return; // AddToList explained why
 
-        var started = StartKsp(ksp, KspLauncher.LaunchArguments(server, hasPassword));
+        // Launch the way CKAN's Play button does for this install (its options), then LMP's connect option.
+        var started = StartKsp(ksp, [.. CkanTools.LaunchOptions(ksp), .. KspLauncher.LaunchArguments(server, hasPassword)]);
         if (!started)
         {
             _launchResult.Text = "KSP didn't start.";

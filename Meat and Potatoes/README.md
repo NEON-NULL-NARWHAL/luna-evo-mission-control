@@ -37,6 +37,7 @@ Every source file starts with a short header pointing back here, like this:
 | 19 | [Sharing crafts](19-Sharing-Crafts.md) | work on the Crafts page, the .lunacraft format, or craft import/export |
 | 20 | [Next steps (handoff)](20-Next-Steps.md) | pick up the next task: house rules, quick wins with file pointers, the LMP fork list |
 | 21 | [Vessel cleanup](21-Vessel-Cleanup.md) | change the Vessels page or how Universe vessels are read and removed |
+| 22 | [CKAN and the LMP client](22-CKAN-and-LMP-Client.md) | change how CKAN is downloaded or read, or how the LMP client is installed |
 
 ## 🔣 Legend
 
@@ -99,6 +100,7 @@ Symbols used in the map below and throughout these chapters:
 | ⭐🧠🔌⚠️ | `Setup/ServerInstaller.cs` | Download (SHA-256 verified, GitHub only, size-limited) + install/update a server zip; never touches Config/Universe/logs/Plugins; backs up old binaries. See [14](14-Security.md). |
 | 🧠🔌 | `Setup/ConfigGenerator.cs` | Writes a new server's config from the schema and the wizard's choices. |
 | 🧠 | `Setup/RuntimeInstaller.cs` | Installs the .NET runtime with winget. |
+| 🧠🔌⚠️ | `Setup/Tools.cs` | CKAN copies (verified, per version), CKAN's instances and launch options, the LMP client installer. See [22](22-CKAN-and-LMP-Client.md). |
 | ⭐🧠⚠️ | `Setup/AppUpdater.cs` | LUNA EVO updating itself: check its releases, verified download, swap the running exe. See [18](18-Updating-LUNA-EVO.md). |
 | **Live/** | | *What's happening on the server* ([11](11-Live-Players.md)) |
 | 🧠🔌 | `Live/ServerInfoClient.cs` | Reads LMP's website JSON: players, vessels, subspaces; join/leave diff. |

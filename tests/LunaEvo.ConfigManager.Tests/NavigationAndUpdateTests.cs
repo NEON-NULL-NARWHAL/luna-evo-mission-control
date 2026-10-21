@@ -188,6 +188,58 @@ public class NavigationAndUpdateTests
     }
 
     [AvaloniaFact]
+    public void Downloads_tab_gets_a_verified_ckan_and_opens_it()
+    {
+        var exe = TestData.FakeExe("ckan");
+        using var ui = new UiHarness();
+        ui.Web.Text(Core.Setup.CkanTools.ReleasesUrl, TestData.CkanReleasesJson(exe)).Bytes(TestData.CkanExeUrl, exe);
+        var opened = new List<string>();
+        SettingsPage.StartCkan = path =>
+        {
+            opened.Add(path);
+            return true;
+        };
+        ui.OpenTab(MainWindow.SettingsKey);
+        ui.Click(ui.Find<Button>("settings/tab/downloads"));
+        ui.Pump();
+
+        ui.Await(ui.Window.SettingsPageForTests.DownloadCkanAsync());
+        ui.Pump();
+        Assert.StartsWith("CKAN v1.36.4 downloaded and verified", ui.Find<TextBlock>("settings/ckanStatus").Text);
+        ui.Click(ui.Find<Button>("settings/ckanOpen/v1.36.4"));
+        Assert.EndsWith(Path.Combine("v1.36.4", "ckan.exe"), Assert.Single(opened));
+    }
+
+    [AvaloniaFact]
+    public void Join_offers_ckan_installs_and_launches_with_ckans_options()
+    {
+        using var ui = new UiHarness(openServer: false);
+        var ksp = TestData.FakeKsp();
+        Directory.CreateDirectory(Path.Combine(ksp, "GameData", "LunaMultiplayer", "Plugins"));
+        File.Copy(Path.Combine(TestPaths.LmpServer, "Server.dll"), Path.Combine(ksp, "GameData", "LunaMultiplayer", "Plugins", "LmpClient.dll"));
+        Directory.CreateDirectory(Path.Combine(ksp, "CKAN"));
+        File.WriteAllText(Path.Combine(ksp, "CKAN", "GUIConfig.json"), "{ \"CommandLines\": [ \"KSP_x64.exe -single-instance\" ] }");
+        Directory.CreateDirectory(Core.Setup.CkanTools.ConfigFolder);
+        File.WriteAllText(Path.Combine(Core.Setup.CkanTools.ConfigFolder, "config.json"),
+            "{ \"GameInstances\": [ { \"Name\": \"Modded\", \"Path\": " + System.Text.Json.JsonSerializer.Serialize(ksp) + " } ] }");
+        var launches = new List<IReadOnlyList<string>>();
+        JoinPage.StartKsp = (_, arguments) =>
+        {
+            launches.Add(arguments);
+            return true;
+        };
+        ui.Window.Navigate(MainWindow.JoinKey);
+        ui.Window.Join.ShowCkanInstances(); // re-read CKAN's config written above
+        ui.Pump();
+        ui.Click(ui.Find<Button>("join/ckan/Modded"));
+        Assert.Equal(ksp, ui.Window.Join.KspBox.Text);
+        ui.Find<TextBox>("join/address").Text = "127.0.0.1";
+        ui.Await(ui.Window.Join.LaunchAsync());
+
+        Assert.Equal(["-single-instance", "-lmp", "lmp://127.0.0.1"], Assert.Single(launches));
+    }
+
+    [AvaloniaFact]
     public void Players_settings_and_join_pages_have_tabs()
     {
         using var ui = new UiHarness();

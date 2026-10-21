@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.0 (2026-10-20)
+
+### Added
+- **Settings → Downloads:** LUNA EVO keeps its own verified copies of **CKAN** (the official `ckan.exe`, SHA-256
+  checked, one folder per version: download the latest, open, remove) and installs the **LMP client mod** into any KSP
+  install, including every install CKAN manages, in any version (the open server's by default). Your LMP settings
+  (server list) are kept, the old version is backed up outside GameData, and an existing `000_Harmony` is never replaced.
+- **Setup wizard, step 3 (optional):** download CKAN, and install the LMP client matching the new server into your KSP.
+- **Join page + CKAN:** your CKAN installs as one-click picks, and **Launch KSP and join** uses the same options as
+  CKAN's Play button (e.g. `-single-instance`) before connecting.
+
+### Fixed
+- Progress messages arriving after a download finished could overwrite the result (CKAN, LMP client, LUNA EVO update).
+- Two LMP client installs within the same second could collide on the backup folder name.
+
 ## 1.0.1 (2026-10-20)
 
 Fourth security audit (the 1.0 review); details in `SECURITY.md`.
