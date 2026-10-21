@@ -30,7 +30,7 @@ public sealed class UniverseBackups(string serverDirectory)
     /// Zips the Universe folder. Files are read with sharing on, so this works while the server runs (send LMP
     /// "/backup now" first so its files are fresh). Unreadable files are skipped and counted.
     /// </summary>
-    public (UniverseSnapshot Snapshot, int Skipped) Create(string label = "manual", DateTime? now = null)
+    public (UniverseSnapshot Snapshot, int Skipped) Create(string label = "manual", DateTime? now = null, CompressionLevel compression = CompressionLevel.Optimal)
     {
         if (!Directory.Exists(UniverseFolder))
             throw new DirectoryNotFoundException($"No Universe folder at {UniverseFolder}. Start the server once to create it.");
@@ -52,7 +52,7 @@ public sealed class UniverseBackups(string serverDirectory)
                 try
                 {
                     using var source = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                    var entry = zip.CreateEntry(Path.GetRelativePath(UniverseFolder, file).Replace('\\', '/'), CompressionLevel.Optimal);
+                    var entry = zip.CreateEntry(Path.GetRelativePath(UniverseFolder, file).Replace('\\', '/'), compression);
                     using var target = entry.Open();
                     source.CopyTo(target);
                 }
@@ -175,7 +175,8 @@ public sealed class UniverseBackups(string serverDirectory)
             return null;
         try
         {
-            var snapshot = Create(label).Snapshot;
+            // Fastest: these run while the user waits (stopping the server, updating LMP); a bit bigger, much quicker.
+            var snapshot = Create(label, compression: CompressionLevel.Fastest).Snapshot;
             Prune(keep, label);
             return snapshot;
         }

@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 namespace LunaEvo.ConfigManager;
 
 /// <summary>
-/// Uses Shell_NotifyIcon's balloon, which Windows 10 and 11 show as a normal notification (and keep in the
-/// notification centre). No package or app registration needed. The LUNA EVO icon appears in the notification area
-/// after the first one and is removed when the app closes. Does nothing on other systems.
+/// Uses Shell_NotifyIcon's balloon, which Windows 10 and 11 show as a normal notification. No package or app
+/// registration needed. Its icon is only in the notification area while a notification is showing (removed
+/// <see cref="ShowFor"/> later), so it never sits next to home server mode's icon. Does nothing on other systems.
 /// </summary>
 internal static class DesktopNotifier
 {
@@ -22,6 +22,10 @@ internal static class DesktopNotifier
     private static IntPtr _window;
     private static IntPtr _icon;
     private static bool _added;
+    private static Timer? _removal;
+
+    /// <summary>How long the icon stays after a notification (Windows shows the banner for about 5 seconds).</summary>
+    public static TimeSpan ShowFor { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>The main window's handle; set once it's shown.</summary>
     public static void Attach(IntPtr window) => _window = window;
@@ -43,6 +47,8 @@ internal static class DesktopNotifier
         data.szInfo = Cut(message, 255);
         data.dwInfoFlags = warning ? NiifWarning : NiifInfo;
         Shell_NotifyIconW(NimModify, ref data);
+        _removal?.Dispose();
+        _removal = new Timer(_ => Remove(), null, ShowFor, Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>Removes the notification-area icon. Called when the app closes.</summary>

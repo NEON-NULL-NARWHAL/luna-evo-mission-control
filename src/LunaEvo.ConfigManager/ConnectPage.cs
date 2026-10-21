@@ -24,9 +24,17 @@ internal sealed class ConnectPage
         _host = host;
         var refresh = Ui.Button("Refresh", "text", "IconRestart").WithId("connect/refresh");
         refresh.Click += (_, _) => Refresh();
+        var invite = Ui.Button("Copy invite", "fab").WithId("connect/invite");
+        invite.Margin = new Thickness(0, 0, 8, 0);
+        invite.Click += async (_, _) =>
+        {
+            if (Invite() is { } text && TopLevel.GetTopLevel(View)?.Clipboard is { } clipboard)
+                await clipboard.SetTextAsync(text);
+        };
         var header = new DockPanel();
-        DockPanel.SetDock(refresh, Dock.Right);
-        header.Children.Add(refresh);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top, Children = { invite, refresh } };
+        DockPanel.SetDock(actions, Dock.Right);
+        header.Children.Add(actions);
         header.Children.Add(new StackPanel
         {
             Spacing = 2,
@@ -176,6 +184,28 @@ internal sealed class ConnectPage
         _status.Children.Add(Ui.Row(!running ? "Server is stopped" : listening ? $"Listening on UDP {port}" : $"Nothing is listening on UDP {port}",
             !running ? "Start it on the Server Console page." : listening ? "The server is ready for players." : "The server may still be starting, or another program has the port.", null)
             .WithId("connect/listening"));
+    }
+
+    /// <summary>
+    /// A ready-to-send message for friends: server name, the best address to use (VPN/mesh first, then local
+    /// network), the LMP version they need, and whether there's a password (never the password itself). The Join page
+    /// accepts it pasted in whole.
+    /// </summary>
+    internal string? Invite()
+    {
+        if (_host.Session is not { } session)
+            return null;
+        var port = session.GetValue(LmpRules.Connection, "Port") ?? "8800";
+        var addresses = NetworkHelper.LocalAddresses();
+        bool Mesh(LocalAddress a) => System.Net.IPAddress.TryParse(a.Address, out var ip) && Core.Join.ServerProbe.Kind(ip).StartsWith("VPN", StringComparison.Ordinal);
+        var best = addresses.FirstOrDefault(Mesh) ?? addresses.FirstOrDefault(a => a.IsPrivate) ?? addresses.FirstOrDefault();
+        var address = best == null ? "(ask me)" : port == "8800" ? best.Address : $"{best.Address}:{port}";
+        var password = string.IsNullOrEmpty(session.GetValue(LmpRules.General, "Password")) ? "none" : "yes, ask me";
+        return $"Join my KSP server \"{_host.ServerName}\"!\n" +
+               $"Address: {address}\n" +
+               $"LMP version: {session.Schema.ServerVersion} (you need the same LMP client mod)\n" +
+               $"Password: {password}\n" +
+               "With LUNA EVO: Join a server, paste this whole message into the address box.";
     }
 
     private Button CopyButton(string text)

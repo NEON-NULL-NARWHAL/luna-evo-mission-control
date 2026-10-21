@@ -29,13 +29,13 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 3. ~~Universe backup on every stop and before an LMP update~~ (done in 0.7.1: `UniverseBackups.Safety`).
 4. ~~**Scheduled chat announcements.**~~ (done in 0.8.0: `Core/Ops/Announcements.cs`, `ServerPage.CheckAnnouncements`) `AppSettings`: list of (minutes, text). `ServerPage.Tick` sends `/say <text>` via
    `TrySend` when due (LMP takes one command per 500 ms). Settings → Automation tab gets an editor.
-5. **Copy invite** (Connect page): one button copying "Server: <name>, address <addr>:<port>, LMP <version>, password: yes/no".
+5. ~~**Copy invite**~~ (done in 0.9.0: `ConnectPage.Invite`, `ServerAddress.Parse` reads pasted invites). Was: (Connect page): one button copying "Server: <name>, address <addr>:<port>, LMP <version>, password: yes/no".
    `ServerAddress.Parse` on the Join page should accept it pasted (take the first `host:port` in the text).
-6. **Crafts page screenshots** for the README (demo copy only; keep UI automation short, it steals focus).
+6. ~~**Crafts page screenshots**~~ (done in 0.9.0). for the README (demo copy only; keep UI automation short, it steals focus).
 7. **Commit email**: switch `git config user.email` (repo-local) to the GitHub noreply address. Ask the owner first.
 
-- **Home server mode follow-ups** (0.8.0 added it in `HomeServer.cs` + `MainWindow.HideToTray`): with Windows notifications on,
-  there are two LUNA EVO icons in the notification area (Avalonia's tray icon and `DesktopNotifier`'s); merge them.
+- ~~Two notification-area icons~~ (0.9.0: `DesktopNotifier` removes its icon `ShowFor` after each notification).
+  Untested on real Windows: whether the notification centre keeps the entry after the icon goes.
 
 ## Bigger
 

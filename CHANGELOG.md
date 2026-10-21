@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0 (2026-10-20)
+
+### Added
+- **Server health** on the Server Console: memory, CPU and threads of `Server.exe`, every 2 seconds while it runs
+  (also for a server started outside LUNA EVO).
+- **Copy invite** on the Connect page: a ready-to-send message (server name, the best address to use with mesh/VPN
+  first, the LMP version needed, whether there's a password, never the password). Pasting the whole message into the
+  Join page's address box works.
+- README screenshots for Crafts, settings search, server health, home server mode and chat announcements.
+
+### Changed
+- Automatic safety backups (on stop, before updates) use fast compression, so stopping a big server isn't slowed down.
+- The Windows-notifications icon only stays in the notification area while a notification shows, so home server mode
+  has a single LUNA EVO icon.
+
 ## 0.8.1 (2026-10-20)
 
 Third security audit; details in `SECURITY.md`.

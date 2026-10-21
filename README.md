@@ -53,13 +53,13 @@ console window open. This app does all of that for you, and adds what a server h
 |---|---|
 | 🧙 **Setup wizard** | Pick a folder and answer a few questions (name, password, game mode, difficulty, players, port). LUNA EVO downloads the LMP server from GitHub, writes the config, checks for (and can install) the .NET runtime it needs, and opens it. Private by default: not on the public list, no router changes, until you choose. |
 | ⬆️ **LMP updates** | Tells you when a newer LMP server is out and updates it in one click, keeping your Config, Universe, logs and Plugins, and saving the old version first. |
-| ▶️ **Server Console** | Start, stop and restart, with a live colour-coded console, filters, search, commands with history and quick buttons, and a log file browser. Stops are **clean** (LMP backs up the universe), never a kill. |
+| ▶️ **Server Console** | Start, stop and restart, with a live colour-coded console, filters, search, commands with history and quick buttons, and a log file browser. Stops are **clean** (LMP backs up the universe), never a kill. Live **memory and CPU** of the server while it runs. |
 | 👥 **Players** | Who's online, their vessels and warp subspaces, with **Kick** and **Ban** buttons (reason optional). |
 | 📜 **Player history** | Everyone who's played: last seen, sessions, time played, LMP version, and your own notes. Built from LMP's own log and live data; IP addresses are never kept. |
 | 🚨 **Alerts** | Someone guessing the admin password (LMP doesn't limit guesses) or a banned player trying to get back in shows at the top of the Players page and as a notification. |
 | 🚫 **Bans** | LMP's ban list with names instead of ids, and **Unban** (LMP has no unban command). |
 | 🔔 **Notifications** | Windows notifications and an optional Discord channel when the server starts, stops or crashes, for alerts, and (if you like) players joining and leaving. The Discord webhook is stored encrypted and posts can never ping @everyone. |
-| 🔌 **Connect** | The exact addresses to give your friends (LAN, VPN/mesh, internet), whether you're on the public list, UPnP, a one-click Windows Firewall rule, whether the port is actually listening, and **Share with players** so their Join page can see live info. |
+| 🔌 **Connect** | The exact addresses to give your friends (LAN, VPN/mesh, internet), whether you're on the public list, UPnP, a one-click Windows Firewall rule, whether the port is actually listening, **Share with players** so their Join page can see live info, and **Copy invite**: a ready-to-send message friends paste straight into their Join page. |
 
 ### Join a server (for players)
 
@@ -121,6 +121,12 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | **Players:** live from LMP's own data, with alerts for admin-password guessing and banned players. | **Player history and bans:** sessions, time played, notes; unban by name. |
 | ![Check my mods](docs/screenshots/join-mods.png) | ![Updates](docs/screenshots/settings-updates.png) |
 | **Check my mods:** what LMP will refuse, before you join. | **Updates:** LUNA EVO updates itself from its GitHub releases. (Taken while the repository was still private, hence the message.) |
+| ![Crafts](docs/screenshots/crafts.png) | ![Settings search](docs/screenshots/search.png) |
+| **Crafts:** export your designs, import friends', with a missing-parts check. | **Search:** find any setting across the tabs. |
+| ![Server health](docs/screenshots/console-health.png) | ![Home server mode](docs/screenshots/home-server.png) |
+| **Server health:** memory, CPU and threads of the running server. | **Home server mode:** one switch for an always-on host PC. |
+| ![Chat announcements](docs/screenshots/announcements.png) | |
+| **Chat announcements:** messages to game chat on a schedule. | |
 | ![Profiles and backups](docs/screenshots/profiles.png) | ![A Windows notification](docs/screenshots/notification-toast.png) |
 | **Profiles & Backups:** switch whole configs; snapshot and restore the Universe. | **A Windows notification** from LUNA EVO. |
 | ![Import from GameData](docs/screenshots/mod-import.png) | ![Plugin lists](docs/screenshots/mod-lists.png) |
@@ -287,7 +293,7 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 228 tests: core logic and the real UI, headless; no network, no real server
+dotnet test                      # 232 tests: core logic and the real UI, headless; no network, no real server
 .\publish.ps1                    # -> dist\LunaEvo-ConfigManager-<version>-win-x64\LunaEvo.ConfigManager.exe
 .\release.ps1                    # tests, build, and a GitHub release with the exe: every copy then offers the update
 ```
@@ -311,8 +317,8 @@ ConfigManager/
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, joining
 │   └── LunaEvo.ConfigManager/        🖥️ the Avalonia desktop app
 ├── tests/
-│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (154)
-│   ├── LunaEvo.ConfigManager.Tests/        🧪 UI tests: the real window, driven headlessly (74)
+│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (156)
+│   ├── LunaEvo.ConfigManager.Tests/        🧪 UI tests: the real window, driven headlessly (76)
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
 ├── docs/screenshots/
@@ -334,7 +340,7 @@ We want to be completely clear about this.
 |---|---|
 | Set the goals: a GUI config manager, then server control, theming, this repo, the 0.3 feature set (wizard, players, mod import, automation...), 0.4 (a security audit, the Join page, removing Discord), 0.5 (player history, alerts, bans, mod check, notifications), and 0.6 (self-update, a tidier layout). Found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API and mod checks really work. |
 | Made the decisions: desktop app, Avalonia, .NET 10, GPL-3.0 (the repo started private and is now public), the look (inspired by [NOMM](https://github.com/Combat787/NOMM)). | Wrote all of the code: the C#, XAML and build scripts. |
-| Supplied the real server, its configs and the requirements. | Wrote all 228 automated tests, a fake LMP server, and fakes for every network call. |
+| Supplied the real server, its configs and the requirements. | Wrote all 232 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP (below), took the screenshots, and wrote these docs. |
 
 - **Model and tool:** Claude Opus 5.5 by Anthropic, working in Claude Code (an AI coding agent that can read files, run commands and build/test the code) inside VS Code.
@@ -345,7 +351,7 @@ We want to be completely clear about this.
 
 AI-written code can look right and still be wrong, so nothing here is trusted on looks:
 
-- **228 automated tests.** They also run on GitHub on every push. Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
+- **232 automated tests.** They also run on GitHub on every push. Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
 - **Against the real thing:**
   - The wizard downloaded the real LMP 0.29.2 from GitHub, and the real server started on the generated config **with no errors**.
   - The Players page read the real server's live JSON. A Universe backup was taken while it ran, and it stopped cleanly.

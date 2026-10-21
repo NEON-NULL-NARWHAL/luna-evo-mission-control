@@ -28,6 +28,10 @@ public sealed record ServerAddress(string Host, int Port = ServerAddress.Default
     /// </summary>
     public static ServerAddress? Parse(string? text, int websitePort = DefaultWebsitePort)
     {
+        // A whole LUNA EVO invite pasted in: use its "Address:" line.
+        if (text?.Contains("Address:", StringComparison.OrdinalIgnoreCase) == true &&
+            System.Text.RegularExpressions.Regex.Match(text, @"Address:\s*(\S+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase) is { Success: true } invite)
+            text = invite.Groups[1].Value;
         text = text?.Trim();
         if (string.IsNullOrEmpty(text))
             return null;

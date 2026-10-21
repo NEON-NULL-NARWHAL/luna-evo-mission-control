@@ -87,6 +87,8 @@ internal sealed class ServerPage : IDisposable
     private readonly Button _stop = Ui.Button("Stop", "text", "IconStop").WithId("console/stop");
     private readonly Button _restart = Ui.Button("Restart", "text", "IconRestart").WithId("console/restart");
     private readonly WrapPanel _cards = new() { Margin = new Thickness(0, 16, 0, 8) };
+    private readonly WrapPanel _health = new() { Margin = new Thickness(0, 0, 0, 8), IsVisible = false };
+    private readonly ProcessStats _stats = new();
     private readonly Border _banner = new() { IsVisible = false, Margin = new Thickness(0, 0, 0, 12) };
     private readonly TextBlock _bannerText = new();
     private readonly Border _exposure = new Border { IsVisible = false, Margin = new Thickness(0, 0, 0, 12) }.WithId("console/exposure");
@@ -514,7 +516,7 @@ internal sealed class ServerPage : IDisposable
 
         _exposure.Classes.Add("banner");
         _exposure.Child = _exposureText;
-        var top = new StackPanel { Children = { header, _cards, _exposure, _banner, tabs } };
+        var top = new StackPanel { Children = { header, _cards, _health, _exposure, _banner, tabs } };
         var page = new DockPanel { Margin = new Thickness(28, 20, 28, 20) };
         DockPanel.SetDock(top, Dock.Top);
         page.Children.Add(top);
@@ -719,12 +721,36 @@ internal sealed class ServerPage : IDisposable
     {
         _ticks++;
         if (_ticks % 2 == 0)
+        {
             CheckExternal();
+            ShowHealth();
+        }
         _ = CheckDailyRestartAsync(DateTime.Now);
         _ = CheckUniverseBackupAsync(DateTime.Now);
         CheckAnnouncements(DateTime.Now);
         if (_runner.State == ServerState.Running)
             UpdateState(); // uptime
+    }
+
+    /// <summary>Memory, CPU and threads of Server.exe, every 2 seconds while it runs.</summary>
+    internal void ShowHealth()
+    {
+        var health = IsRunning ? _stats.Sample(_runner.ProcessId ?? _externalPid) : _stats.Sample(null);
+        _health.IsVisible = health != null;
+        if (health == null)
+            return;
+        _health.Children.Clear();
+        HealthCard("Memory", $"{health.MemoryBytes / 1024.0 / 1024.0:0} MB");
+        HealthCard("CPU", $"{health.CpuPercent:0.#} %");
+        HealthCard("Threads", health.Threads.ToString());
+    }
+
+    private void HealthCard(string label, string value)
+    {
+        var card = new Border { Child = new StackPanel { Spacing = 2, Children = { Ui.Text(label, "sublabel"), Ui.Text(value, "value") } } }
+            .WithId("console/health/" + label);
+        card.Classes.Add("card");
+        _health.Children.Add(card);
     }
 
     private readonly Dictionary<int, DateTime> _announced = [];

@@ -25,6 +25,24 @@ public class JoinTests
         Assert.Equal((host, port), (address.Host, address.Port));
     }
 
+    [Fact]
+    public void Reads_the_address_out_of_a_pasted_luna_evo_invite()
+    {
+        var invite = string.Join("\n", "Join my KSP server \"Kerbin\"!", "Address: 100.101.102.103:9000", "LMP version: 0.29.2", "Password: yes, ask me");
+        Assert.Equal(("100.101.102.103", 9000), (ServerAddress.Parse(invite)!.Host, ServerAddress.Parse(invite)!.Port));
+    }
+
+    [Fact]
+    public void Samples_a_processes_memory_and_cpu()
+    {
+        var stats = new Server.ProcessStats();
+        var pid = Environment.ProcessId;
+        Assert.True(stats.Sample(pid)!.MemoryBytes > 0);
+        Assert.InRange(stats.Sample(pid)!.CpuPercent, 0, 100);
+        Assert.Null(stats.Sample(null));
+        Assert.Null(stats.Sample(int.MaxValue)); // not running
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("host:notaport")]

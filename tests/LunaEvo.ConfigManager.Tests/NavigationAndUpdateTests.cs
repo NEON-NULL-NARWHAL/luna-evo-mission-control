@@ -141,6 +141,33 @@ public class NavigationAndUpdateTests
     }
 
     [AvaloniaFact]
+    public void The_invite_says_where_and_which_version_but_never_the_password()
+    {
+        using var ui = new UiHarness();
+        ui.Session.SetValue(LmpRules.General, "Password", "secret-password-123");
+        ui.OpenTab(MainWindow.ConnectKey);
+        var invite = ui.Window.Connect!.Invite()!;
+        Assert.Contains("Address: ", invite);
+        Assert.Contains("LMP version: 0.29.2", invite);
+        Assert.Contains("Password: yes, ask me", invite);
+        Assert.DoesNotContain("secret-password-123", invite);
+    }
+
+    [AvaloniaFact]
+    public void The_console_shows_the_servers_memory_and_cpu_while_it_runs()
+    {
+        using var ui = new UiHarness(fakeServer: true);
+        ui.OpenTab(MainWindow.ConsolePage);
+        Assert.False(ui.TryFind<Border>("console/health/Memory")?.IsEffectivelyVisible == true); // nothing while stopped
+        ui.Click(ui.Find<Button>("console/start"));
+        ui.WaitFor(() => ui.Server.State == Core.Server.ServerState.Running, "server running");
+        ui.Server.ShowHealth();
+        ui.Pump();
+        Assert.True(ui.Find<Border>("console/health/Memory").IsEffectivelyVisible);
+        Assert.NotNull(ui.Find<Border>("console/health/CPU"));
+    }
+
+    [AvaloniaFact]
     public void Players_settings_and_join_pages_have_tabs()
     {
         using var ui = new UiHarness();
