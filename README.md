@@ -108,6 +108,7 @@ You don't have to host anything: choose **Join a friend's server** on the welcom
 | 🔄 **Restarts** | After a crash (giving up if it keeps crashing), and an optional daily restart with an in-game warning. |
 | 🌌 **Universe backups** | Dated snapshots on demand, every few hours, every time the server stops and before every LMP update. One-click restore, which backs up first. |
 | 🧹 **Vessel cleanup** | Remove debris, asteroids and abandoned ships (server stopped, backed up first, crewed ships protected): the biggest performance win a host has. |
+| 🪐 **Solar system map** | Every vessel on the server on its orbit, where it is now, around every body, including the planet packs in your GameData (OPM, MPE and other Kopernicus packs). Zoom, pan, click a ship for its orbit and crew. |
 | 💬 **Chat announcements** | Messages to the game chat on a schedule ("every 60 minutes: join our Discord"). |
 | 🗂️ **Config profiles** | Save the whole setup as "Career campaign" or "Sandbox chaos night" and switch in one click. |
 
@@ -117,7 +118,7 @@ You don't have to host anything: choose **Join a friend's server** on the welcom
 |---|---|
 | 📦 **One file** | A single self-contained `.exe`. Next to `Server.exe` it opens that server by itself. |
 | ⬆️ **Updates itself** | Checks its GitHub releases on startup; **Update and restart** verifies the download, swaps the exe and restarts. |
-| 🧭 **Easy to find your way** | One rail: Server (console, Players, Vessels, Connect, Server settings, Mod Control, Profiles & backups), Play (Server browser, Join, Crafts, CKAN mods) and App settings, with every version in use (LUNA EVO, LMP server and client, KSP, CKAN) at the bottom. |
+| 🧭 **Easy to find your way** | One rail: Server (console, Players, Vessels, Map, Connect, Server settings, Mod Control, Profiles & backups), Play (Server browser, Join, Crafts, CKAN mods) and App settings, with every version in use (LUNA EVO, LMP server and client, KSP, CKAN) at the bottom. |
 | 🎨 **Make it yours** | An RGB color wheel and KSP-themed presets regenerate the whole theme; dark, light or follow Windows. |
 
 ### Safe by default
@@ -145,6 +146,8 @@ You don't have to host anything: choose **Join a friend's server** on the welcom
 | **Players:** live from LMP, with alerts for password guessing and banned players. | **History and bans:** sessions, time played, notes; unban by name. |
 | ![Server health](docs/screenshots/console-health.png) | ![Vessel cleanup](docs/screenshots/vessels.png) |
 | **Server health:** memory, CPU and threads of the running server. | **Vessel cleanup:** debris selected, crewed ships protected, backup first. |
+| ![Solar system map](docs/screenshots/map.png) | ![Map around Kerbin](docs/screenshots/map-kerbin.png) |
+| **Solar system map:** 47 bodies with Outer Planets and other packs, read from GameData. | **Around Kerbin:** stations on their orbits, landed craft on the surface. |
 
 **Playing**
 
@@ -180,7 +183,7 @@ You don't have to host anything: choose **Join a friend's server** on the welcom
 | ![Light theme](docs/screenshots/light.png) | ![Welcome](docs/screenshots/welcome.png) |
 | **Light theme.** | **Welcome:** host, open a server, or just play. |
 
-<sub>Screenshots are LUNA EVO 0.6 to 2.0 (older ones still say "Config Manager", its name before 2.0) running a sandbox copy of a real LMP 0.29.2 server, with personal details removed: network addresses are examples and the players are made-up Kerbals. The setup wizard is shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
+<sub>Screenshots are LUNA EVO 0.6 to 2.2 (older ones still say "Config Manager", its name before 2.0) running a sandbox copy of a real LMP 0.29.2 server, with personal details removed: network addresses are examples and the players are made-up Kerbals. The setup wizard is shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
 
 ## Getting started
 

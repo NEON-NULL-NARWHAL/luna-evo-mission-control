@@ -136,7 +136,8 @@ public class FuzzTests
     [Fact]
     public void Craft_and_vessel_files() => Fuzz(
         ["ship = Kerbal X\nversion = 1.12.5\ntype = VAB\nPART\n{\n part = mk1pod.v2_4294\n}\n",
-         "pid = 1\nname = Mun Base\ntype = Base\nsit = LANDED\nORBIT\n{\n REF = 2\n}\nPART\n{\n name = x\n crew = Jeb\n}\n"],
+         "pid = 1\nname = Mun Base\ntype = Base\nsit = LANDED\nORBIT\n{\n REF = 2\n}\nPART\n{\n name = x\n crew = Jeb\n}\n",
+         "pid = 2\nsit = ORBITING\nlat = 1\nlon = 2\nORBIT\n{\n SMA = -7e5\n ECC = 1.2\n INC = 5\n LAN = 1\n LPE = 2\n MNA = 3\n EPH = 4\n IDENT = Squad/Mun\n}\n"],
         text =>
         {
             try

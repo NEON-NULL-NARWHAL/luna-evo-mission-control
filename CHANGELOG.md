@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.2.0 (2026-10-21)
+
+### Added
+- **Solar system map** (rail → Map): every vessel on the server on its orbit, where it is now, top-down. Pick any
+  star, planet or moon; scroll to zoom, drag to move; click a vessel for its apoapsis, periapsis, inclination, period
+  and crew, or a moon to go there. Landed craft sit on the surface; asteroids and debris can be hidden.
+- **Planet packs:** the bodies come from your KSP's GameData (Kopernicus configs), so Outer Planets Mod, MPE and other
+  packs show up, moved planets included (OPM's Eeloo round Sarnus). Checked on a 47-body install.
+- Universe time as the server's clients see it ("Year 1, day 86, 05:15"), server running or not.
+
+### Tests
+- Orbit math against KSP's own numbers, planet packs (moves, removals, broken packs), the universe clock, odd orbits
+  from save files, and the Map page clicked through. 315 tests.
+
 ## 2.1.1 (2026-10-21)
 
 Tenth audit, the deep dive; details in `SECURITY.md`.

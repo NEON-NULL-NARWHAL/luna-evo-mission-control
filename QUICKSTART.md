@@ -32,7 +32,7 @@ LMP server and client, KSP, CKAN).
 | Rail | Page | What it's for |
 |---|---|---|
 | Server | **Server console** | Start, stop, restart; the live console; cards you click to change name, port, players |
-| | **Players** · **Vessels** | Who's online, history, kick/ban; every vessel, cleanup |
+| | **Players** · **Vessels** · **Map** | Who's online, history, kick/ban; every vessel, cleanup; the solar system map |
 | | **Connect** | What to tell friends, firewall, invite |
 | | **Server settings** | Every LMP setting (start with **Essentials**) |
 | | **Mod Control** | Which parts and mods players may use |
@@ -179,6 +179,10 @@ Full guide: [Play together without opening any ports](README.md#play-together-wi
 - **Profiles & backups**<br>
   ↳ Saves a copy of your whole config as a named profile, and zips the Universe (your game world) to restore later.
   Restoring makes a backup first, so it can be undone.
+
+- **Map**<br>
+  ↳ Reads the server's `Universe/Vessels` and your KSP's GameData (for planet packs) and draws every vessel on its
+  orbit. Read-only: it changes nothing. Pick a body at the top, scroll to zoom, drag to move, click a ship.
 
 💡 **Tip:** these only run while LUNA EVO is open; home server mode makes sure it is.
 

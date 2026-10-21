@@ -194,7 +194,21 @@ internal static class TestData
         Vessel("d4", "Ast. ABC-123", "SpaceObject");
     }
 
-    public const string CkanExeUrl = "https://github.com/KSP-CKAN/CKAN/releases/download/v1.36.4/ckan.exe";
+    /// <summary>Vessels with real orbits for the map: a station round Kerbin, a Mun lander, a Duna probe, a rock round the Sun.</summary>
+    public static void AddOrbitingVessels(string serverDirectory)
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(serverDirectory, "Universe", "Vessels")).FullName;
+        void Vessel(string id, string name, string type, string sit, string orbit, string crew = "", string extra = "") =>
+            File.WriteAllText(Path.Combine(folder, id + ".txt"),
+                string.Join("\n", $"pid = {id}", $"name = {name}", $"type = {type}", $"sit = {sit}", extra, "ORBIT", "{", orbit, "}",
+                    "PART", "{", "name = mk1pod.v2", crew.Length > 0 ? $"crew = {crew}" : "", "}"));
+        Vessel("k1", "Kerbin Station", "Station", "ORBITING", "SMA = 700000\nECC = 0.001\nINC = 0\nLAN = 0\nLPE = 0\nMNA = 0\nEPH = 0\nREF = 1\nIDENT = Squad/Kerbin", "Jebediah Kerman");
+        Vessel("m1", "Mun Lander", "Lander", "LANDED", "SMA = 100000\nECC = 0.9\nREF = 2\nIDENT = Squad/Mun", extra: "lat = 3.5\nlon = 45");
+        Vessel("d1", "Duna Probe", "Probe", "ORBITING", "SMA = 900000\nECC = 0.2\nINC = 10\nLAN = 30\nLPE = 40\nMNA = 1\nEPH = 0\nREF = 6\nIDENT = Squad/Duna");
+        Vessel("s1", "Ast. XYZ-987", "SpaceObject", "ORBITING", "SMA = 15000000000\nECC = 0.1\nREF = 0\nIDENT = Squad/Sun");
+    }
+
+    public const string CkanExeUrl ="https://github.com/KSP-CKAN/CKAN/releases/download/v1.36.4/ckan.exe";
 
     /// <summary>CKAN's GitHub releases: a new one with a checksummed ckan.exe, an old one without.</summary>
     public static string CkanReleasesJson(byte[] exe)

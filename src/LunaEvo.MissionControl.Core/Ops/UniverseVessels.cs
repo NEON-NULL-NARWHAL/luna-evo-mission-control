@@ -17,6 +17,17 @@ public sealed record UniverseVessel(string Id, string Name, string Type, string 
     public bool IsDebris => Type.Equals("Debris", StringComparison.OrdinalIgnoreCase);
     public bool IsSpaceObject => Type.Equals("SpaceObject", StringComparison.OrdinalIgnoreCase);
     public bool HasCrew => Crew.Count > 0;
+
+    /// <summary>Its orbit (for the map), or null if the file has none or it can't be read.</summary>
+    public Map.Orbit? Orbit { get; init; }
+
+    /// <summary>The body it orbits as the file names it (ORBIT IDENT: "Squad/Kerbin", "Urlum"), or null.</summary>
+    public string? BodyName { get; init; }
+
+    /// <summary>Latitude and longitude in degrees, for landed and splashed vessels.</summary>
+    public (double Lat, double Lon)? Surface { get; init; }
+
+    public bool IsLanded => Situation is "LANDED" or "SPLASHED" or "PRELAUNCH";
 }
 
 /// <summary>
@@ -62,8 +73,19 @@ public static class UniverseVessels
         var parts = root.Nodes.Where(n => n.Name == "PART").ToList();
         var crew = parts.SelectMany(p => p.Values.Where(v => v.Key == "crew").Select(v => v.Value)).Where(c => c.Length > 0).Distinct().ToList();
         var id = System.IO.Path.GetFileNameWithoutExtension(path);
+        double? N(KspNode? node, string key) =>
+            node?.Get(key) is { } text && double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) && double.IsFinite(v) ? v : null;
+        var elements = orbit == null ? null
+            : N(orbit, "SMA") is { } sma && N(orbit, "ECC") is { } ecc && ecc >= 0
+                ? new Map.Orbit(sma, ecc, N(orbit, "INC") ?? 0, N(orbit, "LAN") ?? 0, N(orbit, "LPE") ?? 0, N(orbit, "MNA") ?? 0, N(orbit, "EPH") ?? 0)
+                : null;
         return new UniverseVessel(id, root.Get("name") is { Length: > 0 } name ? name : "(unnamed)", root.Get("type") ?? "Unknown",
-            root.Get("sit") ?? "", body, parts.Count, crew, path);
+            root.Get("sit") ?? "", body, parts.Count, crew, path)
+        {
+            Orbit = elements,
+            BodyName = orbit?.Get("IDENT") is { Length: > 0 } ident ? ident : null,
+            Surface = N(root, "lat") is { } lat && N(root, "lon") is { } lon ? (lat, lon) : null,
+        };
     }
 
     /// <summary>

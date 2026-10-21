@@ -38,6 +38,7 @@ public sealed class MainWindow : Window
     internal const string CkanKey = "ckan";
     internal const string BrowserKey = "browser";
     internal const string VesselsKey = "vessels";
+    internal const string MapKey = "map";
     internal const string ServerSettingsKey = "serverSettings";
     internal const string ModControlFile = "LMPModControl.xml";
 
@@ -57,7 +58,7 @@ public sealed class MainWindow : Window
     ];
 
     /// <summary>Rail pages hidden in simple mode.</summary>
-    private static readonly string[] AdvancedPages = [PlayersKey, VesselsKey, ModControlFile, ProfilesKey, CraftsKey];
+    private static readonly string[] AdvancedPages = [PlayersKey, VesselsKey, MapKey, ModControlFile, ProfilesKey, CraftsKey];
 
     private readonly HashSet<SettingRow> _essentialRows = [];
     private TextBox? _settingsSearch;
@@ -90,6 +91,7 @@ public sealed class MainWindow : Window
     private readonly CraftsPage _craftsPage;
     private readonly CkanPage _ckanPage;
     private readonly BrowserPage _browserPage;
+    private readonly MapPage _mapPage;
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
@@ -206,6 +208,7 @@ public sealed class MainWindow : Window
         _craftsPage = new CraftsPage(this);
         _ckanPage = new CkanPage(this);
         _browserPage = new BrowserPage(this);
+        _mapPage = new MapPage(this);
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
         var exe = CurrentExe; // this window's exe, not whatever CurrentExe is in 15 seconds
@@ -247,6 +250,7 @@ public sealed class MainWindow : Window
     internal CraftsPage Crafts => _craftsPage;
     internal CkanPage Ckan => _ckanPage;
     internal BrowserPage Browser => _browserPage;
+    internal MapPage Map => _mapPage;
     internal SettingsPage SettingsPageForTests => _settingsPage;
 
     /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>
@@ -594,6 +598,9 @@ public sealed class MainWindow : Window
             case BrowserKey:
                 _browserPage.Refresh();
                 break;
+            case MapKey:
+                _mapPage.Refresh();
+                break;
             case VesselsKey:
                 _vesselsPage?.Refresh();
                 break;
@@ -741,6 +748,7 @@ public sealed class MainWindow : Window
         AddNav(ConsolePage, consoleContent, _server!.View);
         AddNav(PlayersKey, new TextBlock { Text = "Players" }, _players!.View);
         AddNav(VesselsKey, new TextBlock { Text = "Vessels" }, _vesselsPage!.View);
+        AddNav(MapKey, new TextBlock { Text = "Map" }, _mapPage.View);
         AddNav(ConnectKey, new TextBlock { Text = "Connect" }, _connect!.View);
 
 

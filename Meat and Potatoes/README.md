@@ -39,6 +39,7 @@ Every source file starts with a short header pointing back here, like this:
 | 21 | [Vessel cleanup](21-Vessel-Cleanup.md) | change the Vessels page or how Universe vessels are read and removed |
 | 22 | [CKAN and the LMP client](22-CKAN-and-LMP-Client.md) | change how CKAN is downloaded or read, or how the LMP client is installed |
 | 23 | [Server browser, simple mode, quick access](23-Server-Browser.md) | change the server browser, simple mode, Essentials, the clickable cards, the versions list or the error log |
+| 24 | [Solar system map](24-Solar-System-Map.md) | change the Map page, the orbit math, how planet packs are read, or the universe clock |
 
 ## 🔣 Legend
 
@@ -122,7 +123,9 @@ Symbols used in the map below and throughout these chapters:
 | 🧠 | `Join/ServerProbe.cs` | `ServerAddress` parsing; DNS, network kind, ping, and live info from a host's LMP website. |
 | 🧠🔌⚠️ | `Join/ServerBrowser.cs` | The public server list from LMP's master servers (`/json`), read defensively and merged. See [23](23-Server-Browser.md). |
 | 🧠🔌⚠️ | `Join/KspLauncher.cs` | Finds KSP, its game version and the LMP client, plans auto-connect vs server list (LMP's `-lmp` bug), edits LMP's client `settings.xml`, starts KSP. |
-| 🧠🔌 | `Ops/UniverseVessels.cs` | Universe vessels: list, remove after a backup. See [21](21-Vessel-Cleanup.md). |
+| 🧠🔌 | `Ops/UniverseVessels.cs` | Universe vessels: list (with orbit and surface position), remove after a backup. See [21](21-Vessel-Cleanup.md). |
+| **Map/** | | *The solar system map's model* ([24](24-Solar-System-Map.md)) |
+| 🧠⚠️ | `Map/SolarSystem.cs` | Kepler orbits, KSP's stock bodies, planet packs from Kopernicus configs, the universe clock. |
 | 🧠 | `Ops/ProfileStore.cs` | Named copies of the whole config. |
 | 🧠⚠️ | `Ops/Notifications.cs` | Notification kinds, Discord posting (no mentions, escaped), `SecretProtector` (DPAPI). See [17](17-Notifications.md). |
 | 🧠🔌 | `Ops/UniverseBackups.cs` | Zips and restores the Universe. |
@@ -144,6 +147,7 @@ Symbols used in the map below and throughout these chapters:
 | ⭐🖥️🔌 | `SetupWizard.cs` | "Set up a new server": download, configure, open. |
 | 🖥️🔌 | `PlayersPage.cs` | Live players and vessels, Kick/Ban, alerts, player history and notes, bans with unban. |
 | 🖥️🔌 | `VesselsPage.cs` | The Vessels page: vessel list, quick selections, remove. |
+| 🖥️ | `MapPage.cs` | The Map page and `MapCanvas`: bodies, vessels on their orbits, zoom, pan, click. See [24](24-Solar-System-Map.md). |
 | 🖥️ | `ConnectPage.cs` | Addresses to share, firewall, reachability, sharing live info with players. |
 | ⭐🖥️ | `JoinPage.cs` | Join a server (for players): check, save, check my mods, launch KSP into it. `StartKsp` is the test seam. |
 | 🖥️ | `ProfilesPage.cs` | Config profiles and Universe backups. |
@@ -163,8 +167,8 @@ Symbols used in the map below and throughout these chapters:
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (152 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
-| 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (71 tests). |
+| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (214 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (101 tests). |
 | ⭐🧪 | `LunaEvo.MissionControl.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |

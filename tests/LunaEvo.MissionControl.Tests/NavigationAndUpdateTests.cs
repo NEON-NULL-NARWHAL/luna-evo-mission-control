@@ -19,7 +19,7 @@ public class NavigationAndUpdateTests
     {
         using var ui = new UiHarness();
         var rail = RailButtons(ui);
-        Assert.Equal(["nav/console", "nav/players", "nav/vessels", "nav/connect", "nav/serverSettings", "nav/LMPModControl.xml", "nav/profiles", "nav/browser", "nav/join", "nav/crafts", "nav/ckan", "nav/settings"], rail);
+        Assert.Equal(["nav/console", "nav/players", "nav/vessels", "nav/map", "nav/connect", "nav/serverSettings", "nav/LMPModControl.xml", "nav/profiles", "nav/browser", "nav/join", "nav/crafts", "nav/ckan", "nav/settings"], rail);
 
         ui.OpenTab(MainWindow.ConsolePage);
         Assert.Null(ui.TryFind<Button>("nav/WarpSettings.xml")); // not in the rail any more

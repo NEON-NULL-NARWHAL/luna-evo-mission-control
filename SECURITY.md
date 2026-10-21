@@ -23,7 +23,7 @@ response time.
 | **A friend's server** | Join page, when you press Check | DNS lookup, 4 pings (ICMP) and one HTTP request to the address you typed. Nothing else. |
 | **Windows Firewall** (`netsh`, as administrator) | Only when you press "Allow through firewall" | Windows asks for permission each time. The exact command is in the button's tooltip. |
 | **winget** | Only when you accept installing the .NET runtime | Installs Microsoft's `Microsoft.DotNet.Runtime.6`. |
-| **Your KSP install** | Join page: "Launch KSP and join" or "Add to LMP's server list" | Starts `KSP_x64.exe` and edits LMP's own `settings.xml` server list (backed up first, and never while KSP is running). "Check my mods" only reads your GameData. |
+| **Your KSP install** | Join page: "Launch KSP and join" or "Add to LMP's server list" | Starts `KSP_x64.exe` and edits LMP's own `settings.xml` server list (backed up first, and never while KSP is running). "Check my mods" and the Map only read your GameData. |
 | **Discord** (`discord.com`) | Only if you save a webhook (App settings → Notifications) | HTTPS posts of the notifications. The URL is stored encrypted for your Windows account (DPAPI) and never shown again; posts can't mention anyone. |
 | **Windows notifications** | App settings → Notifications (on by default) | Shown on this PC only. |
 | **Windows startup list** (`HKCU\...\Run`) | Only while Home server mode is on | One entry, "LUNA EVO Mission Control" ("LUNA EVO Config Manager" before 2.0, removed on upgrade), for your user only; removed when you switch the mode off. |
@@ -46,6 +46,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.2.0 | Solar system map: reads `Universe/Vessels`, `StartTime.txt`, `Subspace.txt` and Kopernicus `.cfg` files in GameData, read-only | Notes below | The owner's real GameData (47 bodies, 33 from planet packs) and a sanitized copy of a real 51-vessel universe; a looping or star-removing pack fixed before release | 315 |
 | 2.1.1 | | **Audit 10** (J1-J9) | 2.1.0's features against live services (LMP client from GitHub into a sandbox KSP, browser pings, CKAN choices); a 3-minute soak; 10,500 fuzzed parser inputs; firewall rule quoting against the real netsh | 303 |
 | 2.1.0 | Install the server's mods, LMP version helper, browser pings, CKAN provider choices, Cancel | - | Real ckan.exe 1.36.4: headless installs skip "which provider" questions (found and fixed); the new choice flow dry-ran Parallax with 4 choices on a clean KSP folder | 291 |
 | 2.0.1 | GitHub repository renamed to `luna-evo-mission-control` | - | Old API and download URLs redirect (checked live, including with the updater built with the old name) | 282 |
@@ -69,6 +70,18 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Security notes on 2.2.0 (the solar system map)
+
+- **Read-only.** The Map reads the server's `Universe/Vessels/*.txt`, `StartTime.txt` and `Subspace.txt`, and
+  Kopernicus configs in your KSP's GameData. It writes nothing and connects to nothing.
+- **GameData is outside text** (mods anyone can publish): only `*.cfg` files under 4 MB, reparse points skipped,
+  parsed with the same `KspConfigParser` as the GameData scan (fuzzed in audit 10); numbers must be finite.
+- **Found while testing:** a pack that made two bodies orbit each other would have hung the map (walking up the
+  parents never ends), and one that removed or re-parented the Sun would have crashed it. Bodies are now kept only
+  if their parents reach the star within 64 steps, and the Sun can't be removed or moved. `MapTests` covers both.
+- **Odd save values** (ECC exactly 1, huge or zero SMA, times far from the epoch) give finite positions; Kepler's
+  equation is solved with an iteration cap. Fuzzed in `MapTests`.
 
 ## Audit 10 (2.1.1, October 2026)
 

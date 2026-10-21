@@ -37,6 +37,11 @@ after 2.1.1: all 303 passed locally, but on GitHub's runner every UI test that s
 tests use then reaches the other test run's fake servers. Before trying again, find that cause (e.g. run the two
 projects one after the other on CI).
 
+2.2.0 added `MapTests` (Core: Kepler orbits against known answers, stock periods, planet packs with moves, removals
+and a broken pack, the universe clock, vessel orbits, odd orbits fuzzed) and `MapPageTests` (UI: a fake KSP with a
+pack body, vessels from `TestData.AddOrbitingVessels`, focus, click, details, filters). Headless windows don't paint:
+the map test renders the canvas into a `RenderTargetBitmap` so its marks exist.
+
 2.1.1 (audit 10) added `FuzzTests` (every parser of outside text, 1,500 seeded mutations each; a parser may only throw
 what it documents, and the seed is fixed so a failure reproduces), `CodeHygieneTests` (no `/// <summary>` left above
 another one: the sign of code inserted between a member and its comment) and `SupportCoverageTests` (`ErrorLog`,
