@@ -58,6 +58,22 @@ addresses**, even though LMP's own log lines contain them. It stays next to your
   `thumbnail.png` are accepted (nothing else is ever unpacked), 20 MB at most, and the craft must parse. Imports go
   only into a KSP save's Ships folder or the server's craft library, and never overwrite.
 
+## Audit 5 (1.2.0, October 2026)
+
+A deeper pass over everything since 1.0 (CKAN and LMP client downloads, the new mod-list install) and a re-read of
+the older hot paths for robustness and wasted work.
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| E1 | High (design) | **A `.ckan` file can carry its own `download` URL** (and `install_to` paths). Handing a pasted file to `ckan install -c` would let whoever wrote it put any DLL into GameData, and KSP runs every DLL there. | The file is **never passed to CKAN**. Only mod identifiers (CKAN's own rule: letters, digits, `-`, `_`, not starting with `-`, so none can read as an option) and versions (`[A-Za-z0-9.:+_~-]`) are read out and passed as `ckan install Mod Mod=version` with `--headless --no-recommends`, so everything comes from CKAN's catalogue. At most 2,000 mods; arguments go through `ArgumentList`, never a shell. Checked with the real ckan.exe 1.36.4 on a throwaway KSP folder. |
+| E2 | Medium | **`settings.json` was written in place**: a crash or power cut mid-write could leave it half-written, losing saved servers and the Discord webhook. | Written to `settings.json.tmp`, then swapped in. |
+| E3 | Low | Mod-list install could run while CKAN had the install open (two writers on CKAN's registry). | Refused while `CKAN/registry.locked` names a live process (or can't be read); a lock left by a closed CKAN doesn't block. Also refused while KSP runs. |
+| E4 | Low (efficiency) | The Players history was rebuilt every 5 s, announcements parsed every second, the Join auto-refresh repeated DNS and four pings every 10 s, and every mod check / craft import re-read thousands of GameData files. | Redraw only on change (tracker version, ban file time, search, online list); parse once per change; auto-refresh reads only live info; GameData scans reused for 2 minutes. |
+
+Reviewed and fine: the CKAN page shows `%LOCALAPPDATA%` instead of user paths; the process list check disposes what
+it opens; CKAN's own output is shown as plain text, never run or parsed for commands. Spelling: a dictionary pass over
+every string, comment and doc found only LMP's own `Hearbeat`, now shown spelled right.
+
 ## Audit 4 (1.0.1, October 2026)
 
 The 1.0 review: vessel cleanup, server health, invites and the notification icon's timer, plus the usual re-checks

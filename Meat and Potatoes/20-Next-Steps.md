@@ -37,12 +37,12 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 - ~~Two notification-area icons~~ (0.9.0: `DesktopNotifier` removes its icon `ShowFor` after each notification).
   Untested on real Windows: whether the notification centre keeps the entry after the icon goes.
 
-## CKAN (next steps; 1.1.0 did downloads, instances and launch options: [22](22-CKAN-and-LMP-Client.md))
+## CKAN (next steps; 1.1.0 did downloads, instances and launch options, 1.2.0 the CKAN page and mod lists: [22](22-CKAN-and-LMP-Client.md))
 
 - **Share the server's modpack:** the host's `<ksp>/CKAN/installed-<instance>.ckan` (Connect page, invite, Kystack).
   Players compare by mod name using `<ksp>/CKAN/registry.json` (`installed_modules`).
-- **Install missing mods with CKAN:** `ckan.exe install -c <modpack.ckan> --headless` against the chosen instance
-  (check `CKAN/registry.locked`: CKAN open → ask to close, or open CKAN's GUI instead). Test only on a cloned instance.
+- ~~**Install missing mods with CKAN.**~~ (done in 1.2.0: CKAN page → Install a mod list, names only, never `-c`.)
+  Next: fill the list straight from a server's shared modpack, and show which mods are already installed.
 - **Kystack server browser** (see the conversation notes): own LMP master server (`LmpMasterServer`, Docker), PR to
   LMP's `MasterServersList.txt`, a web list with "Join with LUNA EVO" links.
 

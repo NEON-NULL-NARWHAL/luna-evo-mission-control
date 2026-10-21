@@ -41,6 +41,31 @@ public static partial class GameDataScanner
         AttributesToSkip = FileAttributes.ReparsePoint,
     };
 
+    private static readonly Dictionary<(string, bool), (DateTime At, GameDataScan Scan)> Cache = [];
+    private static readonly Lock CacheGate = new();
+
+    /// <summary>How long a scan is reused by <see cref="ScanCached"/>.</summary>
+    public static TimeSpan CacheFor { get; set; } = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// <see cref="Scan"/>, reusing a scan of the same folder from the last <see cref="CacheFor"/>: reading thousands of
+    /// .cfg files for every mod check or craft import is slow. A scan with hashes also answers requests without.
+    /// </summary>
+    public static GameDataScan ScanCached(string gameDataDirectory, bool hashPlugins = true)
+    {
+        var full = Path.GetFullPath(gameDataDirectory).TrimEnd(Path.DirectorySeparatorChar).ToLowerInvariant();
+        lock (CacheGate)
+        {
+            foreach (var key in new[] { (full, hashPlugins), (full, true) })
+                if (Cache.TryGetValue(key, out var hit) && DateTime.UtcNow - hit.At < CacheFor)
+                    return hit.Scan;
+        }
+        var scan = Scan(gameDataDirectory, hashPlugins);
+        lock (CacheGate)
+            Cache[(full, hashPlugins)] = (DateTime.UtcNow, scan);
+        return scan;
+    }
+
     public static GameDataScan Scan(string gameDataDirectory, bool hashPlugins = true)
     {
         if (!Directory.Exists(gameDataDirectory))

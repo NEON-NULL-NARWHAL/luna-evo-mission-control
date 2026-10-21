@@ -11,7 +11,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 1.1.1** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 1.2.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Join a friend](#join-a-friends-server)** · **[No open ports (Tailscale)](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
@@ -73,7 +73,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | 🚀 **Launch KSP straight into it** | One button starts KSP and LMP connects by itself. For a server with a password or a non-default port (which LMP can't take on the command line), it's put at the top of LMP's server list with the password, ready to click. |
 | 🧩 **Check my mods** | Compares your GameData with the server's mod rules exactly the way LMP will when you connect: banned mods, mods it doesn't allow, missing or different-version required mods, missing parts and expansions, and parts the server would drop. |
 | 📌 **My servers** | Save the servers you play on. Passwords are never stored by LUNA EVO. |
-| 🧰 **CKAN and the LMP client, managed** | Settings → Downloads keeps verified copies of CKAN (any version) and installs the right LMP client into any KSP install, including your CKAN ones. Launching uses CKAN's own options, then connects. |
+| 🧰 **CKAN and the LMP client, managed** | A CKAN page shows whether CKAN is installed and used, lists your CKAN installs, and **installs a pasted mod list** (a `.ckan` modpack or mod names) with CKAN. Settings → Downloads installs the right LMP client into any KSP install. Launching uses CKAN's own options, then connects. |
 | 🚀 **Share crafts** | The **Crafts** page lists your KSP craft designs and the server's craft library. Export one to a `.lunacraft` file for friends; import theirs into your save or the server, with a check of which parts (mods) you're missing. |
 
 ### Configure it
@@ -131,8 +131,10 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | **Server health:** memory, CPU and threads of the running server. | **Home server mode:** one switch for an always-on host PC. |
 | ![Chat announcements](docs/screenshots/announcements.png) | ![Vessel cleanup](docs/screenshots/vessels.png) |
 | **Chat announcements:** messages to game chat on a schedule. | **Vessel cleanup:** debris selected, crewed ships protected, backup first. |
-| ![Downloads](docs/screenshots/downloads.png) | ![Join with CKAN](docs/screenshots/join-ckan.png) |
-| **Downloads:** verified CKAN copies and the LMP client into any KSP install. | **Join + CKAN:** pick a CKAN install; launch with CKAN's own options. |
+| ![CKAN page](docs/screenshots/ckan.png) | ![Join with CKAN](docs/screenshots/join-ckan.png) |
+| **CKAN:** is it installed, your CKAN installs, and install a mod list. | **Join + CKAN:** pick a CKAN install; launch with CKAN's own options. |
+| ![Downloads](docs/screenshots/downloads.png) | |
+| **Downloads:** the LMP client into any KSP install, any version. | |
 | ![Setup wizard, extras](docs/screenshots/wizard-extras.png) | |
 | **Setup wizard, step 3:** also get CKAN and the matching LMP client. | |
 | ![Profiles and backups](docs/screenshots/profiles.png) | ![A Windows notification](docs/screenshots/notification-toast.png) |
@@ -230,14 +232,21 @@ server for changes to take effect.
 ### Get set up to play (CKAN and the LMP mod)
 
 You need the **LMP client mod**, in the same version as the server, and most groups use **CKAN** for their other mods.
-LUNA EVO handles both, any time, in **LUNA EVO → Settings → Downloads**:
+LUNA EVO handles both, any time:
 
-- **Download the latest CKAN:** the official `ckan.exe`, checked against GitHub's SHA-256 and kept by LUNA EVO
-  (one copy per version, so no mystery copies in Downloads). Press **Open** to run it.
-- **LMP client mod:** pick your KSP install (CKAN's installs are listed too) and the LMP version (the open server's by
-  default), then **Install into this KSP**. Your LMP server list is kept and the old version is backed up.
+- **Play → CKAN mods** shows at a glance whether LUNA EVO has CKAN (and which version it uses), whether CKAN is open,
+  and your CKAN installs with their LMP version and mod count. **Download CKAN** gets the official `ckan.exe`, checked
+  against GitHub's SHA-256 and kept by LUNA EVO (one copy per version, no mystery copies in Downloads).
+- **Install a mod list:** your friend or server host exports their mods from CKAN (**File → Export modpack**, a
+  `.ckan` file). Paste it in, or **Load a .ckan file...**, or just type mod names one per line, pick your KSP install
+  and press **Install with CKAN**. CKAN works out the dependencies and downloads everything from its own catalogue
+  (LUNA EVO takes only the mod names from the list, never a file's own download links). Close KSP and CKAN first.
+- **LMP client mod** (Settings → Downloads): pick your KSP install and the LMP version (the open server's by default),
+  then **Install into this KSP**. Your LMP server list is kept and the old version is backed up.
 
-Setting up a server? Step 3 of the setup wizard can do both for you.
+Setting up a server? Step 3 of the setup wizard can get CKAN and the LMP client for you.
+
+![CKAN page](docs/screenshots/ckan.png)
 
 ![Downloads](docs/screenshots/downloads.png)
 
@@ -317,7 +326,7 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 240 tests: core logic and the real UI, headless; no network, no real server
+dotnet test                      # 248 tests: core logic and the real UI, headless; no network, no real server
 .\publish.ps1                    # -> dist\LunaEvo-ConfigManager-<version>-win-x64\LunaEvo.ConfigManager.exe
 .\release.ps1                    # tests, build, and a GitHub release with the exe: every copy then offers the update
 ```

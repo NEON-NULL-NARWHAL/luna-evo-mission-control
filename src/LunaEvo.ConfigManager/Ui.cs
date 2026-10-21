@@ -16,7 +16,9 @@ namespace LunaEvo.ConfigManager;
 internal static partial class Ui
 {
     /// <summary>"DedicatedServer" → "Dedicated Server", "LMPModControl" → "LMP Mod Control".</summary>
-    public static string Humanize(string name) => WordBoundary().Replace(name, " ");
+    public static string Humanize(string name) =>
+        // LMP misspells HearbeatMsInterval; the file keeps LMP's name, people see the right word.
+        WordBoundary().Replace(name, " ").Replace("Hearbeat", "Heartbeat", StringComparison.Ordinal);
 
     /// <summary>A TextBlock with style classes from App.axaml, e.g. "label", "sublabel", "headline".</summary>
     public static TextBlock Text(string text, params string[] classes)

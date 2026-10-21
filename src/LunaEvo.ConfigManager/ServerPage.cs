@@ -756,6 +756,7 @@ internal sealed class ServerPage : IDisposable
     private readonly Dictionary<int, DateTime> _announced = [];
     private DateTime _announceSince = DateTime.Now;
     private string? _announceSetting;
+    private IReadOnlyList<Announcement> _announceItems = [];
 
     /// <summary>Sends scheduled chat announcements (LUNA EVO Settings → Automation). Runs every second; tests call it with a chosen time.</summary>
     internal void CheckAnnouncements(DateTime now)
@@ -769,10 +770,10 @@ internal sealed class ServerPage : IDisposable
         if (_host.Settings.Announcements != _announceSetting)
         {
             _announceSetting = _host.Settings.Announcements;
+            _announceItems = Announcements.Parse(_announceSetting).Items; // parsed once, not every second
             _announced.Clear();
         }
-        var (items, _) = Announcements.Parse(_announceSetting);
-        foreach (var announcement in Announcements.Due(items, _announced, _announceSince, now))
+        foreach (var announcement in Announcements.Due(_announceItems, _announced, _announceSince, now))
             TrySend("/say " + announcement.Text);
     }
 

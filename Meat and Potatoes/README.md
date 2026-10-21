@@ -100,7 +100,7 @@ Symbols used in the map below and throughout these chapters:
 | ⭐🧠🔌⚠️ | `Setup/ServerInstaller.cs` | Download (SHA-256 verified, GitHub only, size-limited) + install/update a server zip; never touches Config/Universe/logs/Plugins; backs up old binaries. See [14](14-Security.md). |
 | 🧠🔌 | `Setup/ConfigGenerator.cs` | Writes a new server's config from the schema and the wizard's choices. |
 | 🧠 | `Setup/RuntimeInstaller.cs` | Installs the .NET runtime with winget. |
-| 🧠🔌⚠️ | `Setup/Tools.cs` | CKAN copies (verified, per version), CKAN's instances and launch options, the LMP client installer. See [22](22-CKAN-and-LMP-Client.md). |
+| 🧠🔌⚠️ | `Setup/Tools.cs` | CKAN copies (verified, per version), CKAN's instances and launch options, mod lists for CKAN (`CkanModList`), the LMP client installer. See [22](22-CKAN-and-LMP-Client.md). |
 | ⭐🧠⚠️ | `Setup/AppUpdater.cs` | LUNA EVO updating itself: check its releases, verified download, swap the running exe. See [18](18-Updating-LUNA-EVO.md). |
 | **Live/** | | *What's happening on the server* ([11](11-Live-Players.md)) |
 | 🧠🔌 | `Live/ServerInfoClient.cs` | Reads LMP's website JSON: players, vessels, subspaces; join/leave diff. |
@@ -147,6 +147,7 @@ Symbols used in the map below and throughout these chapters:
 | 🎨 | `ThemeManager.cs` | Generates the palette from one accent colour and applies it live. |
 | 🖥️ | `Ui.cs` | Helpers for building styled controls in code. |
 | 🖥️🔌 | `CraftsPage.cs` | The Crafts page: list, export, import. |
+| 🖥️🔌⚠️ | `CkanPage.cs` | The CKAN page: status, your CKAN installs, install a mod list. See [22](22-CKAN-and-LMP-Client.md). |
 | 🖥️ | `TabSet.cs` | Tabs inside a page (Server settings, Players, Join, Settings). Pages stay in the visual tree; only visibility changes. |
 | 🖥️ | `Dialogs.cs` | Message boxes (with a hook so tests can answer them). |
 | 🎨 | `Assets/` | `icon.png`/`icon.ico`, and `Fonts/` (JetBrains Mono plus its OFL licence). |

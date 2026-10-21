@@ -264,8 +264,12 @@ public sealed partial class PlayerTracker
     }
 
     /// <summary>Writes players.json (to a temp file first, so a crash mid-write can't corrupt it). Never throws.</summary>
+    /// <summary>Goes up on every change, so pages can skip redrawing when nothing happened.</summary>
+    public int Version { get; private set; }
+
     public void Save()
     {
+        Version++;
         try
         {
             string json;

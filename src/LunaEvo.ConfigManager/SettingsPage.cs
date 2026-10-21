@@ -301,14 +301,8 @@ internal sealed class SettingsPage
 
     public Control View { get; }
 
-    // ---- Downloads: CKAN and the LMP client, any time after setup, any version
+    // ---- Downloads: the LMP client, any time after setup, any version (CKAN has its own page)
 
-    /// <summary>Tests replace this so CKAN is never started: (ckan.exe) → started.</summary>
-    internal static Func<string, bool> StartCkan { get; set; } = exe =>
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe)! }) != null;
-
-    private readonly StackPanel _ckanRows = new() { Spacing = 2 };
-    private readonly TextBlock _ckanStatus = Ui.Text("", "sublabel").WithId("settings/ckanStatus");
     private readonly ComboBox _clientKsp = new ComboBox { MinWidth = 360 }.WithId("settings/clientKsp");
     private readonly ComboBox _clientVersion = new ComboBox { MinWidth = 200 }.WithId("settings/clientVersion");
     private readonly TextBlock _clientStatus = Ui.Text("", "sublabel").WithId("settings/clientStatus");
@@ -317,18 +311,12 @@ internal sealed class SettingsPage
     private void BuildDownloads()
     {
         var page = _tabPages["downloads"];
-        _ckanStatus.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
         _clientStatus.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
 
         var (ckan, ckanBody, _) = Ui.Group("CKAN (KSP mod manager)");
-        var getCkan = Ui.Button("Download the latest CKAN", "fab").WithId("settings/ckanDownload");
-        getCkan.Click += async (_, _) => await DownloadCkanAsync();
-        ckanBody.Children.Add(Ui.Row("LUNA EVO's CKAN copies",
-            "The official ckan.exe from CKAN's GitHub releases, checked against GitHub's SHA-256, kept per version in " +
-            Friendly(CkanTools.Root) + ". One known copy instead of several in Downloads; keep older versions if you need them.", null));
-        ckanBody.Children.Add(_ckanRows);
-        ckanBody.Children.Add(new StackPanel { Margin = new Thickness(12, 4, 12, 12), Spacing = 6, Children = { getCkan, _ckanStatus } });
-        getCkan.HorizontalAlignment = HorizontalAlignment.Left;
+        var goCkan = Ui.Button("Open the CKAN page", "text").WithId("settings/goCkan");
+        goCkan.Click += (_, _) => _host.Navigate(MainWindow.CkanKey);
+        ckanBody.Children.Add(Ui.Row("Moved to its own page", "Play → CKAN mods: whether CKAN is installed, your CKAN installs, and installing a mod list.", goCkan));
         page.Children.Add(ckan);
 
         var (client, clientBody, _) = Ui.Group("LMP client mod");
@@ -342,25 +330,9 @@ internal sealed class SettingsPage
         page.Children.Add(client);
     }
 
-    /// <summary>Re-reads the CKAN copies and KSP installs, and loads the LMP versions from GitHub.</summary>
+    /// <summary>Re-reads the KSP installs and loads the LMP versions from GitHub.</summary>
     internal async Task RefreshDownloadsAsync()
     {
-        _ckanRows.Children.Clear();
-        foreach (var (version, exe) in CkanTools.Installed())
-        {
-            var open = Ui.Button("Open", "text").WithId("settings/ckanOpen/" + version);
-            open.Click += (_, _) => _ckanStatus.Text = StartCkan(exe) ? $"CKAN {version} is starting." : "CKAN didn't start.";
-            var remove = Ui.Button("Remove", "text").WithId("settings/ckanRemove/" + version);
-            remove.Click += async (_, _) =>
-            {
-                CkanTools.Remove(version);
-                await RefreshDownloadsAsync();
-            };
-            _ckanRows.Children.Add(Ui.Row($"CKAN {version}", Friendly(exe), new StackPanel { Orientation = Orientation.Horizontal, Children = { open, remove } }));
-        }
-        if (_ckanRows.Children.Count == 0)
-            _ckanRows.Children.Add(Ui.Row("None downloaded yet", "CKAN installs and updates KSP mods; LUNA EVO uses it to get you a server's mods.", null));
-
         var folders = new List<string>();
         void Add(string? folder)
         {
@@ -410,32 +382,6 @@ internal sealed class SettingsPage
             return;
         }
         _clientStatus.Text = Core.Join.KspLauncher.ClientVersion(ksp) is { } version ? $"This KSP has LMP {version}." : "LMP isn't installed in this KSP yet.";
-    }
-
-    internal async Task DownloadCkanAsync()
-    {
-        _ckanStatus.Text = "Asking GitHub for CKAN's releases...";
-        try
-        {
-            var available = await CkanTools.AvailableAsync(Http.Client);
-            if (available.Count == 0)
-            {
-                _ckanStatus.Text = "No verifiable CKAN release found on GitHub.";
-                return;
-            }
-            var (release, exe) = available[0];
-            // Progress<T> reports arrive later than the result; ignore any that land after it.
-            var done = false;
-            var progress = new Progress<double>(p => { if (!done) _ckanStatus.Text = $"Downloading CKAN {release.Tag}... {p:P0}"; });
-            var path = await CkanTools.DownloadAsync(Http.Client, release, exe, progress);
-            done = true;
-            _ckanStatus.Text = $"CKAN {release.Tag} downloaded and verified: {Friendly(path)}";
-        }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or DownloadVerificationException or IOException or UnauthorizedAccessException)
-        {
-            _ckanStatus.Text = "Couldn't download CKAN: " + e.Message;
-        }
-        await RefreshDownloadsAsync();
     }
 
     internal async Task InstallClientAsync()

@@ -138,6 +138,9 @@ public static class AppSettingsStore
     {
         path ??= DefaultPath;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, JsonSerializer.Serialize(settings, Json));
+        // Temp file, then swap: a crash mid-write can't leave a half-written file (and lose saved servers, the webhook...).
+        var temp = path + ".tmp";
+        File.WriteAllText(temp, JsonSerializer.Serialize(settings, Json));
+        File.Move(temp, path, overwrite: true);
     }
 }

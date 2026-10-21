@@ -85,9 +85,11 @@ public static class CkanTools
                 .Where(i => i.ValueKind == JsonValueKind.Object)
                 .Select(i => new CkanInstance(Str(i, "Name"), Str(i, "Path")))
                 .Where(i => i.Path.Length > 0 && Directory.Exists(i.Path))
+                // CKAN writes "M:/Steam/..."; show and compare it like every other Windows path.
+                .Select(i => i with { Path = System.IO.Path.GetFullPath(i.Path).TrimEnd(System.IO.Path.DirectorySeparatorChar) })
                 .ToList();
         }
-        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             return [];
         }
@@ -212,4 +214,156 @@ public static class LmpClientInstaller
             File.Copy(file, target, overwrite: true);
         }
     }
+}
+
+/// <summary>One mod to install: CKAN's identifier, optionally an exact version.</summary>
+public sealed record CkanMod(string Identifier, string? Version = null);
+
+/// <summary>
+/// A mod list to hand to CKAN: a pasted or loaded <c>.ckan</c> modpack (CKAN's "export modpack", or an install's
+/// CKAN/installed-*.ckan), or plain mod identifiers one per line.
+/// <para>
+/// Safety: a .ckan file can carry its own <c>download</c> URL, and CKAN would fetch and install whatever is there (KSP
+/// then runs any DLL in GameData). So the user's file is <b>never</b> passed to CKAN. Only identifiers (checked against
+/// CKAN's identifier rules) and versions are read out and passed as <c>ckan install Mod Mod=version</c>, so CKAN
+/// installs them from its own catalogue. (Not a metapackage of our own: CKAN would keep it in its list, stale after
+/// the next list. Checked with ckan.exe 1.36.4.)
+/// </para>
+/// </summary>
+public static partial class CkanModList
+{
+    public const int MaxMods = 2000;
+
+    public static (IReadOnlyList<CkanMod> Mods, IReadOnlyList<string> Problems) Parse(string? text)
+    {
+        var mods = new List<CkanMod>();
+        var problems = new List<string>();
+        text = text?.Trim() ?? "";
+        if (text.StartsWith('{'))
+        {
+            try
+            {
+                using var json = JsonDocument.Parse(text);
+                foreach (var list in new[] { "depends", "recommends" })
+                    if (json.RootElement.TryGetProperty(list, out var items) && items.ValueKind == JsonValueKind.Array)
+                        foreach (var item in items.EnumerateArray())
+                        {
+                            var name = item.ValueKind == JsonValueKind.Object && item.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
+                            var version = item.ValueKind == JsonValueKind.Object && item.TryGetProperty("version", out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+                            Add(name, version, problems, mods);
+                        }
+                if (json.RootElement.TryGetProperty("download", out _))
+                    problems.Add("This .ckan file has its own download link; it's ignored. Only its list of mods is used, from CKAN's catalogue.");
+            }
+            catch (JsonException e)
+            {
+                problems.Add("That isn't a valid .ckan file: " + e.Message);
+            }
+        }
+        else
+        {
+            foreach (var raw in text.Replace("\r", "").Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith('#'))
+                    continue;
+                Add(line.Split([' ', '\t', ','], StringSplitOptions.RemoveEmptyEntries)[0], null, problems, mods);
+            }
+        }
+        var unique = mods.DistinctBy(m => m.Identifier, StringComparer.OrdinalIgnoreCase).ToList();
+        if (unique.Count > MaxMods)
+            problems.Add($"Only the first {MaxMods} of {unique.Count} mods are used.");
+        return (unique.Take(MaxMods).ToList(), problems);
+    }
+
+    /// <summary>`ckan update`: refresh CKAN's catalogue for this install.</summary>
+    public static IReadOnlyList<string> UpdateArguments(string kspFolder) => ["update", "--headless", "--gamedir", kspFolder];
+
+    /// <summary>
+    /// `ckan install Mod Mod=version ...`, no extra recommendations, no prompts. Split into several commands when the list
+    /// wouldn't fit one Windows command line (32,767 characters). Identifiers never start with "-", so none reads as an option.
+    /// </summary>
+    public static IReadOnlyList<IReadOnlyList<string>> InstallCommands(string kspFolder, IReadOnlyList<CkanMod> mods, int maxLength = 24_000)
+    {
+        var commands = new List<IReadOnlyList<string>>();
+        List<string>? current = null;
+        var length = 0;
+        foreach (var mod in mods)
+        {
+            var argument = mod.Version is { Length: > 0 } ? $"{mod.Identifier}={mod.Version}" : mod.Identifier;
+            if (current == null || length + argument.Length + 1 > maxLength)
+            {
+                current = ["install", "--headless", "--no-recommends", "--gamedir", kspFolder];
+                length = current.Sum(a => a.Length + 3);
+                commands.Add(current);
+            }
+            current.Add(argument);
+            length += argument.Length + 1;
+        }
+        return commands;
+    }
+
+    /// <summary>
+    /// True if CKAN has this install open: CKAN/registry.locked holds the process id of the CKAN using it. A lock
+    /// left behind by a CKAN that has since closed doesn't count (CKAN clears those itself).
+    /// </summary>
+    public static bool IsLocked(string kspFolder)
+    {
+        var lockFile = System.IO.Path.Combine(kspFolder, "CKAN", "registry.locked");
+        if (!File.Exists(lockFile))
+            return false;
+        try
+        {
+            var text = File.ReadAllText(lockFile).Trim();
+            if (!int.TryParse(text, out var pid))
+                return true; // unreadable: be careful
+            using var process = System.Diagnostics.Process.GetProcessById(pid);
+            return !process.HasExited;
+        }
+        catch (ArgumentException)
+        {
+            return false; // that process is gone
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>How many mods CKAN has installed here (CKAN/registry.json installed_modules), or null.</summary>
+    public static int? InstalledCount(string kspFolder)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(kspFolder, "CKAN", "registry.json");
+            if (!File.Exists(path) || new FileInfo(path).Length > 200 * 1024 * 1024)
+                return null;
+            using var stream = File.OpenRead(path);
+            using var json = JsonDocument.Parse(stream);
+            return json.RootElement.TryGetProperty("installed_modules", out var m) && m.ValueKind == JsonValueKind.Object ? m.EnumerateObject().Count() : null;
+        }
+        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static void Add(string? name, string? version, List<string> problems, List<CkanMod> mods)
+    {
+        if (name == null)
+            return;
+        if (!Identifier().IsMatch(name))
+        {
+            problems.Add($"\"{(name.Length > 40 ? name[..40] + "…" : name)}\" isn't a CKAN mod identifier; skipped.");
+            return;
+        }
+        mods.Add(new CkanMod(name, version is { Length: > 0 and < 60 } && VersionText().IsMatch(version) ? version : null));
+    }
+
+    // CKAN's identifier rule: letters, digits and "-"/"_", not starting with "-" (so it can never look like an option).
+    [System.Text.RegularExpressions.GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$")]
+    private static partial System.Text.RegularExpressions.Regex Identifier();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^[A-Za-z0-9.:+_~-]+$")]
+    private static partial System.Text.RegularExpressions.Regex VersionText();
 }

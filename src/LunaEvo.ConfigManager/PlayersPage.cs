@@ -183,9 +183,18 @@ internal sealed class PlayersPage : IDisposable
     internal void OnPlayerEvent(PlayerEvent e) => RefreshHistory();
 
     /// <summary>Redraws alerts, player history and bans from the tracker and LMP's ban list.</summary>
+    private string? _historyKey;
+
     internal void RefreshHistory()
     {
         var tracker = _host.Tracker;
+        // Runs every 5 s with the poll; redraw only when the history, bans, search or server state changed.
+        var bansFile = _host.Session is { } session ? new BanList(session.ServerDirectory).FilePath : null;
+        var key = $"{tracker?.GetHashCode()}|{tracker?.Version}|{(bansFile != null && File.Exists(bansFile) ? File.GetLastWriteTimeUtc(bansFile).Ticks : 0)}|" +
+                  $"{_historySearch.Text}|{_host.Server?.IsRunning}|{string.Join(",", tracker?.Online ?? [])}|{DateTime.Now:yyyyMMddHH}";
+        if (key == _historyKey)
+            return;
+        _historyKey = key;
         var online = tracker?.Online ?? [];
         var banned = _host.Session is { } s ? new BanList(s.ServerDirectory).Ids() : [];
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.2.0 (2026-10-20)
+
+### Added
+- **CKAN page** (Play → CKAN mods): whether LUNA EVO has CKAN and which version it uses, whether CKAN is open right now,
+  and your CKAN installs with their LMP version and number of CKAN mods. Download, open and remove CKAN copies here
+  (moved from Settings → Downloads, which now links to it).
+- **Install a mod list:** paste a `.ckan` modpack (CKAN → File → Export modpack) or mod names one per line, or load a
+  `.ckan` file, pick the KSP install, and CKAN downloads and installs them, with its messages shown as it goes. Only the
+  mod names and versions are taken from the list; CKAN installs them from its own catalogue (a file's own download
+  link is never used). Refuses while KSP or CKAN has that install open.
+
+### Changed
+- LMP's misspelled `HearbeatMsInterval` is shown as "Heartbeat Ms Interval" (the file keeps LMP's name).
+- Faster: the Players history is only redrawn when something changed, chat announcements are parsed once instead of
+  every second, the Join page's auto-refresh no longer re-runs DNS and pings every 10 seconds, and GameData scans are
+  reused for two minutes (mod check, craft import).
+- `settings.json` is saved through a temp file, so a crash mid-save can't lose your settings.
+- CKAN's install paths are shown like any other Windows path (`M:\Steam\...`, not `M:/Steam/...`).
+
+### Security
+- Fifth audit; details in `SECURITY.md`.
+
 ## 1.1.1 (2026-10-20)
 
 ### Changed

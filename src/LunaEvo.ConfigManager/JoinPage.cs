@@ -88,7 +88,7 @@ internal sealed class JoinPage : IDisposable
         _refresh.Tick += async (_, _) =>
         {
             if (_autoRefresh.IsChecked == true && _server != null)
-                await CheckAsync();
+                await RefreshLiveAsync(); // not DNS and 4 pings every 10 seconds
         };
         _refresh.Start();
 
@@ -232,7 +232,7 @@ internal sealed class JoinPage : IDisposable
         _modSummary.Text = "Scanning your GameData (this can take a minute with many mods)...";
         try
         {
-            var result = await Task.Run(() => ModCheck.Check(ModRules.Load(rules), GameDataScanner.Scan(Path.Combine(ksp, "GameData"))));
+            var result = await Task.Run(() => ModCheck.Check(ModRules.Load(rules), GameDataScanner.ScanCached(Path.Combine(ksp, "GameData"))));
             ShowModResult(result);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Xml.XmlException)
@@ -282,6 +282,27 @@ internal sealed class JoinPage : IDisposable
     internal TextBox PasswordBox => _password;
 
     /// <summary>Looks the server up: addresses, ping, and live info if the host shares it.</summary>
+    /// <summary>Re-reads only the live info (players, vessels) for the checked server. Never throws.</summary>
+    internal async Task RefreshLiveAsync()
+    {
+        if (_checking || _server is not { } server)
+            return;
+        _checking = true;
+        try
+        {
+            _live = await ServerProbe.LiveInfoAsync(Http.Client, server);
+            ShowSnapshot(_live.Snapshot);
+        }
+        catch (Exception)
+        {
+            // A refresh is best effort; the next one tries again.
+        }
+        finally
+        {
+            _checking = false;
+        }
+    }
+
     internal async Task CheckAsync()
     {
         if (_checking)

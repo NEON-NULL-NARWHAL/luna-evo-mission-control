@@ -160,7 +160,7 @@ internal sealed class CraftsPage
             _result.Text = "Checking parts against your GameData...";
             try
             {
-                var scan = await Task.Run(() => GameDataScanner.Scan(Path.Combine(ksp, "GameData"), hashPlugins: false));
+                var scan = await Task.Run(() => GameDataScanner.ScanCached(Path.Combine(ksp, "GameData"), hashPlugins: false));
                 var absent = CraftShare.MissingParts(shared.Craft, scan.Parts);
                 missing = absent.Count == 0 ? "You have every part it uses." :
                     $"{absent.Count} of its parts aren't in your GameData (a mod you don't have?): {string.Join(", ", absent.Take(8))}{(absent.Count > 8 ? ", ..." : "")}.";

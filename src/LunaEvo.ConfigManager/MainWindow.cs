@@ -35,6 +35,7 @@ public sealed class MainWindow : Window
     internal const string SettingsKey = "settings";
     internal const string JoinKey = "join";
     internal const string CraftsKey = "crafts";
+    internal const string CkanKey = "ckan";
     internal const string VesselsKey = "vessels";
     internal const string ServerSettingsKey = "serverSettings";
     internal const string ModControlFile = "LMPModControl.xml";
@@ -65,6 +66,7 @@ public sealed class MainWindow : Window
     private readonly SettingsPage _settingsPage;
     private readonly JoinPage _joinPage;
     private readonly CraftsPage _craftsPage;
+    private readonly CkanPage _ckanPage;
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
@@ -175,6 +177,7 @@ public sealed class MainWindow : Window
         _settingsPage = new SettingsPage(this);
         _joinPage = new JoinPage(this);
         _craftsPage = new CraftsPage(this);
+        _ckanPage = new CkanPage(this);
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
         var exe = CurrentExe; // this window's exe, not whatever CurrentExe is in 15 seconds
@@ -213,6 +216,7 @@ public sealed class MainWindow : Window
     internal SetupWizard? Wizard { get; private set; }
     internal JoinPage Join => _joinPage;
     internal CraftsPage Crafts => _craftsPage;
+    internal CkanPage Ckan => _ckanPage;
     internal SettingsPage SettingsPageForTests => _settingsPage;
 
     /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>
@@ -525,6 +529,9 @@ public sealed class MainWindow : Window
             case CraftsKey:
                 _craftsPage.Refresh();
                 break;
+            case CkanKey:
+                _ckanPage.Refresh();
+                break;
             case VesselsKey:
                 _vesselsPage?.Refresh();
                 break;
@@ -787,6 +794,7 @@ public sealed class MainWindow : Window
         AddHeading("Play");
         AddNav(JoinKey, new TextBlock { Text = "Join a server" }, _joinPage.View);
         AddNav(CraftsKey, new TextBlock { Text = "Crafts" }, _craftsPage.View);
+        AddNav(CkanKey, new TextBlock { Text = "CKAN mods" }, _ckanPage.View);
     }
 
     private void AddLunaEvoSection()
