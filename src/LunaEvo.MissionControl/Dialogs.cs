@@ -82,7 +82,13 @@ internal static class Dialogs
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
 
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+        // More than three answers (e.g. CKAN's "which provider?" options): one per line, so long names aren't cut off.
+        var many = buttons.Length > 3;
+        var row = new StackPanel
+        {
+            Orientation = many ? Orientation.Vertical : Orientation.Horizontal, Spacing = 8,
+            HorizontalAlignment = many ? HorizontalAlignment.Stretch : HorizontalAlignment.Right,
+        };
         for (var i = 0; i < buttons.Length; i++)
         {
             var index = i;

@@ -31,6 +31,11 @@ install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, 
 damaged (the current Universe must survive), DTDs refused, Windows device names as profile names, weak-password
 warnings, and a hand-edited settings file full of nulls.
 
+2.1.0 added `PlayTogetherTests` (UI: CKAN provider choices with real ckan.exe output, Cancel, Copy log, Join →
+install the server's mods, the LMP version check from the browser and an invite, browser ping/sort/save/password,
+Connect's mod list export). `UiHarness` fakes `CkanPage.CopyText` (`ui.Copied`), `BrowserPage.Ping` and
+`JoinPage.PingServer`: tests never ping real addresses.
+
 1.4.0 added `BrowserTests` (Core: master server lists merged and read defensively, endpoints, KSP's game version, port
 range) and `QuickAccessTests` (UI: versions, issues list, quick edit, vessel cards, simple mode, browser to Join,
 allowing a player's parts). On GitHub, `UiHarness.WaitFor` waits three times longer (`CI=true`).

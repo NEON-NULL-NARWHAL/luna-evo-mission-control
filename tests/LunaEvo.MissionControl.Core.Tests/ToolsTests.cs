@@ -250,4 +250,37 @@ public class ToolsTests
 
         Assert.Equal(["install", "--no-recommends", "--gamedir", "K", "A"], Assert.Single(CkanModList.CheckCommands("K", [new CkanMod("A")])));
     }
+    [Fact]
+    public void Reads_ckans_which_provider_question()
+    {
+        // Real ckan.exe 1.36.4 output for "install ParallaxContinued", answered "n".
+        var choice = CkanOutput.Choice([
+            "Parallax Continued requires KSPBurst, which can be provided by multiple mods.",
+            "Which KSPBurst provider would you like to install?",
+            "1) KSPBurst (KSPBurst Compiler)",
+            "2) KSPBurst-Lite (KSPBurst Lite)",
+            "Enter a number between 1 and 2 (To cancel press \"c\" or \"n\".): ",
+            "Selection cancelled"])!;
+        Assert.Equal(("Parallax Continued", "KSPBurst"), (choice.Mod, choice.Needs));
+        Assert.Equal([("KSPBurst", "KSPBurst Compiler"), ("KSPBurst-Lite", "KSPBurst Lite")], choice.Options);
+        Assert.Null(CkanOutput.Choice(["About to install:", " * Module Manager 4.2.3", "Continue? [Y/n] Installation aborted: User declined install list"]));
+        Assert.Null(CkanOutput.Choice(["X requires Y, which can be provided by multiple mods.", "1) --gamedir (evil)"])); // never an option-looking id
+    }
+
+    [Fact]
+    public void Reads_the_ksp_versions_ckan_accepts_for_an_install()
+    {
+        var ksp = Temp("ksp");
+        Assert.Empty(CkanModList.CompatibleVersions(ksp));
+        Directory.CreateDirectory(Path.Combine(ksp, "CKAN"));
+        File.WriteAllText(Path.Combine(ksp, "CKAN", "compatible_ksp_versions.json"), """{"GameVersionWhenWritten":"1.12.5.3190","Versions":["1.12","1.11","1.8", 7]}""");
+        Assert.Equal(["1.12", "1.11", "1.8"], CkanModList.CompatibleVersions(ksp));
+    }
+
+    [Fact]
+    public void Reads_the_lmp_version_from_a_pasted_invite()
+    {
+        Assert.Equal(new Version(0, 29, 2), Join.ServerAddress.InviteVersion("Join my KSP server!\nAddress: 1.2.3.4\nLMP version: 0.29.2-compiled (you need the same LMP client mod)\n"));
+        Assert.Null(Join.ServerAddress.InviteVersion("192.168.1.20"));
+    }
 }

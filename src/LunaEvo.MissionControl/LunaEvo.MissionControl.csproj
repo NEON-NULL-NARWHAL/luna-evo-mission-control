@@ -9,7 +9,7 @@
     <Product>LUNA EVO Mission Control</Product>
     <!-- FileDescription: Windows shows it as the app name on notifications. -->
     <AssemblyTitle>LUNA EVO Mission Control</AssemblyTitle>
-    <Version>2.0.1</Version>
+    <Version>2.1.0</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>

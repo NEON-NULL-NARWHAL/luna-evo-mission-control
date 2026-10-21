@@ -12,7 +12,7 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 2.0.1** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 2.1.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[⚡ Quickstart](QUICKSTART.md)** · **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Find and join](#join-a-friends-server)** · **[Mods with CKAN](#using-the-ckan-page)** · **[No open ports](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
@@ -66,7 +66,7 @@ LMP's list. Mission Control does all of that, for hosts and players alike.
 |---|---|
 | 🧙 **Setup wizard** | Pick a folder and answer a few questions (name, password, mode, difficulty, players, port). LUNA EVO downloads the LMP server from GitHub, writes the config before it ever starts, and installs the .NET runtime it needs. Private by default. It can also get CKAN and the matching LMP client for you. |
 | ▶️ **Server console** | Start, stop and restart, with a live color-coded console, filters, search, commands with history and quick buttons, and a log file browser. **Cards at the top** (name, game port, max players...) change a setting right there. Live memory and CPU. Stops are clean (LMP saves the universe), never a kill. |
-| 🔌 **Connect** | The exact addresses to give friends (LAN, VPN/mesh, internet), a one-click firewall rule, whether the port is listening, **Share with players** for live info, and **Copy invite**: a message friends paste straight into their Join page. |
+| 🔌 **Connect** | The exact addresses to give friends (LAN, VPN/mesh, internet), a one-click firewall rule, whether the port is listening, **Share with players** for live info, **Copy invite** (a message friends paste straight into their Join page) and **Export my mod list** for them to install. |
 | 👥 **Players** | Who's online, their vessels and warp subspaces, **Kick** and **Ban**. Click a card for the list of just those players, vessels or asteroids. |
 | 📜 **History, alerts, bans** | Everyone who's played (last seen, time played, your notes; never IPs). Alerts for admin-password guessing and banned players returning. LMP's ban list with names, and **Unban**. |
 | 🔔 **Notifications** | Windows notifications and an optional Discord channel: server up, stopped or crashed, alerts, joins and leaves. The webhook is stored encrypted; posts can never ping @everyone. |
@@ -78,10 +78,11 @@ You don't have to host anything: choose **Join a friend's server** on the welcom
 
 | | |
 |---|---|
-| 🌍 **Server browser** | Every public LMP server, the list LMP shows in game: search, only your LMP version, no password, has players. **Join** checks it and gets you ready to launch. |
+| 🌍 **Server browser** | Every public LMP server, the list LMP shows in game: search, sort by players or ping, only your LMP version, no password, has players. **Save** to My servers; **Join** asks for the password if there is one, checks the server and gets you ready to launch. |
 | 🛰️ **Check a server** | A friend's address: its network (this PC, LAN, VPN/mesh, internet), your ping, and, if the host shares it, name, mode, players and vessels. |
+| 🔢 **Right LMP version** | Join knows the server's LMP version (from the browser or the invite) and offers **Install LMP x.y.z** when yours doesn't match. |
 | 🚀 **Launch KSP straight in** | One button: KSP starts with CKAN's options and LMP connects by itself. Servers with a password or another port go to the top of LMP's server list, password included. |
-| 🧰 **CKAN mods** | See whether CKAN is installed and which copy is used, **check** and **install** a mod list (a `.ckan` modpack or mod names), **export** your install's list for friends. Uses LUNA EVO's verified CKAN or yours; CKAN's errors in plain words. |
+| 🧰 **CKAN mods** | **Install the server's mods** from the list your host sent, or check and install any mod list (a `.ckan` modpack or mod names). When a mod needs "one of several" others, you pick (CKAN's command line would quietly leave it out). Cancel, Copy log, CKAN's errors in plain words, and **export** your own list for friends. Uses LUNA EVO's verified CKAN or yours. |
 | 🧩 **Check my mods** | Your GameData against a server's mod rules, exactly as LMP checks them: banned, missing or wrong-version mods, missing parts, parts it would drop. Hosting it? **Allow them on my server** in one click. |
 | 📦 **LMP client** | Install the LMP client mod in the server's version into any KSP install, your CKAN ones included (App settings → Downloads). |
 | 🚀 **Crafts** | Export a craft to a `.lunacraft` file for friends; import theirs into your save or the server, with a missing-parts check. |
@@ -267,8 +268,9 @@ it for them (App settings → Downloads), or it's on [LMP's releases page](https
 
 **Play → Server browser** lists every public LMP server, read from LMP's own master servers (the list LMP shows in
 game). Filters: **Only my LMP version** (your KSP's LMP client; on by default, because the versions must match),
-**No password**, **Has players**, and a search. **Join** fills the server into the Join page and checks it, ready for
-**Launch KSP and join**. A server's own website link opens in your browser.
+**No password**, **Has players**, and a search; sort by players, ping (the top 40 are pinged) or name. **Save** adds a
+server to My servers. **Join** asks for the password if the server has one, fills the server into the Join page and
+checks it, ready for **Launch KSP and join**. A server's own website link opens in your browser.
 
 ### Join a friend's server
 
@@ -277,7 +279,9 @@ game). Filters: **Only my LMP version** (your KSP's LMP client; on by default, b
    press **Check server**. You see where it is and your ping; server info, players and vessels appear if the host
    pressed **Share with players** on their Connect page.
 3. Check the **Kerbal Space Program** folder (found automatically for Steam; your CKAN installs are one click away)
-   and that your LMP version matches the server's (install the right one from App settings → Downloads).
+   and that your LMP version matches the server's. When Join knows the server's version (a pasted invite says it),
+   it tells you if yours differs and offers **Install LMP x.y.z**. Need the server's mods? **Install the server's
+   mods...** opens the `.ckan` list your host sent.
 4. Type the password if there is one, and press **Launch KSP and join**.
    - KSP starts with the same options as CKAN's Play button, so your modded install runs exactly as usual.
    - Default port (8800), no password: LMP connects by itself.
@@ -312,13 +316,19 @@ Most groups use **CKAN** for their mods. Open **Play → CKAN mods**; the page h
    one exported above), paste a `.ckan` file's text, or type mod names one per line (`#` starts a comment).
 3. Pick the KSP install in **Into this KSP install**.
 4. Optional: **Check with CKAN** works the list out without installing anything (CKAN is told "no" when it asks to
-   continue): it says whether everything can be installed, or which mod it doesn't know.
+   continue): it says whether everything can be installed, or which mod it doesn't know. If a mod needs "one of
+   several" others (Parallax needs a KSPBurst, Scatterer a sun flare), LUNA EVO asks you which, using CKAN's own options.
+   **Install** asks the same before it starts, because CKAN's command line would silently leave those out.
 5. Press **Install with CKAN** and confirm. CKAN refreshes its catalog, works out the dependencies and downloads
    everything, with its messages underneath. If a mod is unknown or doesn't fit your KSP version, CKAN stops and
    undoes that install, and the page says why.
 
+**Cancel** stops CKAN while it runs (an install asks first), and **Copy log** copies CKAN's messages for a bug report.
 Only mod names and versions are read from a list. Anything else in the file, such as a download link, is ignored.
 Setting up a server? Step 3 of the setup wizard can get CKAN and the LMP client for you.
+
+**From a host:** **Connect → Export my mod list...** saves your CKAN mods as a `.ckan` file. Players press **Join →
+Install the server's mods...**, open it, and the CKAN page loads it for their KSP and checks it.
 
 ### Play together without opening any ports (Tailscale, Twingate)
 
@@ -390,7 +400,7 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 282 tests: core logic and the real UI, headless; no network, no real server
+dotnet test                      # 291 tests: core logic and the real UI, headless; no network, no real server
 .\publish.ps1                    # -> dist\LunaEvo-MissionControl-<version>-win-x64\LunaEvo.MissionControl.exe
 .\release.ps1                    # tests, build, and a GitHub release with the exe: every copy then offers the update
 ```
@@ -414,8 +424,8 @@ luna-evo-mission-control/
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, CKAN
 │   └── LunaEvo.MissionControl/        🖥️ the Avalonia desktop app
 ├── tests/
-│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (189)
-│   ├── LunaEvo.MissionControl.Tests/        🧪 UI tests: the real window, driven headlessly (93)
+│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (192)
+│   ├── LunaEvo.MissionControl.Tests/        🧪 UI tests: the real window, driven headlessly (99)
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
 ├── docs/screenshots/
@@ -438,7 +448,7 @@ We want to be completely clear about this.
 |---|---|
 | Set the goals, release by release: a GUI config manager (0.1), then server control and theming, the setup wizard, players, mod import and automation (0.3), the Join page (0.4), player history, alerts and the mod check (0.5), self-update (0.6), crafts, home server mode and vessel cleanup (0.7 to 1.0), CKAN and the LMP client (1.1 to 1.3), the server browser and simple mode (1.4), and the rename to Mission Control (2.0), with a security audit at each milestone. Tested it on the real server and game, and found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API, the master servers and mod checks really work. |
 | Made the decisions: desktop app, Avalonia, .NET 10, GPL-3.0 (the repo started private and is now public), the look (inspired by [NOMM](https://github.com/Combat787/NOMM)), the name. | Wrote all of the code: the C#, XAML and build scripts. |
-| Supplied the real server, its configs, the requirements and lists of what to fix. | Wrote all 282 automated tests, a fake LMP server, and fakes for every network call. |
+| Supplied the real server, its configs, the requirements and lists of what to fix. | Wrote all 291 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP and CKAN (below), took the screenshots, and wrote these docs. |
 
 - **Model and tool:** Claude Opus 5.5 by Anthropic, working in Claude Code (an AI coding agent that can read files, run commands and build/test the code) inside VS Code.
@@ -449,7 +459,7 @@ We want to be completely clear about this.
 
 AI-written code can look right and still be wrong, so nothing here is trusted on looks:
 
-- **282 automated tests**, run on GitHub on every push: byte-for-byte file round trips; every validation rule;
+- **291 automated tests**, run on GitHub on every push: byte-for-byte file round trips; every validation rule;
   generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install and
   update from zips (refusing to overwrite your config or escape the folder); a fake server that really starts, takes
   commands, crashes and stops; and UI tests that click through **every tab and control**.
@@ -459,7 +469,8 @@ AI-written code can look right and still be wrong, so nothing here is trusted on
   - The Join page checked a real running server and found a real KSP install with LMP 0.29.2.
   - Downloads matched GitHub's published SHA-256 for the real LMP 0.29.2 server and client and CKAN 1.36.4.
   - The real `ckan.exe` installed and dry-ran mod lists (up to 108 mods) on a throwaway KSP folder, and LUNA EVO's
-    export of a real install matched the modpack it was set up from.
+    export of a real install matched the modpack it was set up from. It also showed that CKAN's command line silently
+    skips "which provider?" questions; LUNA EVO now asks them (checked with Parallax's four on a clean KSP folder).
   - The server browser read 368 real public servers from LMP's master servers.
   - The GameData import scanned a real modded KSP install (4,382 `.cfg` files): 1,527 parts and 132 plugins with hashes.
 - **Visual checks:** every page was screenshotted and reviewed during development.

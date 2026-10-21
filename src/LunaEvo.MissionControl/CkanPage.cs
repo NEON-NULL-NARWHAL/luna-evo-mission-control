@@ -6,6 +6,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -34,7 +35,14 @@ internal sealed class CkanPage
     /// Tests replace this: runs ckan.exe with arguments and optional text for its input (null: input closed), reporting
     /// each output line; returns the exit code.
     /// </summary>
-    internal static Func<string, IReadOnlyList<string>, string?, Action<string>, Task<int>> RunCkan { get; set; } = RunProcessAsync;
+    internal static Func<string, IReadOnlyList<string>, string?, Action<string>, CancellationToken, Task<int>> RunCkan { get; set; } = RunProcessAsync;
+
+    /// <summary>Tests replace this: puts text on the clipboard (Copy log).</summary>
+    internal static Func<MainWindow, string, Task> CopyText { get; set; } = async (host, text) =>
+    {
+        if (host.Clipboard is { } clipboard)
+            await clipboard.SetTextAsync(text);
+    };
 
     /// <summary>Tests replace the open dialog: → chosen .ckan path, or null.</summary>
     internal static Func<MainWindow, Task<string?>> PickModList { get; set; } = async host =>
@@ -64,6 +72,9 @@ internal sealed class CkanPage
 
     internal const int MaxListBytes = CkanModList.MaxListBytes;
 
+    /// <summary>The page's last message (what the Connect page shows after an export).</summary>
+    internal string Result => _result.Text ?? "";
+
     // What GitHub says about the user's own ckan.exe: path → "official vX" / "not an official build" / "couldn't check".
     private readonly Dictionary<string, string> _ownChecks = new(StringComparer.OrdinalIgnoreCase);
     private readonly CheckBox _exactVersions = new CheckBox { Content = "Exact versions", IsChecked = true }.WithId("ckan/exactVersions");
@@ -79,6 +90,13 @@ internal sealed class CkanPage
     private readonly ComboBox _target = new ComboBox { MinWidth = 360 }.WithId("ckan/target");
     private readonly Button _install = Ui.Button("Install with CKAN", "fab").WithId("ckan/install");
     private readonly Button _check = Ui.Button("Check with CKAN", "text").WithId("ckan/check");
+    private readonly Button _cancel = new Button { Content = "Cancel", IsVisible = false }.WithId("ckan/cancel");
+    private readonly Button _copyLog = new Button { Content = "Copy log", IsVisible = false }.WithId("ckan/copyLog");
+    private CancellationTokenSource? _running;
+    private List<string> _lastLog = [];
+
+    // Providers the user picked when CKAN asked "which X provider?" (X → mod), kept until the list changes.
+    private readonly Dictionary<string, string> _chosen = new(StringComparer.OrdinalIgnoreCase);
     private readonly TextBlock _result = Ui.Text("", "sublabel").WithId("ckan/result");
     private readonly ListBox _log = new ListBox { Height = 160, IsVisible = false }.WithId("ckan/log");
     private bool _busy;
@@ -108,6 +126,11 @@ internal sealed class CkanPage
         _install.HorizontalAlignment = HorizontalAlignment.Left;
         _install.Click += async (_, _) => await InstallListAsync();
         _check.Click += async (_, _) => await CheckListAsync();
+        _cancel.Classes.Add("text");
+        _copyLog.Classes.Add("text");
+        _cancel.Click += async (_, _) => await CancelAsync();
+        _copyLog.Click += async (_, _) => await CopyLogAsync();
+        _list.TextChanged += (_, _) => _chosen.Clear();
         _check.VerticalAlignment = VerticalAlignment.Center;
         var refresh = Ui.Button("Refresh", "text", "IconRestart").WithId("ckan/refresh");
         refresh.Click += (_, _) => Refresh();
@@ -129,7 +152,7 @@ internal sealed class CkanPage
         listBody.Children.Add(new StackPanel
         {
             Margin = new Thickness(12, 4, 12, 12), Spacing = 6,
-            Children = { new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _install, _check } }, _result, _log },
+            Children = { new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _install, _check, _cancel, _copyLog } }, _result, _log },
         });
 
         var header = new DockPanel();
@@ -237,6 +260,9 @@ internal sealed class CkanPage
                 _result.Text = $"{list.Mods.Count} mod(s) from {instance.Name} are in the list below. Pick where to install them.";
             };
             var chosen = picked is { } p ? $" · {p.Mods.Count} picked by you" : "";
+            // CKAN's "Compatible game versions" for this install: its command line (and so LUNA EVO) uses them too.
+            if (CkanModList.CompatibleVersions(instance.Path) is { Count: > 0 } accepted)
+                chosen += " · also accepts mods for KSP " + string.Join(", ", accepted);
             _installs.Children.Add(Ui.Row(instance.Name, $"{instance.Path} · {lmp} · {mods}{chosen}{(CkanModList.IsLocked(instance.Path) ? " · open in CKAN" : "")}",
                     new StackPanel { Orientation = Orientation.Horizontal, Children = { use, export } })
                 .WithId("ckan/instance/" + instance.Name));
@@ -362,8 +388,10 @@ internal sealed class CkanPage
     private (List<string> All, Action<string> Line) StartLog()
     {
         _log.IsVisible = true;
+        _copyLog.IsVisible = true;
         var shown = new System.Collections.ObjectModel.ObservableCollection<string>();
         var all = new List<string>();
+        _lastLog = all;
         _log.ItemsSource = shown;
         return (all, text =>
         {
@@ -380,13 +408,21 @@ internal sealed class CkanPage
     }
 
     /// <summary>Runs the work with the buttons off; any unexpected error is shown and logged, never thrown.</summary>
-    private async Task Busy(string what, Func<Task> work)
+    private async Task Busy(string what, Func<CancellationToken, Task> work)
     {
         _busy = true;
         _install.IsEnabled = _check.IsEnabled = false;
+        using var running = new CancellationTokenSource();
+        _running = running;
+        _cancel.IsVisible = true;
+        _cancel.IsEnabled = true;
         try
         {
-            await work();
+            await work(running.Token);
+        }
+        catch (OperationCanceledException) when (running.IsCancellationRequested)
+        {
+            _result.Text = "Canceled. CKAN was stopped.";
         }
         catch (Exception e)
         {
@@ -395,43 +431,140 @@ internal sealed class CkanPage
         }
         finally
         {
+            _running = null;
+            _cancel.IsVisible = false;
             _busy = false;
             Refresh();
         }
     }
+
+    /// <summary>Cancel: stops CKAN. A check just stops; an install is confirmed first (it may be part-way through).</summary>
+    internal async Task CancelAsync()
+    {
+        if (_running is not { } running)
+            return;
+        if (_installing && !await Dialogs.ConfirmAsync(_host, "Stop CKAN?",
+                "CKAN is installing. Stopping it now may leave this install part-way: some mods in, others not. " +
+                "Running Install with CKAN again finishes the job.", "Stop CKAN"))
+            return;
+        _cancel.IsEnabled = false;
+        running.Cancel();
+    }
+
+    /// <summary>Copy log: everything CKAN printed in the last check or install, for a bug report or CKAN's forum.</summary>
+    internal async Task CopyLogAsync()
+    {
+        if (_lastLog.Count == 0)
+            return;
+        string text;
+        lock (_lastLog)
+            text = string.Join(Environment.NewLine, _lastLog);
+        await CopyText(_host, text);
+        // Added to the message, not instead of it: the check's or install's result stays readable.
+        var note = $" (Copied CKAN's {_lastLog.Count} lines of output.)";
+        var current = (_result.Text ?? "").Split(" (Copied CKAN's")[0];
+        _result.Text = current + note;
+    }
+
+    private bool _installing;
+
+    /// <summary>
+    /// From the Join page ("Install the server's mods"): puts a host's mod list in the box, picks the KSP install, and
+    /// runs Check with CKAN so the user sees what would happen before installing.
+    /// </summary>
+    internal async Task LoadForInstallAsync(string listText, string? kspFolder)
+    {
+        _list.Text = listText;
+        if (kspFolder != null && Core.Join.KspLauncher.IsKspFolder(kspFolder))
+        {
+            var full = Path.GetFullPath(kspFolder).TrimEnd(Path.DirectorySeparatorChar);
+            var items = (_target.ItemsSource as IEnumerable<string> ?? []).ToList();
+            var match = items.FirstOrDefault(i => string.Equals(i, full, StringComparison.OrdinalIgnoreCase));
+            if (match == null)
+            {
+                items.Add(full);
+                _target.ItemsSource = items;
+                match = full;
+            }
+            _target.SelectedItem = match;
+        }
+        await CheckListAsync();
+    }
+
+    /// <summary>
+    /// The dry run, repeated until CKAN has no more questions: whenever it asks "which X provider would you like?",
+    /// the user picks one (from CKAN's own options) and it's added to the list. Without this, CKAN's --headless install
+    /// silently leaves such dependencies out. Returns the mods to install (with the chosen providers) and the dry run's
+    /// result, or null if the user didn't choose.
+    /// </summary>
+    private async Task<(List<CkanMod> Mods, CkanCheck Check)?> ResolveAsync(string ckan, string ksp, IReadOnlyList<CkanMod> list,
+        List<string> all, Action<string> line, CancellationToken cancel)
+    {
+        for (var round = 0; round < 25; round++)
+        {
+            var mods = list.Concat(_chosen.Values.Where(id => !list.Any(m => m.Identifier.Equals(id, StringComparison.OrdinalIgnoreCase)))
+                .Select(id => new CkanMod(id))).ToList();
+            var would = new List<string>();
+            CkanChoice? question = null;
+            CkanCheck? failed = null;
+            foreach (var command in CkanModList.CheckCommands(ksp, mods))
+            {
+                int start;
+                lock (all)
+                    start = all.Count;
+                var exit = await RunCkan(ckan, command, "n" + Environment.NewLine, line, cancel);
+                List<string> output;
+                lock (all)
+                    output = all.Skip(start).ToList();
+                if ((question = CkanOutput.Choice(output)) != null)
+                    break;
+                var check = CkanOutput.Check(output, exit);
+                if (!check.Ok)
+                {
+                    failed = check;
+                    break;
+                }
+                would.AddRange(check.WouldInstall);
+            }
+            if (failed != null)
+                return (mods, failed);
+            if (question == null)
+                return (mods, new CkanCheck(true, would, ""));
+
+            var options = question.Options.Select(o => $"{o.Identifier} ({o.Name})").Append("Cancel").ToArray();
+            var pick = await Dialogs.ChooseAsync(_host, $"Which {question.Needs}?",
+                $"{question.Mod} needs {question.Needs}, and several mods provide it. Pick one; it's added to the list. " +
+                "(CKAN's own window asks the same; its installs from the command line would just leave it out.)", options);
+            if (pick < 0 || pick >= question.Options.Count)
+                return null;
+            _chosen[question.Needs] = question.Options[pick].Identifier;
+            line($"LUNA EVO: {question.Needs} will be provided by {question.Options[pick].Identifier}.");
+        }
+        return (list.ToList(), new CkanCheck(false, [], "CKAN kept asking which mods to use; install this list from CKAN's own window instead."));
+    }
+
+    private string ChosenText() =>
+        _chosen.Count == 0 ? "" : " Chosen for you: " + string.Join(", ", _chosen.Select(c => $"{c.Value} (for {c.Key})")) + ".";
 
     /// <summary>"Check with CKAN": a dry run. CKAN resolves the list and is told "no" when it asks to continue; nothing changes.</summary>
     internal async Task CheckListAsync()
     {
         if (_busy || Ready() is not var (mods, problems, ksp, ckan))
             return;
-        await Busy("check the list", async () =>
+        await Busy("check the list", async cancel =>
         {
             var (all, line) = StartLog();
             _result.Text = "Refreshing CKAN's catalog...";
-            await RunCkan(ckan, CkanModList.UpdateArguments(ksp), null, line);
+            await RunCkan(ckan, CkanModList.UpdateArguments(ksp), null, line, cancel);
             _result.Text = $"Checking {mods.Count} mod(s) with CKAN (nothing is installed)...";
-            var would = new List<string>();
-            foreach (var command in CkanModList.CheckCommands(ksp, mods))
+            if (await ResolveAsync(ckan, ksp, mods, all, line, cancel) is not var (_, check))
             {
-                int start;
-                lock (all)
-                    start = all.Count;
-                var exit = await RunCkan(ckan, command, "n" + Environment.NewLine, line);
-                List<string> output;
-                lock (all)
-                    output = all.Skip(start).ToList();
-                var check = CkanOutput.Check(output, exit);
-                if (!check.Ok)
-                {
-                    _result.Text = check.Message;
-                    return;
-                }
-                would.AddRange(check.WouldInstall);
+                _result.Text = "Check stopped: CKAN needs you to pick a mod for it.";
+                return;
             }
-            _result.Text = (would.Count > 0
-                ? $"CKAN can install this list: {would.Count} mod(s) in its plan (dependencies included; ones you already have are kept). Press Install with CKAN."
-                : "CKAN can install this list. Everything in it is already installed.") + (problems.Count > 0 ? " " + string.Join(" ", problems) : "");
+            _result.Text = !check.Ok ? check.Message : (check.WouldInstall.Count > 0
+                ? $"CKAN can install this list: {check.WouldInstall.Count} mod(s) in its plan (dependencies included; ones you already have are kept). Press Install with CKAN."
+                : "CKAN can install this list. Everything in it is already installed.") + ChosenText() + (problems.Count > 0 ? " " + string.Join(" ", problems) : "");
         });
     }
 
@@ -444,26 +577,46 @@ internal sealed class CkanPage
                 $"Into {ksp}: {names}. CKAN works out the dependencies and downloads everything from its catalog. " +
                 (problems.Count > 0 ? string.Join(" ", problems) : ""), "Install"))
             return;
-        await Busy("run CKAN", async () =>
+        await Busy("run CKAN", async cancel =>
         {
             var (all, line) = StartLog();
             _result.Text = "Refreshing CKAN's catalog...";
-            await RunCkan(ckan, CkanModList.UpdateArguments(ksp), null, line);
-            _result.Text = $"Installing {mods.Count} mod(s)...";
-            var exit = 0;
-            foreach (var command in CkanModList.InstallCommands(ksp, mods))
-                if ((exit = await RunCkan(ckan, command, null, line)) != 0)
-                    break;
-            List<string> output;
-            lock (all)
-                output = [.. all];
-            _result.Text = exit == 0
-                ? $"Done: CKAN installed the mod list into {ksp}."
-                : CkanOutput.Problem(output, exit) + " CKAN undoes an install it couldn't finish; its messages are below.";
+            await RunCkan(ckan, CkanModList.UpdateArguments(ksp), null, line, cancel);
+            // A dry run first: CKAN's questions ("which X provider?") get answered here, because --headless skips them.
+            _result.Text = "Checking the list with CKAN first...";
+            if (await ResolveAsync(ckan, ksp, mods, all, line, cancel) is not var (withChoices, check))
+            {
+                _result.Text = "Not installed: CKAN needs you to pick a mod for it.";
+                return;
+            }
+            if (!check.Ok)
+            {
+                _result.Text = check.Message;
+                return;
+            }
+            _result.Text = $"Installing {withChoices.Count} mod(s)...";
+            _installing = true;
+            try
+            {
+                var exit = 0;
+                foreach (var command in CkanModList.InstallCommands(ksp, withChoices))
+                    if ((exit = await RunCkan(ckan, command, null, line, cancel)) != 0)
+                        break;
+                List<string> output;
+                lock (all)
+                    output = [.. all];
+                _result.Text = exit == 0
+                    ? $"Done: CKAN installed the mod list into {ksp}." + ChosenText()
+                    : CkanOutput.Problem(output, exit) + " CKAN undoes an install it couldn't finish; its messages are below.";
+            }
+            finally
+            {
+                _installing = false;
+            }
         });
     }
 
-    private static async Task<int> RunProcessAsync(string exe, IReadOnlyList<string> arguments, string? input, Action<string> line)
+    private static async Task<int> RunProcessAsync(string exe, IReadOnlyList<string> arguments, string? input, Action<string> line, CancellationToken cancel)
     {
         var info = new System.Diagnostics.ProcessStartInfo(exe)
         {
@@ -481,7 +634,22 @@ internal sealed class CkanPage
         process.StandardInput.Close();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        await process.WaitForExitAsync();
+        try
+        {
+            await process.WaitForExitAsync(cancel);
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                // Already finished.
+            }
+            throw;
+        }
         return process.ExitCode;
     }
 }

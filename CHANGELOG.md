@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.1.0 (2026-10-21)
+
+### Added
+- **Install the server's mods** (Join): open the `.ckan` mod list your host sent; the CKAN page loads it for your KSP
+  and checks it with CKAN straight away. Hosts make that file with **Connect → Export my mod list...**.
+- **Wrong LMP version?** Join knows the server's LMP version (from the server browser, or a pasted invite) and, when
+  yours differs or is missing, offers **Install LMP x.y.z** right there.
+- **Server browser:** sort (most players, lowest ping, name), ping times for the servers at the top, **Save** to My
+  servers, and a password prompt when you join a server that has one.
+- **CKAN page:** **Cancel** while CKAN runs, **Copy log** for CKAN's output, and each install shows the other KSP
+  versions CKAN accepts mods for there (its "Compatible game versions").
+
+### Fixed
+- **CKAN mods that need "one of several" mods** (Parallax needs a KSPBurst, Scatterer a sun flare...) were installed
+  without it: CKAN's command line silently skips that question. LUNA EVO now asks you, with CKAN's own options, and
+  includes your pick. Found and checked with the real ckan.exe 1.36.4.
+- Dialogs with many answers list them one per line instead of cutting them off.
+- Tests no longer ping real addresses.
+
 ## 2.0.1 (2026-10-21)
 
 ### Changed

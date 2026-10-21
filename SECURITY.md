@@ -28,6 +28,7 @@ response time.
 | **Windows startup list** (`HKCU\...\Run`) | Only while Home server mode is on | One entry, "LUNA EVO Mission Control" ("LUNA EVO Config Manager" before 2.0, removed on upgrade), for your user only; removed when you switch the mode off. |
 | **CKAN and the LMP client** (GitHub) | CKAN page and App settings → Downloads; setup wizard step 3 if switched on | The same verified download as LMP's server: GitHub only, SHA-256 checked (and again where it's stored or before unpacking). Nothing unverified. The client is unpacked with size and stay-inside checks, only into `GameData/LunaMultiplayer` (and `000_Harmony` if missing). |
 | **CKAN's command line** (`ckan.exe`: LUNA EVO's verified copy, or your own if you chose one) | CKAN page → Install with CKAN, after you confirm | `ckan update` and `ckan install <mod names>` for the KSP install you pick, never while KSP or CKAN has it open. Only mod names and versions from a list are passed (a `.ckan` file itself never is). CKAN then downloads from its own catalog. |
+| **Public servers' addresses** (ICMP ping) | Server browser: the 40 servers at the top of the list, once each | Two pings per server, nothing else, to measure the delay. |
 | **LMP's master servers** (`ms.lmp.dasskelett.dev`, `lmp.nightshade.fun`, and their nightly lists) | Server browser: the first time you open it, and Refresh | One HTTPS GET each for the public list (LMP's own `/json`). Read with an 8 MB cap; names and descriptions cut and cleaned; only IP addresses accepted; a server's website link opens only if it's http(s). Joining a listed server is the Join page's usual check (DNS, pings, its LMP website). |
 | **Crafts from friends** | Crafts page → Import | Read as data with size limits; written only into a KSP save's Ships folder or the server's craft library, never overwriting. |
 
@@ -44,6 +45,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.1.0 | Install the server's mods, LMP version helper, browser pings, CKAN provider choices, Cancel | - | Real ckan.exe 1.36.4: headless installs skip "which provider" questions (found and fixed); the new choice flow dry-ran Parallax with 4 choices on a clean KSP folder | 291 |
 | 2.0.1 | GitHub repository renamed to `luna-evo-mission-control` | - | Old API and download URLs redirect (checked live, including with the updater built with the old name) | 282 |
 | 2.0.0 | Renamed to LUNA EVO Mission Control (exe, settings folder, startup entry; old copies still update) | **Audit 9** (I1-I8) | Old-name update path and settings migration tested; the published exe started from the demo copy | 282 |
 | 1.4.0 | Server browser, simple mode, quick edits from the console cards, allowing a player's parts, CKAN dry run | **Audit 8** (H1-H3) | The browser read 368 real public servers from LMP's master servers; Check with CKAN dry-ran a real 108-mod list on a throwaway KSP folder | 276 |

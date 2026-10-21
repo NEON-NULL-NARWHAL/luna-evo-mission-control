@@ -235,7 +235,7 @@ public class NavigationAndUpdateTests
         File.WriteAllText(Path.Combine(Core.Setup.CkanTools.ConfigFolder, "config.json"),
             "{ \"GameInstances\": [ { \"Name\": \"Modded\", \"Path\": " + System.Text.Json.JsonSerializer.Serialize(ksp) + " } ] }");
         var runs = new List<IReadOnlyList<string>>();
-        CkanPage.RunCkan = (exe, arguments, _, line) =>
+        CkanPage.RunCkan = (exe, arguments, _, line, _) =>
         {
             Assert.Equal(installed, exe);
             runs.Add(arguments);
@@ -262,7 +262,10 @@ public class NavigationAndUpdateTests
         ui.Await(ui.Window.Ckan.InstallListAsync());
         ui.Pump();
         // Only names and versions reach CKAN; the file's own download link never does.
-        Assert.Equal([["update", "--headless", "--gamedir", ksp], ["install", "--headless", "--no-recommends", "--gamedir", ksp, "MechJeb2", "KerbalEngineerRedux=1.1.9.0"]], runs);
+        Assert.Equal([
+            ["update", "--headless", "--gamedir", ksp],
+            ["install", "--no-recommends", "--gamedir", ksp, "MechJeb2", "KerbalEngineerRedux=1.1.9.0"], // the dry run first
+            ["install", "--headless", "--no-recommends", "--gamedir", ksp, "MechJeb2", "KerbalEngineerRedux=1.1.9.0"]], runs);
         Assert.Contains("CKAN says hi", (IEnumerable<string>)ui.Find<ListBox>("ckan/log").ItemsSource!);
         Assert.StartsWith("Done", ui.Find<TextBlock>("ckan/result").Text);
         Assert.Contains("Install 2 mod(s) with CKAN?", ui.DialogsShown);
@@ -308,7 +311,7 @@ public class NavigationAndUpdateTests
             return Task.FromResult<string?>(exportPath);
         };
         var runs = new List<string>();
-        CkanPage.RunCkan = (exe, _, _, _) =>
+        CkanPage.RunCkan = (exe, _, _, _, _) =>
         {
             runs.Add(exe);
             return Task.FromResult(0);
@@ -331,7 +334,7 @@ public class NavigationAndUpdateTests
         Assert.Contains("Scatterer", ui.Find<TextBox>("ckan/list").Text);
         ui.Await(ui.Window.Ckan.InstallListAsync());
         Assert.All(runs, exe => Assert.Equal(own, exe)); // your copy, not LUNA EVO's
-        Assert.Equal(2, runs.Count);
+        Assert.Equal(3, runs.Count); // update, dry run, install
 
         ui.Click(ui.Find<Button>("ckan/forgetExe"));
         Assert.Null(ui.Window.Settings.CkanExePath);
@@ -348,7 +351,7 @@ public class NavigationAndUpdateTests
         var ksp = TestData.FakeKsp();
         ui.Window.UpdateSettings(s => s with { KspFolder = ksp });
         var runs = new List<(IReadOnlyList<string> Args, string? Input)>();
-        CkanPage.RunCkan = (_, arguments, input, line) =>
+        CkanPage.RunCkan = (_, arguments, input, line, _) =>
         {
             runs.Add((arguments, input));
             if (arguments[0] != "install")

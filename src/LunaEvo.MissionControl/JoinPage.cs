@@ -42,6 +42,13 @@ internal sealed class JoinPage : IDisposable
     private readonly Button _launch = Ui.Button("Launch KSP and join", "fab", "IconPlay").WithId("join/launch");
     private readonly Button _addToList = Ui.Button("Add to LMP's server list", "text").WithId("join/addToList");
     private readonly TextBlock _launchResult = Ui.Text("", "sublabel").WithId("join/launchResult");
+    private readonly StackPanel _versionMatch = new() { Spacing = 4 };
+    private readonly Button _installMods = Ui.Button("Install the server's mods...", "text").WithId("join/installMods");
+    /// <summary>Tests replace this so a check never pings a real address: (address) → result.</summary>
+    internal static Func<string, Task<PingResult>> PingServer { get; set; } = address => ServerProbe.PingAsync(address);
+
+    private Version? _serverVersion;  // the LMP version the server runs, when known (server browser, or a pasted invite)
+    private Version? _pendingVersion; // set by the server browser for the next check
     private readonly DispatcherTimer _refresh = new() { Interval = TimeSpan.FromSeconds(10) };
     private readonly TextBox _modRules = new TextBox { PlaceholderText = @"...\LMPModControl.xml" }.WithId("join/modRules");
     private readonly Button _modCheck = Ui.Button("Check my mods", "fab").WithId("join/modCheck");
@@ -154,14 +161,16 @@ internal sealed class JoinPage : IDisposable
         kspRow.Children.Add(browse);
         kspRow.Children.Add(_ksp);
         playBody.Children.Add(Ui.Row("Kerbal Space Program", null, null));
-        playBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 4, Children = { kspRow, _kspStatus, _ckanInstances } });
+        playBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 4, Children = { kspRow, _kspStatus, _versionMatch, _ckanInstances } });
         ShowCkanInstances();
         playBody.Children.Add(Ui.Row("Server password", "Leave empty if the server has none. It's only given to LMP, never kept by LUNA EVO.", _password));
         playBody.Children.Add(new StackPanel
         {
             Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(12, 4, 12, 4),
-            Children = { _launch, _addToList },
+            Children = { _launch, _addToList, _installMods },
         });
+        ToolTip.SetTip(_installMods, "Open the .ckan mod list your host sent; CKAN checks it, then installs it into this KSP.");
+        _installMods.Click += async (_, _) => await InstallServerModsAsync();
         playBody.Children.Add(new Border { Padding = new Thickness(12, 0, 12, 12), Child = _launchResult });
 
         var (modsGroup, modsBody, _) = Ui.Group("Check my mods");
@@ -338,11 +347,106 @@ internal sealed class JoinPage : IDisposable
     }
 
     /// <summary>From the server browser: fill in a public server and check it, ready to launch.</summary>
-    internal async Task OpenServerAsync(string host, int port)
+    /// <param name="version">The LMP version the master server lists for it, if any.</param>
+    internal async Task OpenServerAsync(string host, int port, string? version = null)
     {
         _tabs.Select("server");
         _address.Text = new ServerAddress(host, port).ToString();
+        _pendingVersion = Core.Setup.LmpVersion.Parse(version);
         await CheckAsync();
+    }
+
+    internal Version? ServerVersion => _serverVersion;
+
+    /// <summary>
+    /// "This server runs LMP 0.30.0; you have 0.29.2" with **Install LMP 0.30.0**, when the server's version is known
+    /// and yours is different (or missing). LMP refuses to connect across versions.
+    /// </summary>
+    private void ShowVersionMatch()
+    {
+        _versionMatch.Children.Clear();
+        var ksp = _ksp.Text?.Trim() ?? "";
+        if (_serverVersion is not { } server || !KspLauncher.IsKspFolder(ksp))
+            return;
+        var mine = KspLauncher.ClientVersion(ksp);
+        if (mine != null && SameLmp(mine, server))
+        {
+            _versionMatch.Children.Add(Ui.Text($"This server runs LMP {Show(server)}, the same as yours.", "sublabel").WithId("join/versionOk"));
+            return;
+        }
+        var install = Ui.Button($"Install LMP {Show(server)}", "text").WithId("join/installClient");
+        install.Click += async (_, _) => await InstallMatchingClientAsync();
+        var text = Ui.Text(mine == null
+            ? $"This server runs LMP {Show(server)}, and this KSP has no LMP client yet."
+            : $"This server runs LMP {Show(server)}, but you have {Show(mine)}. LMP only connects when they match.", "sublabel");
+        text.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
+        _versionMatch.Children.Add(new StackPanel { Spacing = 2, Children = { text, install } }.WithId("join/versionMismatch"));
+    }
+
+    private static bool SameLmp(Version a, Version b) => a.Major == b.Major && a.Minor == b.Minor && Math.Max(a.Build, 0) == Math.Max(b.Build, 0);
+
+    private static string Show(Version v) => v.ToString(v.Build >= 0 ? 3 : 2);
+
+    /// <summary>Install LMP x.y.z: the server's version of the LMP client, into this KSP (verified, old version backed up).</summary>
+    internal async Task InstallMatchingClientAsync()
+    {
+        var ksp = _ksp.Text?.Trim() ?? "";
+        if (_serverVersion is not { } server || !KspLauncher.IsKspFolder(ksp))
+            return;
+        if (KspLauncher.IsRunning(ksp))
+        {
+            _launchResult.Text = "Close KSP first, then install the LMP client.";
+            return;
+        }
+        if (!await Dialogs.ConfirmAsync(_host, $"Install LMP {Show(server)}?",
+                $"Into {ksp}: LMP's official client from GitHub, checked against its SHA-256. Your LMP server list is kept, " +
+                "the version you have now is backed up, and other mods aren't touched.", "Install"))
+            return;
+        try
+        {
+            _launchResult.Text = "Asking GitHub for LMP's releases...";
+            var releases = await LmpReleaseFeed.GetAllAsync(Http.Client, LmpReleaseFeed.ReleasesUrl, includePrereleases: true);
+            if (releases.FirstOrDefault(r => r.Version is { } v && SameLmp(v, server) && LmpClientInstaller.ClientAsset(r) is { Sha256: not null }) is not { } release)
+            {
+                _launchResult.Text = $"GitHub has no verifiable LMP {Show(server)} client. Ask your host which version to use.";
+                return;
+            }
+            var done = false;
+            var progress = new Progress<double>(p => { if (!done) _launchResult.Text = $"Downloading LMP {release.Tag}... {p:P0}"; });
+            var backup = await LmpClientInstaller.DownloadAndInstallAsync(Http.Client, release, ksp, progress);
+            done = true;
+            _launchResult.Text = $"Installed LMP {release.Tag}." + (backup != null ? $" The previous version is in {backup}." : "");
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or DownloadVerificationException or IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException or System.Text.Json.JsonException)
+        {
+            _launchResult.Text = "Couldn't install the LMP client: " + e.Message;
+        }
+        ShowKspStatus();
+    }
+
+    /// <summary>
+    /// Install the server's mods: the host's .ckan mod list (CKAN mods → Export mod list, or Connect → Export my mod list)
+    /// goes to the CKAN page for this KSP, which checks it with CKAN straight away. Installing is one more button there.
+    /// </summary>
+    internal async Task InstallServerModsAsync()
+    {
+        if (await CkanPage.PickModList(_host) is not { } path)
+            return;
+        try
+        {
+            if (new FileInfo(path).Length > CkanPage.MaxListBytes)
+            {
+                _launchResult.Text = "That file is too big for a mod list (over 5 MB).";
+                return;
+            }
+            var text = await File.ReadAllTextAsync(path);
+            _host.Navigate(MainWindow.CkanKey);
+            await _host.Ckan.LoadForInstallAsync(text, _ksp.Text?.Trim());
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _launchResult.Text = "Couldn't read that file: " + e.Message;
+        }
     }
 
     /// <summary>Looks the server up: addresses, ping, and live info if the host shares it.</summary>
@@ -350,6 +454,10 @@ internal sealed class JoinPage : IDisposable
     {
         if (_checking)
             return;
+        // The server's LMP version: from the server browser, or the "LMP version:" line of a pasted invite.
+        _serverVersion = _pendingVersion ?? ServerAddress.InviteVersion(_address.Text);
+        _pendingVersion = null;
+        ShowVersionMatch();
         var server = ServerAddress.Parse(_address.Text, (int)(_websitePort.Value ?? ServerAddress.DefaultWebsitePort));
         if (server == null)
         {
@@ -383,7 +491,7 @@ internal sealed class JoinPage : IDisposable
             foreach (var address in addresses.Take(4))
                 _network.Children.Add(Ui.Row(address.Address, address.Kind, null).WithId("join/ip/" + address.Address));
 
-            var ping = await ServerProbe.PingAsync(addresses[0].Address);
+            var ping = await PingServer(addresses[0].Address);
             _network.Children.Add(Ui.Row(
                 ping.AnyReply ? $"Ping {ping.AverageMs} ms" : "No reply to ping",
                 ping.AnyReply
@@ -618,5 +726,6 @@ internal sealed class JoinPage : IDisposable
         _kspStatus.Text = client == null
             ? "Found KSP, but the LMP client mod isn't installed (GameData/LunaMultiplayer)."
             : $"Found KSP with LMP {client}. Your LMP version must match the server's.";
+        ShowVersionMatch();
     }
 }

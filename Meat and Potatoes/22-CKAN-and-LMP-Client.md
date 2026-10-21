@@ -72,6 +72,22 @@ split over several commands if the list wouldn't fit one Windows command line. O
   127). `Core/Setup/CkanOutput` turns that, conflicts, incompatibility and lock errors into plain words.
 - `CkanPage.Busy` wraps the check and the install: any unexpected error is shown and written to `ErrorLog`.
 
+## "Which provider?", Cancel, Copy log (2.1.0)
+
+- **CKAN's command line skips provider questions.** With `--headless`, a mod that needs one of several providers
+  (`ParallaxContinued` → `KSPBurst` or `KSPBurst-Lite`; `Scatterer` → a sun flare) is installed **without** it, exit 0.
+  Interactive, CKAN prints `"<Mod> requires <X>, which can be provided by multiple mods."`, `"Which <X> provider would
+  you like to install?"` and `"1) <identifier> (<name>)"` lines. Checked with ckan.exe 1.36.4.
+- `CkanPage.ResolveAsync` dry-runs (no `--headless`, stdin `"n"`), `CkanOutput.Choice` reads the first question,
+  `Dialogs.ChooseAsync` asks (CKAN's options, then Cancel), the pick goes into `_chosen` (cleared when the list text
+  changes) and the dry run repeats until CKAN asks nothing. Check and Install both run it; Install then adds the picks.
+- `RunCkan(exe, args, input, line, CancellationToken)`: Cancel cancels it and `RunProcessAsync` kills the process tree.
+  An install asks first (it may stop part-way). `CopyText` is the clipboard hook for Copy log.
+- `CkanModList.CompatibleVersions(ksp)` reads `CKAN/compatible_ksp_versions.json`; `ckan compat list --gamedir` shows the
+  command line honours it, so the page only displays it.
+- **From a host:** `ConnectPage.ExportModsAsync` exports the CKAN install matching the Join page's KSP folder (else the
+  first); `JoinPage.InstallServerModsAsync` → `CkanPage.LoadForInstallAsync(text, ksp)` → Check.
+
 ## Where it shows up
 
 - **CKAN page (Play → CKAN mods, 1.2.0):** status (LUNA EVO's copy and version, CKAN open?), copies (download latest,

@@ -14,6 +14,11 @@ namespace LunaEvo.MissionControl;
 internal sealed class BrowserPage
 {
     private const int MaxRows = 300;
+    private const int PingRows = 40; // servers pinged at a time: the top of the list as shown, not all of them
+
+    /// <summary>Tests replace this: (host) → average ping in ms, or null if it didn't answer.</summary>
+    internal static Func<string, Task<long?>> Ping { get; set; } = async host =>
+        (await ServerProbe.PingAsync(host, count: 2, timeoutMs: 1000)).AverageMs;
 
     private readonly MainWindow _host;
     private readonly StackPanel _list = new() { Spacing = 2 };
@@ -22,6 +27,9 @@ internal sealed class BrowserPage
     private readonly CheckBox _noPassword = new CheckBox { Content = "No password" }.WithId("browser/noPassword");
     private readonly CheckBox _withPlayers = new CheckBox { Content = "Has players" }.WithId("browser/withPlayers");
     private readonly TextBlock _status = Ui.Text("", "sublabel").WithId("browser/status");
+    private readonly ComboBox _sort = new ComboBox { ItemsSource = new[] { "Most players", "Lowest ping", "Name" }, SelectedIndex = 0, MinWidth = 160 }.WithId("browser/sort");
+    private readonly Dictionary<string, long?> _pings = [];
+    private readonly HashSet<string> _pinging = [];
     private IReadOnlyList<PublicServer> _servers = [];
     private bool _loading;
 
@@ -32,6 +40,7 @@ internal sealed class BrowserPage
         _search.TextChanged += (_, _) => ShowList();
         foreach (var box in new[] { _myVersion, _noPassword, _withPlayers })
             box.IsCheckedChanged += (_, _) => ShowList();
+        _sort.SelectionChanged += (_, _) => ShowList();
         var refresh = Ui.Button("Refresh", "text", "IconRestart").WithId("browser/refresh");
         refresh.Click += async (_, _) => await LoadAsync();
 
@@ -51,7 +60,7 @@ internal sealed class BrowserPage
         body.Children.Add(new StackPanel
         {
             Margin = new Thickness(12, 8, 12, 4), Spacing = 8,
-            Children = { _search, new WrapPanel { Children = { _myVersion, _noPassword, _withPlayers } }, _status },
+            Children = { new WrapPanel { Children = { _search, new Border { Width = 12 }, _sort } }, new WrapPanel { Children = { _myVersion, _noPassword, _withPlayers } }, _status },
         });
         foreach (var box in new[] { _myVersion, _noPassword, _withPlayers })
             box.Margin = new Thickness(0, 0, 16, 0);
@@ -93,6 +102,58 @@ internal sealed class BrowserPage
         ShowList();
     }
 
+    /// <summary>Join: a password server asks for the password first; then the Join page checks the server, ready to launch.</summary>
+    internal async Task JoinAsync(PublicServer server)
+    {
+        string? password = null;
+        if (server.Password &&
+            (password = await Dialogs.PromptAsync(_host, $"Password for {server.Name}", "This server has a password. It's only given to LMP, never kept by LUNA EVO.", "", "Join")) == null)
+            return;
+        _host.Navigate(MainWindow.JoinKey);
+        if (password != null)
+            _host.Join.PasswordBox.Text = password;
+        await _host.Join.OpenServerAsync(server.Host, server.Port, server.Version);
+    }
+
+    /// <summary>Save: adds the server to Join → My servers (address and name only).</summary>
+    internal void Save(PublicServer server)
+    {
+        if (_host.Settings.SavedServers.Any(s => s.Host == server.Host && s.Port == server.Port))
+            return;
+        _host.UpdateSettings(s => s with { SavedServers = [.. s.SavedServers, new SavedServer(server.Name, server.Host, server.Port)] });
+    }
+
+    /// <summary>Pings the servers shown at the top that haven't been pinged yet (8 at a time), then redraws once.</summary>
+    private async Task PingTopAsync(IEnumerable<PublicServer> servers)
+    {
+        var todo = servers.Where(s => !_pings.ContainsKey(s.Address) && _pinging.Add(s.Address)).ToList();
+        if (todo.Count == 0)
+            return;
+        using var gate = new SemaphoreSlim(8);
+        var results = await Task.WhenAll(todo.Select(async s =>
+        {
+            await gate.WaitAsync();
+            try
+            {
+                return (s.Address, Ms: await Ping(s.Host));
+            }
+            catch (Exception e) when (e is System.Net.NetworkInformation.PingException or InvalidOperationException)
+            {
+                return (s.Address, Ms: (long?)null);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }));
+        foreach (var (address, ms) in results)
+        {
+            _pings[address] = ms;
+            _pinging.Remove(address);
+        }
+        ShowList();
+    }
+
     /// <summary>The LMP client version in your KSP (for "Only my LMP version"), as "0.29.2"; null if none.</summary>
     private string? MyVersion()
     {
@@ -111,16 +172,28 @@ internal sealed class BrowserPage
             .Where(s => _noPassword.IsChecked != true || !s.Password)
             .Where(s => _withPlayers.IsChecked != true || s.Players > 0)
             .Where(s => search.Length == 0 || s.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || s.Description.Contains(search, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(s => s.Players).ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            .ToList();
+        shown = (_sort.SelectedIndex switch
+        {
+            1 => shown.OrderBy(s => _pings.GetValueOrDefault(s.Address) ?? long.MaxValue).ThenByDescending(s => s.Players),
+            2 => shown.OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase),
+            _ => shown.OrderByDescending(s => s.Players).ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase),
+        }).ToList();
+        _ = PingTopAsync(shown.Take(PingRows));
         foreach (var server in shown.Take(MaxRows))
         {
             var join = Ui.Button("Join", "text").WithId("browser/join/" + server.Address);
-            join.Click += async (_, _) =>
+            join.Click += async (_, _) => await JoinAsync(server);
+            var saved = _host.Settings.SavedServers.Any(s => s.Host == server.Host && s.Port == server.Port);
+            var save = Ui.Button(saved ? "Saved" : "Save", "text").WithId("browser/save/" + server.Address);
+            save.IsEnabled = !saved;
+            ToolTip.SetTip(save, "Add to Join → My servers");
+            save.Click += (_, _) =>
             {
-                _host.Navigate(MainWindow.JoinKey);
-                await _host.Join.OpenServerAsync(server.Host, server.Port);
+                Save(server);
+                ShowList();
             };
-            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Children = { join } };
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Children = { save, join } };
             if (server.Website != null)
             {
                 var site = Ui.Button(server.WebsiteText ?? "Website", "text").WithId("browser/site/" + server.Address);
@@ -128,7 +201,8 @@ internal sealed class BrowserPage
                 site.Click += (_, _) => Ui.Open(server.Website);
                 buttons.Children.Insert(0, site);
             }
-            var details = $"{server.Players}/{server.MaxPlayers} players · {server.GameMode} · LMP {server.Version}" +
+            var ping = _pings.TryGetValue(server.Address, out var ms) ? ms is { } m ? $" · {m} ms" : " · no ping reply" : "";
+            var details = $"{server.Players}/{server.MaxPlayers} players{ping} · {server.GameMode} · LMP {server.Version}" +
                           $"{(server.Password ? " · password" : "")}{(server.Cheats ? " · cheats" : "")}{(server.Country.Length > 0 ? " · " + server.Country : "")}" +
                           $" · {server.Address}{(server.Description.Length > 0 ? Environment.NewLine + server.Description : "")}";
             _list.Children.Add(Ui.Row(server.Name, details, buttons).WithId("browser/server/" + server.Address));

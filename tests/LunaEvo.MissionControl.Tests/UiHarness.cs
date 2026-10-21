@@ -45,7 +45,10 @@ internal sealed class UiHarness : IDisposable
         CraftsPage.PickImportPath = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
         HomeServer.ApplyStartWithWindows = (_, _) => throw new InvalidOperationException("A test touched the Windows startup list without faking it.");
         CkanPage.StartCkan = _ => throw new InvalidOperationException("A test tried to start CKAN without faking it.");
-        CkanPage.RunCkan = (_, _, _, _) => throw new InvalidOperationException("A test tried to run CKAN without faking it.");
+        CkanPage.CopyText = (_, text) => { Copied.Add(text); return Task.CompletedTask; };
+        BrowserPage.Ping = _ => Task.FromResult<long?>(42); // never ping real addresses from tests
+        JoinPage.PingServer = _ => Task.FromResult(new Core.Join.PingResult(4, 4, 12, 10));
+        CkanPage.RunCkan = (_, _, _, _, _) => throw new InvalidOperationException("A test tried to run CKAN without faking it.");
         CkanPage.PickModList = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
         CkanPage.PickCkanExe = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
         CkanPage.PickExportPath = (_, _) => throw new InvalidOperationException("A test opened a save dialog without faking it.");
@@ -69,6 +72,9 @@ internal sealed class UiHarness : IDisposable
     public string ConfigDirectory { get; }
     public string SettingsPath { get; }
     public List<string> DialogsShown { get; } = [];
+
+    /// <summary>Text the app put on the clipboard (CKAN page → Copy log).</summary>
+    public List<string> Copied { get; } = [];
 
     /// <summary>Windows notifications the app tried to show: (title, message, is an alert).</summary>
     public List<(string Title, string Message, bool Alert)> Notifications { get; } = [];

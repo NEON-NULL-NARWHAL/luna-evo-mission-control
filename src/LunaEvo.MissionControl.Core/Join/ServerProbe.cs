@@ -23,6 +23,12 @@ public sealed record ServerAddress(string Host, int Port = ServerAddress.Default
     /// <summary>IPv6 literals need brackets in URLs and host:port text.</summary>
     public string HostForUri => Host.Contains(':') && !Host.StartsWith('[') ? $"[{Host}]" : Host;
 
+    /// <summary>The LMP version in a pasted LUNA EVO invite ("LMP version: 0.29.2-compiled ..." → 0.29.2), or null.</summary>
+    public static Version? InviteVersion(string? text) =>
+        text != null && System.Text.RegularExpressions.Regex.Match(text, @"LMP version:\s*(\d+\.\d+(\.\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase) is { Success: true } m
+            ? Version.Parse(m.Groups[1].Value)
+            : null;
+
     /// <summary>
     /// Reads "host", "host:port", "[ipv6]:port", "1.2.3.4" or "lmp://host:port". Null if it isn't a usable address.
     /// </summary>

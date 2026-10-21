@@ -49,14 +49,40 @@ internal sealed class ConnectPage
         addressBody.Children.Add(_addresses);
         var (status, statusBody, _) = Ui.Group("Can they reach it?");
         statusBody.Children.Add(_status);
+        var (mods, modsBody, _) = Ui.Group("Mods for your players");
+        var exportMods = Ui.Button("Export my mod list...", "text").WithId("connect/exportMods");
+        exportMods.Click += async (_, _) => await ExportModsAsync();
+        modsBody.Children.Add(Ui.Row("Send your mod list with the invite",
+            "Saves the mods you picked in CKAN for your KSP install as a .ckan file. Friends open it with Join → Install the " +
+            "server's mods, and CKAN installs the same mods for them.", exportMods));
+        modsBody.Children.Add(new Border { Padding = new Thickness(12, 0, 12, 12), Child = _modsResult });
+        _modsResult.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
 
         View = new ScrollViewer
         {
-            Content = new StackPanel { Margin = new Thickness(28, 20, 28, 28), Spacing = 16, Children = { header, addresses, status } },
+            Content = new StackPanel { Margin = new Thickness(28, 20, 28, 28), Spacing = 16, Children = { header, addresses, status, mods } },
         };
     }
 
     public Control View { get; }
+
+    private readonly TextBlock _modsResult = Ui.Text("", "sublabel").WithId("connect/modsResult");
+
+    /// <summary>Export my mod list: the CKAN list of your own KSP (the Join page's folder, else your first CKAN install).</summary>
+    internal async Task ExportModsAsync()
+    {
+        var instances = Core.Setup.CkanTools.Instances();
+        var mine = _host.Settings.KspFolder is { } k
+            ? instances.FirstOrDefault(i => string.Equals(Path.GetFullPath(i.Path).TrimEnd('\\'), Path.GetFullPath(k).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+            : null;
+        if ((mine ?? instances.FirstOrDefault()) is not { } instance)
+        {
+            _modsResult.Text = "No CKAN install found. Open CKAN once with your KSP, or share mods some other way.";
+            return;
+        }
+        await _host.Ckan.ExportAsync(instance);
+        _modsResult.Text = _host.Ckan.Result;
+    }
 
     public void Refresh()
     {

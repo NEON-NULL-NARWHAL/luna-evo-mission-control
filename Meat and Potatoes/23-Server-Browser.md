@@ -20,7 +20,14 @@ Parsing is defensive like every other network read: types checked, text cut to 2
 characters removed, only IP literals accepted as endpoints, website links only if http(s).
 
 `BrowserPage` loads on first visit, keeps the list until Refresh, filters by your LMP client version (from your KSP's
-`LmpClient.dll`) and sorts by players. **Join** calls `JoinPage.OpenServerAsync(host, port)`.
+`LmpClient.dll`) and sorts by players, ping (`BrowserPage.Ping`, the top 40 shown, 8 at a time, cached) or name.
+**Save** adds a `SavedServer`; **Join** (`JoinAsync`) prompts for a password server's password, then calls
+`JoinPage.OpenServerAsync(host, port, version)`.
+
+**LMP version on Join (2.1.0):** LMP's live info has no version, so `JoinPage` takes it from the browser
+(`_pendingVersion`) or a pasted invite (`ServerAddress.InviteVersion`, the "LMP version:" line) and shows
+`join/versionMismatch` with **Install LMP x.y.z** (`LmpClientInstaller.DownloadAndInstallAsync`, verified). Major,
+minor and build must match. Tests fake `JoinPage.PingServer` and `BrowserPage.Ping`, so no real address is pinged.
 
 ## Simple mode and Essentials
 

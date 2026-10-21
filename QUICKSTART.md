@@ -97,8 +97,9 @@ You don't need to host anything.
 1. Open **Play → Server browser**.<br>
    ↳ Asks LMP's own master servers (the list LMP shows in game) for every public server. **Only my LMP version** reads
    the LMP client in your KSP and hides servers you can't join.
-2. Press **Join** on one, then **Launch KSP and join**.<br>
-   ↳ **Join** fills the server into the Join page and checks it (below).
+2. Press **Join** on one (it asks for the password if the server has one), then **Launch KSP and join**.<br>
+   ↳ **Join** fills the server into the Join page and checks it (below). The list shows ping times for the top 40
+   servers; sort by them, and **Save** keeps a server in My servers.
 
 **A friend's server**
 1. Choose **Join a friend's server** (or **Play → Join a server**).
@@ -106,13 +107,17 @@ You don't need to host anything.
    ↳ Looks the address up, pings it 4 times and asks the server's LMP website for live info: name, mode, players
    and vessels appear if the host shares them. It sends nothing else.
 3. Check your KSP folder and that your LMP version matches the server's.<br>
-   ↳ Your Steam KSP is found by itself; your CKAN installs are one click away.
+   ↳ Your Steam KSP is found by itself; your CKAN installs are one click away. If the server's version is known (the
+   browser and invites say it) and yours differs, **Install LMP x.y.z** appears: it downloads LMP's official client
+   from GitHub, checks it, keeps your LMP server list and backs up the old version.
 4. Type the password if there is one and press **Launch KSP and join**.<br>
    ↳ Starts KSP the way CKAN's Play button does. On the default port with no password, LMP connects by itself;
    otherwise the server (and password) is put at the top of LMP's own server list, so you click it once. That list
    is backed up first and never changed while KSP runs. LUNA EVO doesn't keep your password.
 
 💡 **Tips**
+- Need the server's mods? **Install the server's mods...** (next to Launch) opens the `.ckan` list your host sent and
+  takes you to the CKAN page, already checked for your KSP.
 - **Save to my servers** remembers the address (never the password).
 - **Check my mods** (Join page) tells you what LMP would refuse before you connect.
 
@@ -131,13 +136,17 @@ Full guide: [Find a public server](README.md#find-a-public-server-server-browser
 4. Pick your KSP install and press **Check with CKAN**.<br>
    ↳ A dry run: CKAN works out the whole list and dependencies, then LUNA EVO answers "no" when CKAN asks to
    continue. Nothing is downloaded or changed. It tells you whether everything can be installed, or which mod CKAN
-   doesn't know.
+   doesn't know. If a mod needs "one of several" others (Parallax needs a KSPBurst), LUNA EVO asks you which, with
+   CKAN's own options, and adds your pick to the list.
 5. Press **Install with CKAN** and confirm.<br>
-   ↳ Runs `ckan update`, then `ckan install` with those mod names for that KSP install; CKAN's messages show as it
+   ↳ Runs `ckan update`, the same check (so any "one of several" choice is made first: CKAN's command line would
+   silently leave it out), then `ckan install` with those mod names for that KSP install; CKAN's messages show as it
    goes. If something fails, CKAN undoes that install and the page says why.
 
 💡 **Tips**
-- Hosting? **Export mod list...** on your own install writes a `.ckan` file for friends: just the mods you picked,
+- **Cancel** stops CKAN while it runs (an install asks first: it may be part-way). **Copy log** copies CKAN's messages.
+- Each install shows the other KSP versions CKAN accepts mods for there (set in CKAN's "Compatible game versions").
+- Hosting? **Connect → Export my mod list...** (or **Export mod list...** here) writes a `.ckan` file for friends: just the mods you picked,
   without your Windows user name (which CKAN's own file contains). **Exact versions** gives everyone the same versions.
 - **Use as mod list** copies one install's mods into the box, to set up a second KSP install the same way.
 
@@ -180,7 +189,8 @@ Full guide: [Keep it running](README.md#keep-it-running)
 | Problem | Try |
 |---|---|
 | Friends can't connect | **Connect** shows what's blocking them; press **Allow through firewall**. Same LMP version on both sides? |
-| LMP says the versions don't match | Install the server's LMP version: App settings → Downloads. |
+| LMP says the versions don't match | Check the server on the Join page: **Install LMP x.y.z** appears when the version is known. Or App settings → Downloads. |
+| CKAN asks "Which ...?" | A mod needs one of several others; pick one (the first is usually the standard choice). |
 | My changes did nothing | **Save**, then restart the server: LMP reads its config only at start. |
 | LMP refuses my mods | **Join → Check my mods** lists exactly what and why. |
 | CKAN won't install a list | **Check with CKAN** says which mod it doesn't know; try turning off **Exact versions**. |

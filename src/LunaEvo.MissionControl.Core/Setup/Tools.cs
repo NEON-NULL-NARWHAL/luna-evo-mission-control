@@ -169,6 +169,15 @@ public static class LmpClientInstaller
         release.Assets.FirstOrDefault(a => a.Name.Equals("LunaMultiplayer-Client-Release.zip", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Installs the client. Returns the backup folder of the previous version, or null if there wasn't one.</summary>
+    /// <summary>Downloads an LMP release's client (GitHub only, SHA-256 checked) and installs it into this KSP. Returns the old version's backup, if any.</summary>
+    public static async Task<string?> DownloadAndInstallAsync(HttpClient http, LmpRelease release, string kspFolder, IProgress<double>? progress = null)
+    {
+        if (ClientAsset(release) is not { Sha256: { } sha } asset)
+            throw new DownloadVerificationException($"LMP {release.Tag} has no verifiable client download.");
+        var zip = await new ServerInstaller(http).DownloadAsync(asset, progress, allowUnverified: false);
+        return await Task.Run(() => Install(zip, kspFolder, sha));
+    }
+
     public static string? Install(string zipPath, string kspFolder, string expectedSha256)
     {
         if (!Join.KspLauncher.IsKspFolder(kspFolder))
@@ -429,6 +438,33 @@ public static partial class CkanModList
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             return true;
+        }
+    }
+
+    /// <summary>True for a CKAN mod identifier (letters, digits, "-", "_"; never starting with "-").</summary>
+    public static bool IsIdentifier(string name) => Identifier().IsMatch(name);
+
+    /// <summary>
+    /// The KSP versions CKAN accepts mods for in this install, besides the game's own (CKAN/compatible_ksp_versions.json,
+    /// set in CKAN's "Compatible game versions"). CKAN's command line honours them too, so installs from LUNA EVO match
+    /// what CKAN's window would do. Empty if there's no such file.
+    /// </summary>
+    public static IReadOnlyList<string> CompatibleVersions(string kspFolder)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(kspFolder, "CKAN", "compatible_ksp_versions.json");
+            if (!File.Exists(path) || new FileInfo(path).Length > 64 * 1024)
+                return [];
+            using var json = JsonDocument.Parse(File.ReadAllText(path));
+            return json.RootElement.TryGetProperty("Versions", out var list) && list.ValueKind == JsonValueKind.Array
+                ? list.EnumerateArray().Where(v => v.ValueKind == JsonValueKind.String).Select(v => v.GetString()!)
+                    .Where(v => v.Length < 20 && VersionText().IsMatch(v)).Take(30).ToList()
+                : [];
+        }
+        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return [];
         }
     }
 
