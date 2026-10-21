@@ -31,6 +31,12 @@ install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, 
 damaged (the current Universe must survive), DTDs refused, Windows device names as profile names, weak-password
 warnings, and a hand-edited settings file full of nulls.
 
+2.1.1 (audit 10) added `FuzzTests` (every parser of outside text, 1,500 seeded mutations each; a parser may only throw
+what it documents, and the seed is fixed so a failure reproduces), `CodeHygieneTests` (no `/// <summary>` left above
+another one: the sign of code inserted between a member and its comment) and `SupportCoverageTests` (`ErrorLog`,
+`ServerProcess.Find`). Coverage: `dotnet test tests/LunaEvo.MissionControl.Core.Tests --collect:"XPlat Code Coverage"`
+(Core was 85%).
+
 2.1.0 added `PlayTogetherTests` (UI: CKAN provider choices with real ckan.exe output, Cancel, Copy log, Join →
 install the server's mods, the LMP version check from the browser and an invite, browser ping/sort/save/password,
 Connect's mod list export). `UiHarness` fakes `CkanPage.CopyText` (`ui.Copied`), `BrowserPage.Ping` and

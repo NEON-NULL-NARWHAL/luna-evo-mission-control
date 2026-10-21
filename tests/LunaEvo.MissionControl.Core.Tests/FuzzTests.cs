@@ -1,0 +1,166 @@
+// LUNA EVO · LunaEvo.MissionControl.Core.Tests/FuzzTests.cs
+// [Test] Every parser that reads text from outside (LMP logs and website JSON, master servers, CKAN files and output,
+//        KSP .cfg files, craft and vessel files, invites, settings comments) fed thousands of mutated and random inputs.
+//        A parser may only fail the way it documents; anything else would be a crash in the app.
+// Used by: dotnet test
+// Guide:   Meat and Potatoes/05-Tests.md
+
+using System.Text;
+using System.Text.Json;
+using LunaEvo.MissionControl.Core.Join;
+using LunaEvo.MissionControl.Core.Live;
+using LunaEvo.MissionControl.Core.Mods;
+using LunaEvo.MissionControl.Core.Ops;
+using LunaEvo.MissionControl.Core.Schema;
+using LunaEvo.MissionControl.Core.Server;
+using LunaEvo.MissionControl.Core.Setup;
+
+namespace LunaEvo.MissionControl.Core.Tests;
+
+public class FuzzTests
+{
+    private const int Rounds = 1500;
+    private static readonly string[] Nasty = ["\0", "\r", "\n", "\t", "{", "}", "[", "]", "\"", "\\", "=", ":", ",", "(", ")", "//", "\u202e", "😀", "\uffff", "\ud800", "%", "-", "..", "\u0007"];
+
+    /// <summary>Feeds mutations of the samples (and pure noise) to <paramref name="parse"/>; only the listed exception types may escape.</summary>
+    private static void Fuzz(string[] samples, Action<string> parse, params Type[] allowed)
+    {
+        var random = new Random(4242); // fixed: a failure always reproduces
+        for (var i = 0; i < Rounds; i++)
+        {
+            var input = i % 10 == 0 ? Noise(random) : Mutate(samples[random.Next(samples.Length)], random);
+            try
+            {
+                parse(input);
+            }
+            catch (Exception e) when (allowed.Any(t => t.IsInstanceOfType(e)))
+            {
+                // Documented failure for bad input.
+            }
+            catch (Exception e)
+            {
+                Assert.Fail($"{e.GetType().Name} for input #{i} ({input.Length} chars): {e.Message}\n---\n{(input.Length > 300 ? input[..300] + "..." : input)}");
+            }
+        }
+    }
+
+    private static string Mutate(string sample, Random random)
+    {
+        var text = new StringBuilder(sample);
+        var edits = random.Next(1, 8);
+        for (var e = 0; e < edits && text.Length > 0; e++)
+        {
+            var at = random.Next(text.Length);
+            switch (random.Next(7))
+            {
+                case 0: text.Remove(at, Math.Min(random.Next(1, 20), text.Length - at)); break;
+                case 1: text.Insert(at, Nasty[random.Next(Nasty.Length)]); break;
+                case 2: text[at] = (char)random.Next(0, 0x2FF); break;
+                case 3: text.Length = at; break; // truncated
+                case 4: text.Insert(at, text.ToString(at, Math.Min(50, text.Length - at)), random.Next(1, 40)); break; // repeated
+                case 5: text.Insert(at, new string('[', random.Next(1, 300))); break; // deep nesting
+                default: text.Insert(at, random.Next().ToString()); break;
+            }
+        }
+        return text.ToString();
+    }
+
+    private static string Noise(Random random)
+    {
+        var chars = new char[random.Next(0, 400)];
+        for (var i = 0; i < chars.Length; i++)
+            chars[i] = random.Next(4) == 0 ? Nasty[random.Next(Nasty.Length)][0] : (char)random.Next(1, 0x7F);
+        return new string(chars);
+    }
+
+    /// <summary>Text that is JSON is parsed, then handed to the reader; text that isn't is skipped (JsonDocument's own error).</summary>
+    private static Action<string> AsJson(Action<JsonElement> read) => text =>
+    {
+        JsonDocument json;
+        try
+        {
+            json = JsonDocument.Parse(text);
+        }
+        catch (Exception e) when (e is JsonException or ArgumentException) // ArgumentException: a lone surrogate, not JSON at all
+        {
+            return;
+        }
+        using (json)
+            read(json.RootElement);
+    };
+
+    // One throwaway server folder for the tracker (its players.json is written as it goes).
+    private static readonly string Tracker = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "LunaEvoTests", "fuzz-" + Guid.NewGuid().ToString("N"))).FullName;
+
+    [Fact]
+    public void Lmp_log_lines() => Fuzz(
+        ["[12:34:56][Info]: Client Jeb (abc123) handshake successful, LMP Version: 0.29.2, KSP Version: 1.12.5",
+         "[00:00:01][Warning]: Bill: Tried to run an admin command with an invalid password", "plain text line", "[99:99:99][Nope]: x"],
+        line =>
+        {
+            var parsed = LogLine.Parse(line);
+            var tracker = new PlayerTracker(Tracker);
+            tracker.Observe(parsed);
+        });
+
+    [Fact]
+    public void Lmp_website_json() => Fuzz(
+        [File.ReadAllText(Path.Combine(TestPaths.Fixtures, "Web", "serverinfo.json"))],
+        AsJson(root => ServerInfoClient.Parse(root)), typeof(InvalidDataException), typeof(JsonException));
+
+    [Fact]
+    public void Master_server_json() => Fuzz([TestData.MasterJson], AsJson(root => ServerBrowser.Parse(root)));
+
+    [Fact]
+    public void Ckan_mod_lists_and_output() => Fuzz(
+        ["""{ "spec_version": "v1.6", "depends": [ { "name": "MechJeb2", "version": "2.14" }, { "any_of": [ { "name": "A" } ] } ], "download": "x" }""",
+         "MechJeb2\nKerbalEngineerRedux 1.1\n# comment\n",
+         "Parallax Continued requires KSPBurst, which can be provided by multiple mods.\n1) KSPBurst (KSPBurst Compiler)\n2) KSPBurst-Lite (Lite)",
+         "Unhandled Exception: CKAN.ModuleNotFoundKraken: Module not found: X\n   at CKAN.Main()"],
+        text =>
+        {
+            var (mods, _) = CkanModList.Parse(text);
+            CkanModList.Export(mods, text.Length > 40 ? text[..40] : text);
+            CkanModList.InstallCommands("C:\\KSP", mods);
+            var lines = text.Split('\n');
+            CkanOutput.Check(lines, 1);
+            CkanOutput.Problem(lines, 127);
+            CkanOutput.Choice(lines);
+        });
+
+    [Fact]
+    public void Ksp_cfg_files() => Fuzz(
+        ["PART\n{\n name = some.part\n MODULE\n {\n  name = ModuleEngines\n }\n}\n", "RESOURCE_DEFINITION { name = LiquidFuel }", "@PART[x]:NEEDS[y] { %a = b }"],
+        text => KspConfigParser.Parse(text));
+
+    [Fact]
+    public void Craft_and_vessel_files() => Fuzz(
+        ["ship = Kerbal X\nversion = 1.12.5\ntype = VAB\nPART\n{\n part = mk1pod.v2_4294\n}\n",
+         "pid = 1\nname = Mun Base\ntype = Base\nsit = LANDED\nORBIT\n{\n REF = 2\n}\nPART\n{\n name = x\n crew = Jeb\n}\n"],
+        text =>
+        {
+            try
+            {
+                CraftShare.Parse(text, "x.craft", "test");
+            }
+            catch (InvalidDataException)
+            {
+                // "Not a craft file" is the documented answer.
+            }
+            UniverseVessels.Parse(text, "v.txt");
+        });
+
+    [Fact]
+    public void Invites_addresses_versions_and_comments() => Fuzz(
+        ["Join my KSP server \"X\"!\nAddress: 192.168.1.20:8810\nLMP version: 0.29.2-compiled\n", "lmp://[2001:db8::1]:8800/", "kerbin.example.com:8800",
+         "Max 30 char. Min value = 5000. Values: Sandbox, Career, Science", "0.29.2-compiled", "60 Join our Discord!\n120 Back up your saves"],
+        text =>
+        {
+            ServerAddress.Parse(text);
+            ServerAddress.InviteVersion(text);
+            ServerBrowser.Endpoint(text);
+            CommentRules.Parse(text);
+            LmpVersion.Parse(text);
+            Announcements.Parse(text);
+        });
+}

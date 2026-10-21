@@ -283,4 +283,12 @@ public class ToolsTests
         Assert.Equal(new Version(0, 29, 2), Join.ServerAddress.InviteVersion("Join my KSP server!\nAddress: 1.2.3.4\nLMP version: 0.29.2-compiled (you need the same LMP client mod)\n"));
         Assert.Null(Join.ServerAddress.InviteVersion("192.168.1.20"));
     }
+    [Fact]
+    public void A_pasted_line_of_only_commas_is_skipped()
+    {
+        // Found by FuzzTests: it threw IndexOutOfRangeException, so Check and Install silently did nothing.
+        var (mods, problems) = CkanModList.Parse("MechJeb2\n,\n , ,\nScatterer");
+        Assert.Equal(["MechJeb2", "Scatterer"], mods.Select(m => m.Identifier));
+        Assert.Empty(problems);
+    }
 }

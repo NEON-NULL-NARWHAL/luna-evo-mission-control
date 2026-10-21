@@ -168,7 +168,6 @@ public static class LmpClientInstaller
     public static LmpAsset? ClientAsset(LmpRelease release) =>
         release.Assets.FirstOrDefault(a => a.Name.Equals("LunaMultiplayer-Client-Release.zip", StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Installs the client. Returns the backup folder of the previous version, or null if there wasn't one.</summary>
     /// <summary>Downloads an LMP release's client (GitHub only, SHA-256 checked) and installs it into this KSP. Returns the old version's backup, if any.</summary>
     public static async Task<string?> DownloadAndInstallAsync(HttpClient http, LmpRelease release, string kspFolder, IProgress<double>? progress = null)
     {
@@ -178,6 +177,7 @@ public static class LmpClientInstaller
         return await Task.Run(() => Install(zip, kspFolder, sha));
     }
 
+    /// <summary>Installs the client. Returns the backup folder of the previous version, or null if there wasn't one.</summary>
     public static string? Install(string zipPath, string kspFolder, string expectedSha256)
     {
         if (!Join.KspLauncher.IsKspFolder(kspFolder))
@@ -301,7 +301,7 @@ public static partial class CkanModList
                 if (json.RootElement.TryGetProperty("download", out _))
                     problems.Add("This .ckan file has its own download link; it's ignored. Only its list of mods is used, from CKAN's catalog.");
             }
-            catch (JsonException e)
+            catch (Exception e) when (e is JsonException or ArgumentException) // ArgumentException: broken Unicode in pasted text
             {
                 problems.Add("That isn't a valid .ckan file: " + e.Message);
             }
@@ -313,7 +313,9 @@ public static partial class CkanModList
                 var line = raw.Trim();
                 if (line.Length == 0 || line.StartsWith('#'))
                     continue;
-                Add(line.Split([' ', '\t', ','], StringSplitOptions.RemoveEmptyEntries)[0], null, problems, mods);
+                // A line of only commas or spaces has no name in it (and no first word to take).
+                if (line.Split([' ', '\t', ','], StringSplitOptions.RemoveEmptyEntries) is [var first, ..])
+                    Add(first, null, problems, mods);
             }
         }
         var unique = mods.DistinctBy(m => m.Identifier, StringComparer.OrdinalIgnoreCase).ToList();

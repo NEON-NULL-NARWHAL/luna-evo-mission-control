@@ -131,6 +131,10 @@ public sealed class ServerInstaller(HttpClient http)
             .Select(e => (Entry: e, Relative: StripRoot(e.FullName)))
             .Where(x => x.Relative.Length > 0 && !x.Entry.FullName.EndsWith('/') && !IsProtected(x.Relative))
             .ToList();
+        // Every path is checked before anything is written ("zip slip"), so a bad entry can't leave a half-updated server.
+        foreach (var (entry, relative) in entries)
+            if (!Path.GetFullPath(Path.Combine(serverDirectory, relative)).StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Unsafe path in the zip: {entry.FullName}");
 
         string? backup = null;
         var existing = entries.Select(x => Path.Combine(serverDirectory, x.Relative)).Where(File.Exists).ToList();
@@ -144,13 +148,22 @@ public sealed class ServerInstaller(HttpClient http)
                 archive.CreateEntryFromFile(file, Path.GetRelativePath(serverDirectory, file));
         }
 
+        long written = 0;
+        var buffer = new byte[81920];
         foreach (var (entry, relative) in entries)
         {
             var target = Path.GetFullPath(Path.Combine(serverDirectory, relative));
-            if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException($"Unsafe path in the zip: {entry.FullName}"); // "zip slip"
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            entry.ExtractToFile(target, overwrite: true);
+            // Counted as it's written, not from the sizes the zip claims (which whoever made it chooses).
+            using var source = entry.Open();
+            using var output = File.Create(target);
+            int read;
+            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                if ((written += read) > MaxUnpackedBytes)
+                    throw new InvalidDataException("That zip unpacks to far more than an LMP server, so unpacking stopped.");
+                output.Write(buffer, 0, read);
+            }
         }
         return new InstallResult(entries.Count, backup);
     }

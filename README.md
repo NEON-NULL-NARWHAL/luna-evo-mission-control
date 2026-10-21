@@ -12,7 +12,7 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 2.1.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 2.1.1** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[⚡ Quickstart](QUICKSTART.md)** · **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Find and join](#join-a-friends-server)** · **[Mods with CKAN](#using-the-ckan-page)** · **[No open ports](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
@@ -23,7 +23,7 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 > Mission Control and keeps your settings.
 
 > [!NOTE]
-> **Security:** every download is checked against GitHub's SHA-256. All nine security audits, their fixes, and what each
+> **Security:** every download is checked against GitHub's SHA-256. All ten security audits, their fixes, and what each
 > release was tested against are in [`SECURITY.md`](SECURITY.md).
 > **Written with AI:** the code, tests and docs were written by Claude (Anthropic's AI model), directed and reviewed by
 > the project owner. [Who did what, and how it was checked.](#how-this-app-was-made-ai-disclosure)
@@ -400,7 +400,7 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 291 tests: core logic and the real UI, headless; no network, no real server
+dotnet test                      # 303 tests: core logic and the real UI, headless; no network, no real server
 .\publish.ps1                    # -> dist\LunaEvo-MissionControl-<version>-win-x64\LunaEvo.MissionControl.exe
 .\release.ps1                    # tests, build, and a GitHub release with the exe: every copy then offers the update
 ```
@@ -424,7 +424,7 @@ luna-evo-mission-control/
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, CKAN
 │   └── LunaEvo.MissionControl/        🖥️ the Avalonia desktop app
 ├── tests/
-│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (192)
+│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (204)
 │   ├── LunaEvo.MissionControl.Tests/        🧪 UI tests: the real window, driven headlessly (99)
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
@@ -448,7 +448,7 @@ We want to be completely clear about this.
 |---|---|
 | Set the goals, release by release: a GUI config manager (0.1), then server control and theming, the setup wizard, players, mod import and automation (0.3), the Join page (0.4), player history, alerts and the mod check (0.5), self-update (0.6), crafts, home server mode and vessel cleanup (0.7 to 1.0), CKAN and the LMP client (1.1 to 1.3), the server browser and simple mode (1.4), and the rename to Mission Control (2.0), with a security audit at each milestone. Tested it on the real server and game, and found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API, the master servers and mod checks really work. |
 | Made the decisions: desktop app, Avalonia, .NET 10, GPL-3.0 (the repo started private and is now public), the look (inspired by [NOMM](https://github.com/Combat787/NOMM)), the name. | Wrote all of the code: the C#, XAML and build scripts. |
-| Supplied the real server, its configs, the requirements and lists of what to fix. | Wrote all 291 automated tests, a fake LMP server, and fakes for every network call. |
+| Supplied the real server, its configs, the requirements and lists of what to fix. | Wrote all 303 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP and CKAN (below), took the screenshots, and wrote these docs. |
 
 - **Model and tool:** Claude Opus 5.5 by Anthropic, working in Claude Code (an AI coding agent that can read files, run commands and build/test the code) inside VS Code.
@@ -459,10 +459,11 @@ We want to be completely clear about this.
 
 AI-written code can look right and still be wrong, so nothing here is trusted on looks:
 
-- **291 automated tests**, run on GitHub on every push: byte-for-byte file round trips; every validation rule;
+- **303 automated tests**, run on GitHub on every push: byte-for-byte file round trips; every validation rule;
   generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install and
   update from zips (refusing to overwrite your config or escape the folder); a fake server that really starts, takes
-  commands, crashes and stops; and UI tests that click through **every tab and control**.
+  commands, crashes and stops; UI tests that click through **every tab and control**; and a fuzz test that throws
+  thousands of mangled inputs at every parser of outside data.
 - **Against the real thing:**
   - The wizard downloaded the real LMP 0.29.2 from GitHub, and the real server started on the generated config **with no errors**.
   - The Players page read the real server's live JSON; a Universe backup was taken while it ran, and it stopped cleanly.

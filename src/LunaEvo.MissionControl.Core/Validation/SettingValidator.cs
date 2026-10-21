@@ -15,6 +15,18 @@ public sealed record Issue(string FileName, string? Setting, Severity Severity, 
 
 public static class SettingValidator
 {
+    /// <summary>The range a whole-number setting's .NET type can hold (null for Int64, which long.TryParse already bounds).</summary>
+    private static (long Low, long High)? TypeRange(string clrTypeName) => clrTypeName switch
+    {
+        "Byte" => (byte.MinValue, byte.MaxValue),
+        "SByte" => (sbyte.MinValue, sbyte.MaxValue),
+        "Int16" => (short.MinValue, short.MaxValue),
+        "UInt16" => (ushort.MinValue, ushort.MaxValue),
+        "Int32" => (int.MinValue, int.MaxValue),
+        "UInt32" => (uint.MinValue, uint.MaxValue),
+        _ => null,
+    };
+
     /// <summary>Checks one value against its type and the limits found in its comment. Returns null when valid.</summary>
     public static string? Validate(SettingDefinition setting, string value)
     {
@@ -26,6 +38,9 @@ public static class SettingValidator
             case SettingKind.Integer:
                 if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var whole))
                     return "Must be a whole number.";
+                // The setting's own type: LMP can't read back an Int32 setting saved as 3000000000.
+                if (TypeRange(setting.ClrTypeName) is var (low, high) && (whole < low || whole > high))
+                    return $"Must be between {low} and {high}.";
                 return CheckRange(setting, whole);
 
             case SettingKind.Decimal:

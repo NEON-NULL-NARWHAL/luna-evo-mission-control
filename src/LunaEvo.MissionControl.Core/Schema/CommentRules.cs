@@ -21,7 +21,7 @@ public static partial class CommentRules
         int? maxLength = null;
 
         var m = MaxCharsRegex().Match(comment);
-        if (m.Success) maxLength = int.Parse(m.Groups["n"].Value, CultureInfo.InvariantCulture);
+        if (m.Success && int.TryParse(m.Groups["n"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var n)) maxLength = n;
 
         m = MinValueRegex().Match(comment);
         if (m.Success) min = ParseNumber(m.Groups["n"].Value);
@@ -39,7 +39,8 @@ public static partial class CommentRules
         return (min, max, maxLength);
     }
 
-    private static decimal ParseNumber(string text) => decimal.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+    // Null for a number too big for decimal: a limit nobody could reach is no limit.
+    private static decimal? ParseNumber(string text) => decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
 
     // "Max 30 char", "Max 30 chars", "255 chars max"
     [GeneratedRegex(@"(?:max\s+(?<n>\d+)\s+chars?\b|(?<n>\d+)\s+chars?\s+max)", RegexOptions.IgnoreCase)]

@@ -25,8 +25,9 @@ public sealed record ServerAddress(string Host, int Port = ServerAddress.Default
 
     /// <summary>The LMP version in a pasted LUNA EVO invite ("LMP version: 0.29.2-compiled ..." → 0.29.2), or null.</summary>
     public static Version? InviteVersion(string? text) =>
-        text != null && System.Text.RegularExpressions.Regex.Match(text, @"LMP version:\s*(\d+\.\d+(\.\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase) is { Success: true } m
-            ? Version.Parse(m.Groups[1].Value)
+        text != null && System.Text.RegularExpressions.Regex.Match(text, @"LMP version:\s*(\d+\.\d+(\.\d+)?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase) is { Success: true } m &&
+        Version.TryParse(m.Groups[1].Value, out var version) // a number too big for a version is no version
+            ? version
             : null;
 
     /// <summary>

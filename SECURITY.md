@@ -2,13 +2,14 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the nine security audits (0.4.0 to 2.0.0) found and changed, newest first, and which real
+what the ten security audits (0.4.0 to 2.1.1) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
 
-Please **don't** open a public issue for a security problem. Use GitHub's **Security → Report a vulnerability** on
-this repository, or message a maintainer directly. Include what you did, what happened, and the LUNA EVO version
+Please **don't** open a public issue for a security problem. Message a maintainer privately on GitHub
+([@NEON-NULL-NARWHAL](https://github.com/NEON-NULL-NARWHAL)). (GitHub's private **Report a vulnerability** form isn't
+switched on for this repository yet; see audit 10, J8.) Include what you did, what happened, and the LUNA EVO version
 (LUNA EVO App settings → About). We'll reply as soon as we can. This is a two-person hobby project, so there's no fixed
 response time.
 
@@ -45,6 +46,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.1.1 | | **Audit 10** (J1-J9) | 2.1.0's features against live services (LMP client from GitHub into a sandbox KSP, browser pings, CKAN choices); a 3-minute soak; 10,500 fuzzed parser inputs; firewall rule quoting against the real netsh | 303 |
 | 2.1.0 | Install the server's mods, LMP version helper, browser pings, CKAN provider choices, Cancel | - | Real ckan.exe 1.36.4: headless installs skip "which provider" questions (found and fixed); the new choice flow dry-ran Parallax with 4 choices on a clean KSP folder | 291 |
 | 2.0.1 | GitHub repository renamed to `luna-evo-mission-control` | - | Old API and download URLs redirect (checked live, including with the updater built with the old name) | 282 |
 | 2.0.0 | Renamed to LUNA EVO Mission Control (exe, settings folder, startup entry; old copies still update) | **Audit 9** (I1-I8) | Old-name update path and settings migration tested; the published exe started from the demo copy | 282 |
@@ -67,6 +69,44 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 10 (2.1.1, October 2026)
+
+The deep dive planned in 2.0: line-by-line reading of what earlier audits hadn't read (player tracking, the firewall
+commands, the server and LMP client installers, the self-update swap), every background event checked for UI-thread
+use, a fuzz test of every parser that reads outside text, a 3-minute soak with the fake server, code coverage, and a
+full security check of the repository, its history and the published exe. 2.1.0's new features were also run against
+the real services.
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| J1 | Medium | **A whole number too big for the setting's own type passed validation** (3000000000 for an Int32 like MaxPlayers). LMP can't read such a file, and then runs that whole file on its defaults, which for General means no password. | Each whole number must fit its setting's .NET type (byte, short, int, uint...). |
+| J2 | Low | **A pasted mod list with a line of only commas or spaces** made the parser throw, so Check and Install silently did nothing. Found by the fuzz test. | Such lines are skipped. |
+| J3 | Low | **Broken Unicode in pasted mod-list text** threw an error the parser didn't catch. Found by the fuzz test. | Reported as "not a valid .ckan file". |
+| J4 | Low | **Huge numbers** in an invite's "LMP version" line or a setting description's limits ("Max 99999999999 char") threw OverflowException. Found by the fuzz test. | Read with non-throwing parses; an impossible number is no version or no limit. |
+| J5 | Low | **players.json was rewritten for every online player every 5 seconds** (each website poll), for days on a home server. Ban reasons and clients' version strings were stored at any length. | "Last seen" alone is written at most once a minute; real changes still at once. Text is capped. |
+| J6 | Low | **The LMP server installer checked for unsafe paths while extracting**, so a bad entry could leave a half-updated server, and **its size limit trusted the sizes the zip claims**. (Downloads are SHA-256 checked, so this needs an unverified old release you agreed to.) | Every path is checked before anything is written; the bytes actually written are counted. |
+| J7 | Low | **A netsh that didn't answer within 5 s** made the firewall-rule check throw. | Treated as "don't know". |
+| J8 | Low | **The repository's GitHub security features were off**: secret scanning, push protection, Dependabot alerts and private vulnerability reporting, so "Report a vulnerability" (below) wasn't actually there. | Needs the owner's OK to switch on (they're free for public repos). Until then, report privately by messaging a maintainer. |
+| J9 | Info | The Core tests use **xunit 2.9.3, marked legacy** (the UI tests are on xunit v3). Test-only. | Suggested: move them to xunit v3. |
+
+Checked and fine: every background event (server output, state, exit, player events) reaches the UI through the
+dispatcher; the self-update swap (SHA-256 checked twice, a Windows program, rename with rollback); the firewall rule
+name's quoting, against the real netsh; the LMP client installer (staging folder, checksum required, Harmony never
+replaced). The soak (351 commands, page switches and polls over 3 minutes) ended with 427 handles and 17 threads
+against 431 and 21 after warm-up. Core code coverage is 85%; what's left is mostly code that drives Windows itself
+(winget, netsh, the Ctrl+C helper). No vulnerable NuGet packages; nothing personal in the git history, the tracked
+files or the published exe; release checksums match the local build; the CI token is read-only.
+
+2.1.0 checked for real: **Install LMP 0.29.2** downloaded LMP's client from GitHub, verified it and installed it into a
+sandbox KSP; the browser pinged live public servers (363 listed); CKAN's provider choices were dry-run with Parallax's
+four on a clean KSP folder. Also reported upstream: CKAN issues
+[#4726](https://github.com/KSP-CKAN/CKAN/issues/4726) (headless installs skip provider questions),
+[#4727](https://github.com/KSP-CKAN/CKAN/issues/4727) (an unknown mod crashes the command line) and
+[#4728](https://github.com/KSP-CKAN/CKAN/issues/4728) (the Windows user name in `installed-*.ckan`).
+
+Accepted: the update's version check is skipped if the new exe's version can't be read; its SHA-256 already matches
+GitHub's published one, which proves it's the released file.
 
 ## Audit 9 (2.0.0, October 2026)
 

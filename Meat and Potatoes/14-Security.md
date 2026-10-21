@@ -57,6 +57,9 @@ their IP addresses (`PlayerTracker`).
 - Anything started as a process: absolute path, arguments as a list (`ArgumentList`), never a shell string.
 - Anything stored: no secrets in `AppSettings`.
 - Anything unpacked: limits, stay-inside check, staging folder.
+- Anything parsed from outside text: add it to `FuzzTests`, and parse numbers with `TryParse` (audit 10 found three
+  throwing parses that way).
+- Any whole-number setting: it must fit its .NET type, or LMP runs the whole file on defaults (audit 10, J1).
 - Anything turned into a file or folder name: `SafeName`-style cleaning. Also refuse names made only of dots (`..`) and Windows device
   names (`ProfileStore.IsDeviceName`); audit 6 found both gaps.
 - Any file a user picks or a friend sends: a size limit before reading it (`CkanPage.MaxListBytes`).

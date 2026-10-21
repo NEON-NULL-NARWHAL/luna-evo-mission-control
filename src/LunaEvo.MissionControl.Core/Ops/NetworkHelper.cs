@@ -87,8 +87,8 @@ public static partial class NetworkHelper
             if (process == null)
                 return false;
             process.StandardOutput.ReadToEnd();
-            process.WaitForExit(5000);
-            return process.ExitCode == 0;
+            // ExitCode throws if it hasn't exited; a stuck netsh just means "don't know", shown as no rule.
+            return process.WaitForExit(5000) && process.ExitCode == 0;
         }
         catch (System.ComponentModel.Win32Exception)
         {

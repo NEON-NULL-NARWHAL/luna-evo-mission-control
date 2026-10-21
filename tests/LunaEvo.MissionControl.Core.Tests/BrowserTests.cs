@@ -59,4 +59,13 @@ public class BrowserTests
         Assert.Contains(issues, i => i.Setting == "Port" && i.FileName == Validation.LmpRules.Connection && i.Severity == Validation.Severity.Error);
         Assert.Contains(issues, i => i.Setting == "Port" && i.FileName == Validation.LmpRules.Website && i.Severity == Validation.Severity.Error);
     }
+    [Fact]
+    public void Whole_numbers_must_fit_the_settings_own_type()
+    {
+        var session = ConfigSession.Open(TestPaths.LmpServer, TestPaths.CopyConfigs());
+        session.SetValue(Validation.LmpRules.General, "MaxPlayers", "3000000000"); // an Int32 in LMP
+        Assert.Contains(session.Validate(), i => i.Setting == "MaxPlayers" && i.Message.StartsWith("Must be between"));
+        session.SetValue(Validation.LmpRules.General, "MaxPlayers", "20");
+        Assert.DoesNotContain(session.Validate(), i => i.Setting == "MaxPlayers");
+    }
 }

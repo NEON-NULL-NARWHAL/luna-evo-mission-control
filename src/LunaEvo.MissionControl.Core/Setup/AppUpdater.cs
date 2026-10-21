@@ -87,6 +87,7 @@ public sealed class AppUpdater(HttpClient http)
                 throw new DownloadVerificationException("The downloaded LUNA EVO doesn't match GitHub's checksum. Nothing was changed.");
             if (!LooksLikeExe(staged))
                 throw new DownloadVerificationException("The download isn't a Windows program. Nothing was changed.");
+            // The SHA-256 match above already proves it's the published file; this catches a release with the wrong exe.
             if (LmpVersion.Parse(FileVersionInfo.GetVersionInfo(staged).ProductVersion) is { } version && Normalize(version) != Normalize(update.Version))
                 throw new DownloadVerificationException($"The download says it's LUNA EVO {version}, not {update.Version}. Nothing was changed.");
 

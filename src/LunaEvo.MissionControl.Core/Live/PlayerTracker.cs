@@ -181,17 +181,30 @@ public sealed partial class PlayerTracker
         lock (_gate)
         {
             var record = GetOrAdd(name, now);
-            if (id is { Length: > 0 } && !record.Ids.Contains(id))
+            var changed = false;
+            if (id is { Length: > 0 and <= 64 } && !record.Ids.Contains(id))
+            {
                 record.Ids.Add(id);
-            if (lmp is { Length: > 0 })
-                record.LmpVersion = lmp;
-            if (ksp is { Length: > 0 })
-                record.KspVersion = ksp;
+                changed = true;
+            }
+            if (lmp is { Length: > 0 } && Cut(lmp, 40) != record.LmpVersion)
+            {
+                record.LmpVersion = Cut(lmp, 40);
+                changed = true;
+            }
+            if (ksp is { Length: > 0 } && Cut(ksp, 40) != record.KspVersion)
+            {
+                record.KspVersion = Cut(ksp, 40);
+                changed = true;
+            }
             record.LastSeen = now;
             if (_online.ContainsKey(name))
             {
-                Save();
-                return; // already counted (the log line and the website both report a join)
+                // Already counted (the website reports everyone online every 5 seconds). Only "last seen" moved: write
+                // that at most once a minute, not once per player per poll.
+                if (changed || now - _lastSaved > TimeSpan.FromMinutes(1))
+                    Save();
+                return;
             }
             _online[name] = now;
             record.Sessions++;
@@ -217,7 +230,7 @@ public sealed partial class PlayerTracker
     {
         var now = _clock();
         lock (_gate)
-            GetOrAdd(name, now).BanReason = reason;
+            GetOrAdd(name, now).BanReason = Cut(reason, 200);
         Raise(new PlayerEvent(now, PlayerEventKind.Banned, name, reason));
     }
 
@@ -266,10 +279,16 @@ public sealed partial class PlayerTracker
     /// <summary>Goes up on every change, so pages can skip redrawing when nothing happened.</summary>
     public int Version { get; private set; }
 
+    private DateTime _lastSaved = DateTime.MinValue;
+
+    // Text from log lines (a ban reason, a client's version string) is kept short in players.json.
+    private static string Cut(string text, int max) => text.Length <= max ? text : text[..max];
+
     /// <summary>Writes players.json (to a temp file first, so a crash mid-write can't corrupt it). Never throws.</summary>
     public void Save()
     {
         Version++;
+        _lastSaved = _clock();
         try
         {
             string json;

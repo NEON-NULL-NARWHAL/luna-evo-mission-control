@@ -88,6 +88,11 @@ split over several commands if the list wouldn't fit one Windows command line. O
 - **From a host:** `ConnectPage.ExportModsAsync` exports the CKAN install matching the Join page's KSP folder (else the
   first); `JoinPage.InstallServerModsAsync` → `CkanPage.LoadForInstallAsync(text, ksp)` → Check.
 
+Reported upstream (2026-10-21): [#4726](https://github.com/KSP-CKAN/CKAN/issues/4726) headless installs skip provider
+questions, [#4727](https://github.com/KSP-CKAN/CKAN/issues/4727) an unknown mod crashes the command line (exit 127),
+[#4728](https://github.com/KSP-CKAN/CKAN/issues/4728) the Windows user name in `installed-*.ckan`. If CKAN fixes #4726,
+the dry-run-first step can stay: it also shows the plan before installing.
+
 ## Where it shows up
 
 - **CKAN page (Play → CKAN mods, 1.2.0):** status (LUNA EVO's copy and version, CKAN open?), copies (download latest,

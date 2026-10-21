@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.1.1 (2026-10-21)
+
+Tenth audit, the deep dive; details in `SECURITY.md`.
+
+### Fixed
+- A whole number too big for its setting (e.g. 3000000000 players) is an error now. LMP can't read such a file and
+  runs that whole file on its defaults, which for General means no password.
+- Pasting a mod list with a line of only commas, or with broken Unicode, no longer stops Check and Install silently.
+- Huge numbers in an invite or a setting's description can't crash the app.
+- `players.json` is no longer rewritten every 5 seconds for each player online (at most once a minute when only
+  "last seen" changed).
+- The LMP server installer checks every path before writing anything and counts the bytes it actually unpacks.
+- The firewall-rule check can't throw if Windows' netsh hangs.
+
+### Tests
+- A fuzz test feeds every parser that reads outside text thousands of mutated inputs (it found three of the bugs
+  above); a check that no code comment is separated from its code; tests for the error log and for finding a running
+  server. 303 tests.
+
 ## 2.1.0 (2026-10-21)
 
 ### Added
