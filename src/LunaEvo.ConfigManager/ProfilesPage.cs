@@ -47,7 +47,7 @@ internal sealed class ProfilesPage
         {
             Padding = new Thickness(12, 8, 12, 4),
             Child = Ui.Text("The Universe is the game itself: vessels, kerbals, science, contracts. These are dated zips you can go back to. " +
-                            "Schedule them in LUNA EVO Settings → Server automation.", "sublabel"),
+                            "Schedule them in App settings → Automation & alerts.", "sublabel"),
         });
         backupsBody.Children.Add(_backups);
         backupsBody.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4), Children = { backupNow, openBackups, _backupStatus } });
@@ -59,7 +59,7 @@ internal sealed class ProfilesPage
             {
                 Margin = new Thickness(28, 20, 28, 28),
                 Spacing = 4,
-                Children = { Ui.Text("Profiles & Backups", "headline"), new Border { Height = 12 }, profiles, backups },
+                Children = { Ui.Text("Profiles & backups", "headline"), new Border { Height = 12 }, profiles, backups },
             },
         };
     }

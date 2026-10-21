@@ -23,6 +23,19 @@ internal static class Program
             return helperExit;
 
         Options = StartupOptions.Parse(args);
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => { if (e.ExceptionObject is Exception x) Core.ErrorLog.Write("Unhandled", x); };
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Core.ErrorLog.Write("Background task", e.Exception);
+            e.SetObserved();
+        };
+        // A bug in a button handler is logged and the app carries on, instead of closing with your unsaved edits.
+        // Only here (the real app): headless tests rely on such errors failing the test.
+        Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
+        {
+            Core.ErrorLog.Write("UI", e.Exception);
+            e.Handled = true;
+        };
         return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

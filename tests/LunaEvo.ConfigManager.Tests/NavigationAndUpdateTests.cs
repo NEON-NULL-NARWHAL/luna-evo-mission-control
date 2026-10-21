@@ -19,7 +19,7 @@ public class NavigationAndUpdateTests
     {
         using var ui = new UiHarness();
         var rail = RailButtons(ui);
-        Assert.Equal(["nav/console", "nav/players", "nav/vessels", "nav/connect", "nav/serverSettings", "nav/LMPModControl.xml", "nav/profiles", "nav/join", "nav/crafts", "nav/ckan", "nav/settings"], rail);
+        Assert.Equal(["nav/console", "nav/players", "nav/vessels", "nav/connect", "nav/serverSettings", "nav/LMPModControl.xml", "nav/profiles", "nav/browser", "nav/join", "nav/crafts", "nav/ckan", "nav/settings"], rail);
 
         ui.OpenTab(MainWindow.ConsolePage);
         Assert.Null(ui.TryFind<Button>("nav/WarpSettings.xml")); // not in the rail any more
@@ -173,7 +173,7 @@ public class NavigationAndUpdateTests
         using var ui = new UiHarness();
         TestData.AddVessels(ui.ServerDirectory);
         ui.OpenTab(MainWindow.VesselsKey);
-        Assert.Equal("2", Texts(ui.Find<Border>("vessels/card/Debris")).Last());
+        Assert.Equal("2", Texts(ui.Find<Control>("vessels/card/Debris")).Last());
 
         ui.Click(ui.Find<Button>("vessels/selectDebris"));
         ui.Pump();
@@ -215,7 +215,7 @@ public class NavigationAndUpdateTests
         ui.Click(ui.Find<Button>("ckan/open"));
         Assert.EndsWith(Path.Combine("v1.36.4", "ckan.exe"), Assert.Single(opened));
 
-        // Settings → Downloads points here now.
+        // App settings → Downloads points here now.
         ui.OpenTab(MainWindow.SettingsKey);
         ui.Click(ui.Find<Button>("settings/tab/downloads"));
         ui.Click(ui.Find<Button>("settings/goCkan"));
@@ -235,7 +235,7 @@ public class NavigationAndUpdateTests
         File.WriteAllText(Path.Combine(Core.Setup.CkanTools.ConfigFolder, "config.json"),
             "{ \"GameInstances\": [ { \"Name\": \"Modded\", \"Path\": " + System.Text.Json.JsonSerializer.Serialize(ksp) + " } ] }");
         var runs = new List<IReadOnlyList<string>>();
-        CkanPage.RunCkan = (exe, arguments, line) =>
+        CkanPage.RunCkan = (exe, arguments, _, line) =>
         {
             Assert.Equal(installed, exe);
             runs.Add(arguments);
@@ -308,7 +308,7 @@ public class NavigationAndUpdateTests
             return Task.FromResult<string?>(exportPath);
         };
         var runs = new List<string>();
-        CkanPage.RunCkan = (exe, _, _) =>
+        CkanPage.RunCkan = (exe, _, _, _) =>
         {
             runs.Add(exe);
             return Task.FromResult(0);
@@ -336,6 +336,46 @@ public class NavigationAndUpdateTests
         ui.Click(ui.Find<Button>("ckan/forgetExe"));
         Assert.Null(ui.Window.Settings.CkanExePath);
         Assert.True(Visible(ui, "Not installed"));
+    }
+
+    [AvaloniaFact]
+    public void Ckan_page_checks_a_list_without_installing_and_explains_ckans_errors()
+    {
+        using var ui = new UiHarness(openServer: false);
+        var installed = Path.Combine(Core.Setup.CkanTools.Root, "v1.36.4", "ckan.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(installed)!);
+        File.WriteAllBytes(installed, TestData.FakeExe("ckan"));
+        var ksp = TestData.FakeKsp();
+        ui.Window.UpdateSettings(s => s with { KspFolder = ksp });
+        var runs = new List<(IReadOnlyList<string> Args, string? Input)>();
+        CkanPage.RunCkan = (_, arguments, input, line) =>
+        {
+            runs.Add((arguments, input));
+            if (arguments[0] != "install")
+                return Task.FromResult(0);
+            if (arguments.Contains("NoSuchMod"))
+            {
+                line("Unhandled Exception: CKAN.ModuleNotFoundKraken: Module not found: NoSuchMod ");
+                return Task.FromResult(127);
+            }
+            line("About to install:");
+            line(" * MechJeb2 2.14.3.0");
+            line("Continue? [Y/n] Installation aborted: User declined install list");
+            return Task.FromResult(1);
+        };
+        ui.OpenTab(MainWindow.CkanKey);
+        ui.Find<TextBox>("ckan/list").Text = "MechJeb2";
+
+        ui.Await(ui.Window.Ckan.CheckListAsync());
+        Assert.StartsWith("CKAN can install this list: 1 mod(s)", ui.Find<TextBlock>("ckan/result").Text);
+        Assert.DoesNotContain("--headless", runs[1].Args); // so CKAN asks...
+        Assert.Equal("n" + Environment.NewLine, runs[1].Input); // ...and is told no
+        Assert.Empty(ui.DialogsShown); // a check doesn't ask anything
+
+        ui.Find<TextBox>("ckan/list").Text = "NoSuchMod";
+        ui.Await(ui.Window.Ckan.InstallListAsync());
+        Assert.StartsWith("CKAN doesn't know the mod \"NoSuchMod\"", ui.Find<TextBlock>("ckan/result").Text);
+        Assert.True(ui.Find<Button>("ckan/install").IsEnabled); // ready to try again
     }
 
     [AvaloniaFact]

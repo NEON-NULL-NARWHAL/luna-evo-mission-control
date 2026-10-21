@@ -22,6 +22,16 @@ internal sealed class VesselsPage
     private readonly TextBlock _result = Ui.Text("", "sublabel").WithId("vessels/result");
     private readonly HashSet<string> _selected = [];
     private IReadOnlyList<UniverseVessel> _vessels = [];
+    private string? _kind; // the card filtering the list, or null for everything
+
+    // The cards, and which vessels each one shows.
+    private static readonly (string Label, Func<UniverseVessel, bool> Is)[] Kinds =
+    [
+        ("Vessels", v => !v.IsSpaceObject && !v.IsDebris),
+        ("Debris", v => v.IsDebris),
+        ("Asteroids & comets", v => v.IsSpaceObject),
+        ("Crewed", v => v.HasCrew),
+    ];
 
     public VesselsPage(MainWindow host)
     {
@@ -80,12 +90,24 @@ internal sealed class VesselsPage
     {
         _vessels = _host.Session is { } session ? UniverseVessels.List(session.ServerDirectory) : [];
         _selected.IntersectWith(_vessels.Select(v => v.Id));
-        _cards.Children.Clear();
-        Card("Vessels", _vessels.Count(v => !v.IsSpaceObject && !v.IsDebris).ToString());
-        Card("Debris", _vessels.Count(v => v.IsDebris).ToString());
-        Card("Asteroids & comets", _vessels.Count(v => v.IsSpaceObject).ToString());
-        Card("Crewed", _vessels.Count(v => v.HasCrew).ToString());
+        ShowCards();
         ShowList();
+    }
+
+    /// <summary>Shows only one kind of vessel (a card's label), or everything (null). Clicking the active card clears it.</summary>
+    internal void ShowKind(string? kind)
+    {
+        _kind = Kinds.Any(k => k.Label == kind) ? kind : null;
+        ShowCards();
+        ShowList();
+    }
+
+    private void ShowCards()
+    {
+        _cards.Children.Clear();
+        foreach (var (label, isKind) in Kinds)
+            _cards.Children.Add(Ui.Card("vessels/card/" + label, label, _vessels.Count(isKind).ToString(),
+                () => ShowKind(_kind == label ? null : label), _kind == label, _kind == label ? "Show everything" : "Show only these"));
     }
 
     private void ShowList()
@@ -97,7 +119,9 @@ internal sealed class VesselsPage
         _remove.Content = _selected.Count == 0 ? "Remove selected" : $"Remove {_selected.Count} selected";
 
         var search = _search.Text?.Trim() ?? "";
-        var shown = _vessels.Where(v => search.Length == 0 || v.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || v.Type.Contains(search, StringComparison.OrdinalIgnoreCase))
+        var kind = Kinds.FirstOrDefault(k => k.Label == _kind).Is;
+        var shown = _vessels.Where(v => kind == null || kind(v))
+            .Where(v => search.Length == 0 || v.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || v.Type.Contains(search, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(v => _selected.Contains(v.Id)).ThenBy(v => v.IsDebris ? 0 : v.IsSpaceObject ? 1 : 2).ThenBy(v => v.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
         foreach (var vessel in shown.Take(MaxRows))
@@ -140,7 +164,7 @@ internal sealed class VesselsPage
         var targets = _vessels.Where(v => _selected.Contains(v.Id)).ToList();
         var crewed = targets.Count(v => v.HasCrew);
         if (!await Dialogs.ConfirmAsync(_host, $"Remove {targets.Count} vessel(s)?",
-                "They're removed from the Universe for everyone. The whole Universe is backed up first (Profiles & Backups → " +
+                "They're removed from the Universe for everyone. The whole Universe is backed up first (Profiles & backups → " +
                 "\"beforecleanup\"), so this can be undone." +
                 (crewed > 0 ? $" {crewed} of them have crew; those kerbals will show as missing until you restore." : ""), "Remove"))
             return;

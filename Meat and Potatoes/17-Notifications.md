@@ -3,7 +3,7 @@
 [← Meat and Potatoes](README.md) · Code: `Core/Ops/Notifications.cs`, `App/DesktopNotifier.cs`, `App/MainWindow.cs` (`Notify`), `App/SettingsPage.cs`
 
 Everything goes through **`MainWindow.Notify(Notification)`**, which sends it to Windows and Discord according to
-LUNA EVO Settings → Notifications. It never throws.
+LUNA EVO App settings → Notifications. It never throws.
 
 | Kind | Sent by | Shown when |
 |---|---|---|

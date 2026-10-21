@@ -62,11 +62,21 @@ split over several commands if the list wouldn't fit one Windows command line. O
   `author` is the Windows user name. Name it "<install> mod list": CKAN registers an imported metapackage under that
   name. Checked for real: the owner's 108-mod list exports and re-parses; ckan.exe 1.36.4 installs an export with `-c`.
 
+## Check with CKAN, and CKAN's errors (1.4.0)
+
+- `CkanModList.CheckCommands`: the install commands without `--headless`. CKAN then lists its plan and asks
+  "Continue? [Y/n]"; `RunCkan(exe, args, input: "n\n", line)` answers no, and the input is closed, so nothing can be
+  installed or waited on. Real output (ckan.exe 1.36.4): "About to install:" then ` * Name version` lines, then
+  "Installation aborted: User declined install list" (exit 1). Already-installed mods are listed too.
+- An unknown mod makes CKAN crash with `Unhandled Exception: CKAN.ModuleNotFoundKraken: Module not found: X` (exit
+  127). `Core/Setup/CkanOutput` turns that, conflicts, incompatibility and lock errors into plain words.
+- `CkanPage.Busy` wraps the check and the install: any unexpected error is shown and written to `ErrorLog`.
+
 ## Where it shows up
 
 - **CKAN page (Play → CKAN mods, 1.2.0):** status (LUNA EVO's copy and version, CKAN open?), copies (download latest,
   open, remove older), your CKAN installs (LMP version, mod count, open in CKAN), and Install a mod list.
-- **Settings → Downloads:** the LMP client (pick a KSP install, including CKAN's; pick a version, defaulting to the
+- **App settings → Downloads:** the LMP client (pick a KSP install, including CKAN's; pick a version, defaulting to the
   open server's), plus a link to the CKAN page.
 - **Setup wizard, step 3 (optional):** download CKAN, and install the client matching the new server into the KSP
   found in Steam. Failures are logged and never fail the server setup.

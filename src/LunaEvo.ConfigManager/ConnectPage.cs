@@ -182,7 +182,7 @@ internal sealed class ConnectPage
         var running = _host.Server?.IsRunning == true;
         var listening = running && NetworkHelper.IsUdpPortListening(port);
         _status.Children.Add(Ui.Row(!running ? "Server is stopped" : listening ? $"Listening on UDP {port}" : $"Nothing is listening on UDP {port}",
-            !running ? "Start it on the Server Console page." : listening ? "The server is ready for players." : "The server may still be starting, or another program has the port.", null)
+            !running ? "Start it on the Server console page." : listening ? "The server is ready for players." : "The server may still be starting, or another program has the port.", null)
             .WithId("connect/listening"));
     }
 

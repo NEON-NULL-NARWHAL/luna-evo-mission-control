@@ -36,6 +36,28 @@ internal static partial class Ui
     }
 
     /// <summary>A button with a style class ("fab", "text", "chip"...) and an optional icon resource key.</summary>
+    /// <summary>
+    /// A summary card (label over a value). With <paramref name="click"/> it's a button (Button.card: hover, hand cursor,
+    /// keyboard); <paramref name="selected"/> outlines it, for a card that's filtering a list.
+    /// </summary>
+    public static Control Card(string id, string label, string value, Action? click = null, bool selected = false, string? tip = null)
+    {
+        var content = new StackPanel { Spacing = 2, Children = { Text(label, "sublabel"), Text(value, "value") } };
+        Control card;
+        if (click == null)
+            card = new Border { Child = content };
+        else
+        {
+            var button = new Button { Content = content };
+            button.Click += (_, _) => click();
+            ToolTip.SetTip(button, tip);
+            card = button;
+        }
+        card.Classes.Add("card");
+        card.Classes.Set("selected", selected);
+        return card.WithId(id);
+    }
+
     public static Button Button(string text, string cssClass, string? icon = null)
     {
         var button = new Button { Content = IconAndText(text, icon) };

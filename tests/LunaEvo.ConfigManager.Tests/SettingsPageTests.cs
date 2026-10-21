@@ -87,7 +87,7 @@ public class SettingsPageTests
         ui.OpenTab(MainWindow.SettingsKey);
 
         Assert.Contains($"Version {SettingsPage.AppVersion}", Texts(ui.Find<Border>("settings/appVersion")));
-        Assert.Equal("1.3.2", SettingsPage.AppVersion);
+        Assert.Equal("1.4.0", SettingsPage.AppVersion);
         Assert.Contains(Texts(ui.Find<Border>("settings/lmpVersion")), t => t.StartsWith("Version 0.29.2"));
     }
 
@@ -124,7 +124,7 @@ public class SettingsPageTests
             window.Navigate(MainWindow.SettingsKey);
             window.UpdateLayout();
             var texts = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
-            Assert.Contains("LUNA EVO Settings", texts);
+            Assert.Contains("App settings", texts);
             Assert.Contains("No server open", texts);
         }
         finally

@@ -46,6 +46,26 @@ public static class KspLauncher
         return File.Exists(dll) ? Setup.LmpVersion.Parse(FileVersionInfo.GetVersionInfo(dll).ProductVersion) : null;
     }
 
+    /// <summary>KSP's own version ("1.12.5"), from the "Version x.y.z" line of its readme.txt. Null if it can't tell.</summary>
+    public static string? GameVersion(string kspFolder)
+    {
+        try
+        {
+            var readme = Path.Combine(kspFolder, "readme.txt");
+            if (!File.Exists(readme))
+                return null;
+            using var reader = new StreamReader(readme);
+            for (var i = 0; i < 200 && reader.ReadLine() is { } line; i++)
+                if (System.Text.RegularExpressions.Regex.Match(line, @"^\s*Version\s+(\d+\.\d+(\.\d+)?)\s*$") is { Success: true } m)
+                    return m.Groups[1].Value;
+            return null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     public static string ClientSettingsPath(string kspFolder) =>
         Path.Combine(kspFolder, "GameData", "LunaMultiplayer", "Data", "settings.xml");
 

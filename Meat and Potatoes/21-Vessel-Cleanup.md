@@ -17,7 +17,7 @@ against a real server's 51 vessel files: all parsed (33 of them were asteroids/c
 
 - **Server stopped:** LMP loads vessels at start and rewrites them while running, so removal is disabled while it runs.
 - **Backup first:** `UniverseVessels.Remove` zips the whole Universe (`beforecleanup`, fast compression, last 5 kept)
-  before deleting anything; Profiles & Backups restores it.
+  before deleting anything; Profiles & backups restores it.
 - **Never crewed vessels in a bulk selection** ("Select all debris", "Select asteroids & comets"): their kerbals
   would be left "assigned". They can still be ticked one by one, and the dialog warns.
 - Only files inside this server's `Universe/Vessels` can be removed.

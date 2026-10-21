@@ -113,12 +113,15 @@ public class SetupTests
         tampered[^10] ^= 0xFF;
         var http = new FakeHttp().Bytes(TestData.ServerZipUrl, tampered);
         var downloads = Path.Combine(Path.GetTempPath(), "LunaEvo", "downloads");
-        var before = Directory.Exists(downloads) ? Directory.GetDirectories(downloads).Length : 0;
 
         var error = await Assert.ThrowsAsync<DownloadVerificationException>(() => new ServerInstaller(http.Client).DownloadAsync(Asset(bytes)));
 
         Assert.Contains("doesn't match the checksum", error.Message);
-        Assert.Equal(before, Directory.GetDirectories(downloads).Length); // nothing left behind
+        // Nothing left behind: no file with the tampered bytes. (Counting folders raced with other tests downloading.)
+        var left = Directory.Exists(downloads)
+            ? Directory.EnumerateFiles(downloads, "*", SearchOption.AllDirectories).Where(f => new FileInfo(f).Length == tampered.Length)
+            : [];
+        Assert.DoesNotContain(left, f => File.ReadAllBytes(f).AsSpan().SequenceEqual(tampered));
     }
 
     [Fact]

@@ -36,11 +36,32 @@ public sealed class MainWindow : Window
     internal const string JoinKey = "join";
     internal const string CraftsKey = "crafts";
     internal const string CkanKey = "ckan";
+    internal const string BrowserKey = "browser";
     internal const string VesselsKey = "vessels";
     internal const string ServerSettingsKey = "serverSettings";
     internal const string ModControlFile = "LMPModControl.xml";
 
     // Tab groups on the Server settings page; files a newer LMP adds land in "Other". Mod control has its own rail entry.
+    internal const string EssentialsKey = "essentials";
+
+    /// <summary>
+    /// The Essentials tab: the settings a new host needs to get a server up and friends in. The same live rows as the
+    /// file tabs (edit either), shown only if this LMP version has them.
+    /// </summary>
+    private static readonly (string File, string Setting)[] Essentials =
+    [
+        ("GeneralSettings.xml", "ServerName"), ("GeneralSettings.xml", "Description"), ("GeneralSettings.xml", "Password"),
+        ("GeneralSettings.xml", "AdminPassword"), ("GeneralSettings.xml", "MaxPlayers"), ("GeneralSettings.xml", "GameMode"),
+        ("GeneralSettings.xml", "GameDifficulty"), ("GeneralSettings.xml", "ModControl"), ("ConnectionSettings.xml", "Port"),
+        ("ConnectionSettings.xml", "Upnp"), ("MasterServerSettings.xml", "RegisterWithMasterServer"), ("WebsiteSettings.xml", "EnableWebsite"),
+    ];
+
+    /// <summary>Rail pages hidden in simple mode.</summary>
+    private static readonly string[] AdvancedPages = [PlayersKey, VesselsKey, ModControlFile, ProfilesKey, CraftsKey];
+
+    private readonly HashSet<SettingRow> _essentialRows = [];
+    private TextBox? _settingsSearch;
+
     private static readonly (string Title, string[] Files)[] Sections =
     [
         ("Game", ["GeneralSettings.xml", "GameplaySettings.xml", "WarpSettings.xml", "CraftSettings.xml", "ScreenshotSettings.xml"]),
@@ -53,6 +74,7 @@ public sealed class MainWindow : Window
     private readonly Ellipse _serverDot = new() { Width = 8, Height = 8, VerticalAlignment = VerticalAlignment.Center };
     private readonly Ellipse _consoleDot = new() { Width = 8, Height = 8, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
     private readonly TextBlock _serverText = Ui.Text("", "sublabel").WithId("status/server");
+    private readonly TextBlock _versionsText = Ui.Text("", "sublabel").WithId("status/versions");
     private readonly TextBlock _issuesText = Ui.Text("", "sublabel").WithId("status/issues");
     private readonly TextBlock _saveText = Ui.Text("", "sublabel").WithId("status/save");
     private readonly Button _save = Ui.Button("Save", "fab", "IconSave").WithId("save");
@@ -67,6 +89,7 @@ public sealed class MainWindow : Window
     private readonly JoinPage _joinPage;
     private readonly CraftsPage _craftsPage;
     private readonly CkanPage _ckanPage;
+    private readonly BrowserPage _browserPage;
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
@@ -117,6 +140,7 @@ public sealed class MainWindow : Window
             Children =
             {
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(8, 0), Children = { _serverDot, _serverText } },
+                new Border { Margin = new Thickness(8, 0), Child = _versionsText },
                 new Border { Margin = new Thickness(8, 0), Child = _issuesText },
                 new Border { Margin = new Thickness(8, 0), Child = _saveText },
                 new Border { Margin = new Thickness(8, 0), Child = _updateText },
@@ -170,6 +194,9 @@ public sealed class MainWindow : Window
             _tracker?.Save();
             DesktopNotifier.Remove();
         };
+        _issuesText.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
+        _issuesText.PointerPressed += (_, _) => ShowIssues();
+        ToolTip.SetTip(_issuesText, "Show the problems and where to fix them");
         _updateText.IsVisible = false;
         _updateText.PointerPressed += (_, _) => Navigate(SettingsKey);
         _updateText.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
@@ -178,6 +205,7 @@ public sealed class MainWindow : Window
         _joinPage = new JoinPage(this);
         _craftsPage = new CraftsPage(this);
         _ckanPage = new CkanPage(this);
+        _browserPage = new BrowserPage(this);
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
         var exe = CurrentExe; // this window's exe, not whatever CurrentExe is in 15 seconds
@@ -201,6 +229,7 @@ public sealed class MainWindow : Window
             Open(serverDirectory, options.ConfigDirectory);
         else
             ShowWelcome(null);
+        ShowVersions();
     }
 
     internal static WindowIcon AppIcon { get; } = new(AssetLoader.Open(new Uri("avares://LunaEvo.ConfigManager/Assets/icon.png")));
@@ -217,6 +246,7 @@ public sealed class MainWindow : Window
     internal JoinPage Join => _joinPage;
     internal CraftsPage Crafts => _craftsPage;
     internal CkanPage Ckan => _ckanPage;
+    internal BrowserPage Browser => _browserPage;
     internal SettingsPage SettingsPageForTests => _settingsPage;
 
     /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>
@@ -327,6 +357,7 @@ public sealed class MainWindow : Window
         if (updated == Settings)
             return;
         var lookChanged = updated.AccentColor != Settings.AccentColor || updated.Theme != Settings.Theme;
+        var modeChanged = updated.SimpleMode != Settings.SimpleMode;
         Settings = updated;
         try
         {
@@ -338,6 +369,8 @@ public sealed class MainWindow : Window
         }
         if (lookChanged)
             ThemeManager.Apply(ThemeManager.Parse(Settings.AccentColor, Color.Parse(AppSettings.DefaultAccent)), Settings.Theme);
+        if (modeChanged)
+            ApplySimpleMode();
     }
 
     /// <summary>Tests capture notifications here instead of showing them: (title, message, is an alert).</summary>
@@ -399,7 +432,7 @@ public sealed class MainWindow : Window
     /// <summary>Opens an LMP server folder: reads its schema and configs, then rebuilds every page. Shows the welcome page on failure.</summary>
     internal void Open(string serverDirectory, string? configDirectory) => Open(serverDirectory, configDirectory, keepServerPage: false);
 
-    /// <summary>Re-reads the config from disk (after switching profile), keeping the Server Console and a running server as they are.</summary>
+    /// <summary>Re-reads the config from disk (after switching profile), keeping the Server console and a running server as they are.</summary>
     internal void Reopen()
     {
         if (_session != null)
@@ -497,8 +530,34 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>Shows a page, as clicking it in the rail does: a file name, <see cref="ConsolePage"/> or <see cref="SettingsKey"/>.</summary>
+    /// <summary>
+    /// The versions in use, at the bottom of the rail: LUNA EVO, the open server's LMP, your KSP and its LMP client, and
+    /// the CKAN LUNA EVO uses. Cheap file reads, refreshed on every page change.
+    /// </summary>
+    internal void ShowVersions()
+    {
+        var lines = new List<string> { "LUNA EVO " + SettingsPage.AppVersion };
+        if (_session != null)
+            lines.Add("LMP server " + _session.Schema.ServerVersion);
+        var ksp = Settings.KspFolder is { } k && Core.Join.KspLauncher.IsKspFolder(k) ? k : Core.Join.KspLauncher.FindKsp();
+        if (ksp != null)
+        {
+            lines.Add(Core.Join.KspLauncher.GameVersion(ksp) is { } game ? "KSP " + game : "KSP version unknown");
+            lines.Add(Core.Join.KspLauncher.ClientVersion(ksp) is { } client ? "LMP client " + client.ToString(client.Build >= 0 ? 3 : 2) : "LMP client not installed");
+        }
+        lines.Add(Settings.CkanExePath is { } own && File.Exists(own) ? "CKAN: your own copy"
+            : Core.Setup.CkanTools.Installed() is { Count: > 0 } ckan ? "CKAN " + ckan[0].Version : "CKAN not downloaded");
+        // One compact wrapped line, so the rail's own entries keep their room; the full list is in the tooltip.
+        _versionsText.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
+        _versionsText.MaxWidth = 220;
+        _versionsText.Text = string.Join(" · ", lines);
+        ToolTip.SetTip(_versionsText, string.Join(Environment.NewLine, lines) + Environment.NewLine +
+                                      (ksp == null ? "No KSP install found (set it on the Join page)." : "KSP folder: " + ksp));
+    }
+
     internal void Navigate(string key)
     {
+        ShowVersions();
         // A config file on the Server settings page: select its tab, then show that page.
         if (_settingsTabs?.Has(key) == true)
         {
@@ -531,6 +590,9 @@ public sealed class MainWindow : Window
                 break;
             case CkanKey:
                 _ckanPage.Refresh();
+                break;
+            case BrowserKey:
+                _browserPage.Refresh();
                 break;
             case VesselsKey:
                 _vesselsPage?.Refresh();
@@ -617,6 +679,7 @@ public sealed class MainWindow : Window
         _issuesText.Text = "";
         AddPlaySection();
         AddLunaEvoSection();
+        ApplySimpleMode();
 
         var setup = Ui.Button("Set up a new server", "fab", "IconPlay").WithId("welcome/setup");
         setup.HorizontalAlignment = HorizontalAlignment.Left;
@@ -670,7 +733,7 @@ public sealed class MainWindow : Window
 
         AddHeading("Server");
         var consoleContent = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-        consoleContent.Children.Add(new TextBlock { Text = "Server Console", VerticalAlignment = VerticalAlignment.Center });
+        consoleContent.Children.Add(new TextBlock { Text = "Server console", VerticalAlignment = VerticalAlignment.Center });
         if (_consoleDot.Parent is Panel oldParent)
             oldParent.Children.Remove(_consoleDot);
         Grid.SetColumn(_consoleDot, 1);
@@ -689,6 +752,9 @@ public sealed class MainWindow : Window
             .Select(s => (s.Title, Files: s.Files.Select(session.Schema.Find).OfType<SettingsFileSchema>().ToList()))
             .Append((Title: "Other", Files: session.Schema.Files.Where(f => !known.Contains(f.FileName)).ToList()))
             .Where(s => s.Files.Count > 0);
+        _essentialRows.Clear();
+        _settingsTabs.AddLabel("Start here");
+        BuildEssentials(session);
         foreach (var (title, files) in sections)
         {
             _settingsTabs.AddLabel(title);
@@ -703,7 +769,7 @@ public sealed class MainWindow : Window
                 Ui.Text("Server settings", "headline"),
                 Ui.Text($"LMP's config files in {session.ConfigDirectory}. Changes are saved together with Save.", "sublabel"),
                 new Border { Height = 10 },
-                SearchBox(session),
+                (_settingsSearch = SearchBox(session)),
                 _searchResults,
                 new Border { Height = 6 },
                 _settingsTabs.Strip,
@@ -720,11 +786,49 @@ public sealed class MainWindow : Window
 
         if (session.Schema.Find(ModControlFile) is { } modControl)
             BuildFile(session, modControl, inTabs: false);
-        AddNav(ProfilesKey, new TextBlock { Text = "Profiles & Backups" }, _profilesPage!.View);
+        AddNav(ProfilesKey, new TextBlock { Text = "Profiles & backups" }, _profilesPage!.View);
 
         AddPlaySection();
         AddLunaEvoSection();
-        Navigate(Sections[0].Files[0]);
+        ApplySimpleMode();
+        Navigate(Settings.SimpleMode ? EssentialsKey : Sections[0].Files[0]);
+    }
+
+    private void BuildEssentials(ConfigSession session)
+    {
+        var page = new StackPanel { Margin = new Thickness(28, 4, 28, 28) };
+        page.Children.Add(Ui.Text("Essentials", "title"));
+        var intro = Ui.Text("What most servers need: a name, passwords, who can join and how they find it. Everything else is on the other tabs.", "sublabel");
+        intro.Margin = new Thickness(0, 2, 0, 20);
+        page.Children.Add(intro);
+        var (group, body, _) = Ui.Group("Server basics");
+        foreach (var (fileName, name) in Essentials)
+            if (session.HasFile(fileName) && session.Schema.Find(fileName)?.Settings.FirstOrDefault(s => s.Name == name) is { } setting)
+            {
+                var row = new SettingRow(session, fileName, setting, Refresh);
+                _rows.Add(row);
+                _essentialRows.Add(row);
+                body.Children.Add(row.View);
+            }
+        page.Children.Add(group);
+        var view = new ScrollViewer { Content = page };
+        _settingsTabs!.Add(EssentialsKey, "Essentials", view);
+        _pages[EssentialsKey] = (_settingsTabs.Header(EssentialsKey), view);
+    }
+
+    /// <summary>Simple mode on or off: hides or shows the advanced rail pages, settings tabs and the settings search.</summary>
+    internal void ApplySimpleMode()
+    {
+        var simple = Settings.SimpleMode;
+        foreach (var key in AdvancedPages)
+            if (_pages.TryGetValue(key, out var page))
+                page.Nav.IsVisible = !simple;
+        _settingsTabs?.ShowOnly(simple ? key => key == EssentialsKey : null);
+        if (_settingsSearch != null)
+            _settingsSearch.IsVisible = !simple;
+        _searchResults.IsVisible = !simple;
+        if (simple && _current != null && AdvancedPages.Contains(_current))
+            Navigate(_pages.ContainsKey(ConsolePage) ? ConsolePage : JoinKey);
     }
 
     private readonly WrapPanel _searchResults = new() { Margin = new Thickness(0, 6, 0, 0) };
@@ -746,7 +850,7 @@ public sealed class MainWindow : Window
         _searchResults.Children.Clear();
         if (query.Length < 2)
             return;
-        var matches = _rows
+        var matches = _rows.Where(r => !_essentialRows.Contains(r))
             .Where(r => Ui.Humanize(r.Setting.Name).Contains(query, StringComparison.OrdinalIgnoreCase) ||
                         r.Setting.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                         (r.Setting.Description ?? "").Contains(query, StringComparison.OrdinalIgnoreCase))
@@ -772,6 +876,43 @@ public sealed class MainWindow : Window
         }
     }
 
+    /// <summary>Opens a config file's tab and scrolls to one of its settings (or just the tab).</summary>
+    internal void GoToSetting(string fileName, string? setting)
+    {
+        Navigate(fileName);
+        _rows.FirstOrDefault(r => r.FileName == fileName && r.Setting.Name == setting && !_essentialRows.Contains(r))?.View.BringIntoView();
+    }
+
+    /// <summary>
+    /// "2 warning(s)" under the server status, clicked: opens Server settings with every problem listed where search
+    /// results go; each one jumps to the setting (or the file) that needs fixing.
+    /// </summary>
+    internal void ShowIssues()
+    {
+        if (_session is not { } session)
+            return;
+        Navigate(ServerSettingsKey);
+        _searchResults.Children.Clear();
+        var issues = session.Validate().OrderBy(i => i.Severity == Severity.Error ? 0 : 1).ToList();
+        if (issues.Count == 0)
+        {
+            _searchResults.Children.Add(Ui.Text("No problems found.", "sublabel"));
+            return;
+        }
+        _searchResults.Children.Add(Ui.Text("Problems to fix (click one to go to it):", "sublabel"));
+        foreach (var issue in issues)
+        {
+            var file = session.Schema.Find(issue.FileName);
+            var where = (issue.FileName == ModControlFile ? "Mod Control" : Ui.Humanize(file?.DisplayName ?? issue.FileName)) +
+                        (issue.Setting is { } name ? " › " + Ui.Humanize(name) : "");
+            var chip = Ui.Button($"{(issue.Severity == Severity.Error ? "Error" : "Warning")}: {where}: {issue.Message}", "chip")
+                .WithId($"issues/{issue.FileName}/{issue.Setting}");
+            chip.Margin = new Thickness(0, 0, 6, 6);
+            chip.Click += (_, _) => GoToSetting(issue.FileName, issue.Setting);
+            _searchResults.Children.Add(chip);
+        }
+    }
+
     /// <summary>A rail or tab label with an error-count badge and an unsaved-changes dot.</summary>
     private static Grid NavWithBadge(string text, out Border badge, out TextBlock badgeText, out Ellipse dirty)
     {
@@ -792,6 +933,7 @@ public sealed class MainWindow : Window
     private void AddPlaySection()
     {
         AddHeading("Play");
+        AddNav(BrowserKey, new TextBlock { Text = "Server browser" }, _browserPage.View);
         AddNav(JoinKey, new TextBlock { Text = "Join a server" }, _joinPage.View);
         AddNav(CraftsKey, new TextBlock { Text = "Crafts" }, _craftsPage.View);
         AddNav(CkanKey, new TextBlock { Text = "CKAN mods" }, _ckanPage.View);
@@ -800,7 +942,7 @@ public sealed class MainWindow : Window
     private void AddLunaEvoSection()
     {
         AddHeading("LUNA EVO");
-        AddNav(SettingsKey, new TextBlock { Text = "Settings" }, _settingsPage.View);
+        AddNav(SettingsKey, new TextBlock { Text = "App settings" }, _settingsPage.View);
     }
 
     private void AddHeading(string title)
@@ -885,6 +1027,31 @@ public sealed class MainWindow : Window
             AddNav(file.FileName, navContent, view);
         }
         _files[file.FileName] = new FileView(badge, badgeText, dirty, banner, bannerText);
+    }
+
+    /// <summary>
+    /// Quick edit from a Server console card: one setting, validated, then saved like the Save button (backup, review,
+    /// "server is running" warning). Not saved (invalid or canceled): the old value is put back.
+    /// </summary>
+    internal async Task<bool> QuickEditAsync(string fileName, string setting, string title)
+    {
+        if (_session is not { } session || session.GetValue(fileName, setting) is not { } before)
+            return false;
+        var description = session.Schema.Find(fileName)?.Settings.FirstOrDefault(s => s.Name == setting)?.Description;
+        if (await Dialogs.PromptAsync(this, title, description ?? Ui.Humanize(setting), before, "Save") is not { } value || value == before)
+            return false;
+        session.SetValue(fileName, setting, value.Trim());
+        if (session.Validate().FirstOrDefault(i => i.FileName == fileName && i.Setting == setting && i.Severity == Severity.Error) is { } problem)
+        {
+            session.SetValue(fileName, setting, before);
+            await Dialogs.InfoAsync(this, "Not saved", problem.Message);
+            return false;
+        }
+        var saved = await SaveAsync();
+        if (!saved && session.GetValue(fileName, setting) == value.Trim())
+            session.SetValue(fileName, setting, before);
+        Refresh();
+        return saved;
     }
 
     private void Refresh()

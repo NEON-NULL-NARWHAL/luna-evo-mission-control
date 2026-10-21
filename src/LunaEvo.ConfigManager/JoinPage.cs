@@ -273,6 +273,41 @@ internal sealed class JoinPage : IDisposable
         if (result.ResourcesNotAllowed.Count > 0)
             _modResults.Children.Add(Ui.Row($"{result.ResourcesNotAllowed.Count} of your resources {(result.ResourcesNotAllowed.Count == 1 ? "isn't" : "aren't")} on the server's allowed list",
                 $"For example: {string.Join(", ", result.ResourcesNotAllowed.Take(8))}.", null).WithId("join/modResources"));
+        // Hosting yourself: put them on your open server's allowed lists in one go.
+        if ((result.PartsNotAllowed.Count > 0 || result.ResourcesNotAllowed.Count > 0) && _host.Session?.HasFile(MainWindow.ModControlFile) == true)
+        {
+            var allow = Ui.Button("Allow them on my server...", "text").WithId("join/allowAll");
+            allow.Click += async (_, _) => await AllowOnMyServerAsync(result);
+            _modResults.Children.Add(Ui.Row("Hosting this server?",
+                "Add these parts and resources to the allowed lists of the server open in LUNA EVO (saved with a backup).", allow));
+        }
+    }
+
+    /// <summary>
+    /// "Allow them on my server": adds the parts and resources the check found to the open server's LMPModControl.xml
+    /// AllowedParts/AllowedResources, after explaining the alternative (mod control off) and its risk. Saved like Save.
+    /// </summary>
+    internal async Task<bool> AllowOnMyServerAsync(ModCheckResult result)
+    {
+        if (_host.Session is not { } session || !session.HasFile(MainWindow.ModControlFile))
+            return false;
+        var name = session.GetValue(Core.Validation.LmpRules.General, "ServerName") ?? "your server";
+        if (!await Dialogs.ConfirmAsync(_host, "Allow these on your server?",
+                $"This adds {result.PartsNotAllowed.Count} part(s) and {result.ResourcesNotAllowed.Count} resource(s) to the allowed lists of \"{name}\", " +
+                "so vessels that use them aren't dropped.\n\n" +
+                "A private server may not need an allowed list at all: turning off Mod Control (General settings → Mod Control) skips " +
+                "every mod check, so anyone can join with any mods. That's simpler, but nothing stops a player's mismatched or " +
+                "unwanted mods from breaking shared vessels and saves. Keep the list if you want your group on the same mods.", "Add them"))
+            return false;
+        session.SetList(MainWindow.ModControlFile, "AllowedParts", session.GetList(MainWindow.ModControlFile, "AllowedParts").Union(result.PartsNotAllowed, StringComparer.Ordinal));
+        session.SetList(MainWindow.ModControlFile, "AllowedResources", session.GetList(MainWindow.ModControlFile, "AllowedResources").Union(result.ResourcesNotAllowed, StringComparer.Ordinal));
+        if (!await _host.SaveAsync())
+        {
+            _modSummary.Text = "Added to the allowed lists but not saved yet: press Save when you're ready.";
+            return false;
+        }
+        _modSummary.Text = $"Added to \"{name}\"'s allowed lists and saved. Restart the server for LMP to use them.";
+        return true;
     }
 
     internal ServerAddress? Server => _server;
@@ -301,6 +336,14 @@ internal sealed class JoinPage : IDisposable
         {
             _checking = false;
         }
+    }
+
+    /// <summary>From the server browser: fill in a public server and check it, ready to launch.</summary>
+    internal async Task OpenServerAsync(string host, int port)
+    {
+        _tabs.Select("server");
+        _address.Text = new ServerAddress(host, port).ToString();
+        await CheckAsync();
     }
 
     internal async Task CheckAsync()

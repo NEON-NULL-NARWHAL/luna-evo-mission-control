@@ -62,6 +62,16 @@ internal static class TestData
         return path;
     }
 
+    /// <summary>A master server's /json list (LMP's ServerJson), with broken entries to skip.</summary>
+    public const string MasterJson = """
+        [ { "Country": "US", "ExternalEndpoint": "203.0.113.5:8800", "Version": "0.29.2", "Password": false, "Cheats": true,
+            "GameMode": 2, "MaxPlayers": 20, "PlayerCount": 3, "ServerName": "Kerbin Club\u0007", "Description": "Friendly career",
+            "Website": "https://example.com/kerbin", "WebsiteText": "Discord" },
+          { "ExternalEndpoint": "198.51.100.7:8810", "Version": "0.30.0", "Password": true, "GameMode": 0, "PlayerCount": "lots",
+            "ServerName": "Sandbox Fun", "Website": "file:///C:/evil.exe" },
+          { "ExternalEndpoint": "not-an-endpoint", "ServerName": "Broken" },
+          { "ExternalEndpoint": "203.0.113.5:99999" }, 42 ]
+        """;
 
     /// <summary>A fake KSP folder with LMP's client settings, shaped like the real file (utf-16 declaration, UTF-8 bytes, CRLF).</summary>
     public static string FakeKsp(bool withSettings = true)

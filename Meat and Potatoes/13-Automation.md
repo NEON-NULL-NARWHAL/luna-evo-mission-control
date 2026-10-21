@@ -1,8 +1,8 @@
-# 13 · Automation, Connect, Profiles & Backups
+# 13 · Automation, Connect, Profiles & backups
 
 [← Meat and Potatoes](README.md) · Code: `Core/Ops/`, `App/ServerPage.cs`, `App/ConnectPage.cs`, `App/ProfilesPage.cs`, `App/SettingsPage.cs`
 
-All of it is switched on and tuned in **LUNA EVO Settings** (`AppSettings`); nothing runs unless LUNA EVO is running
+All of it is switched on and tuned in **App settings** (`AppSettings`); nothing runs unless LUNA EVO is running
 the server.
 
 ## Auto-restart after a crash

@@ -79,10 +79,10 @@ internal sealed class SetupWizard
         serverBody.Children.Add(Ui.Row("Put LUNA EVO in the server folder", "So double-clicking it there opens this server straight away.", _copyApp));
 
         var (play, playBody, _) = Ui.Group("3 · Also for playing (optional)");
-        playBody.Children.Add(Ui.Row("Download CKAN", "The KSP mod manager, verified and kept by LUNA EVO (Settings → Downloads has it too, any time).", _getCkan));
+        playBody.Children.Add(Ui.Row("Download CKAN", "The KSP mod manager, verified and kept by LUNA EVO (App settings → Downloads has it too, any time).", _getCkan));
         var ksp = Core.Join.KspLauncher.FindKsp();
         playBody.Children.Add(Ui.Row("Install the matching LMP client into my KSP",
-            ksp != null ? $"The same LMP version as this server, into {ksp}. Your LMP settings are kept." : "No KSP found in your Steam libraries; use Settings → Downloads later.", _getClient));
+            ksp != null ? $"The same LMP version as this server, into {ksp}. Your LMP settings are kept." : "No KSP found in your Steam libraries; use App settings → Downloads later.", _getClient));
         _getClient.IsEnabled = ksp != null;
 
         var (go, goBody, _) = Ui.Group("4 · Set it up");
@@ -142,7 +142,7 @@ internal sealed class SetupWizard
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or DownloadVerificationException or IOException or UnauthorizedAccessException)
             {
-                Log($"CKAN wasn't downloaded ({e.Message}). Try Settings → Downloads later.");
+                Log($"CKAN wasn't downloaded ({e.Message}). Try App settings → Downloads later.");
             }
         }
         if (_getClient.IsChecked == true && Core.Join.KspLauncher.FindKsp() is { } ksp && LmpClientInstaller.ClientAsset(release) is { Sha256: { } sha } client)
@@ -156,7 +156,7 @@ internal sealed class SetupWizard
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException or DownloadVerificationException or IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException)
             {
-                Log($"The LMP client wasn't installed ({e.Message}). Try Settings → Downloads later.");
+                Log($"The LMP client wasn't installed ({e.Message}). Try App settings → Downloads later.");
             }
         }
     }

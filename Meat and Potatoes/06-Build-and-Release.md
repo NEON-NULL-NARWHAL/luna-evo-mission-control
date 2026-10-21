@@ -39,7 +39,7 @@ Each version gets its own folder, so an older exe that's still running doesn't b
 
 ## Releasing a version
 
-1. Bump `<Version>` in `src/LunaEvo.ConfigManager/LunaEvo.ConfigManager.csproj` (shown in Settings → About).
+1. Bump `<Version>` in `src/LunaEvo.ConfigManager/LunaEvo.ConfigManager.csproj` (shown in App settings → About).
 2. Add a `## <version> (date)` section to `CHANGELOG.md`.
 3. Smoke-test `.\publish.ps1`'s exe in a **copy** of a server folder.
 4. Commit and push.

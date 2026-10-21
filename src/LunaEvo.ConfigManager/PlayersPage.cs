@@ -141,9 +141,10 @@ internal sealed class PlayersPage : IDisposable
         }
 
         _updated.Text = $"Updated {DateTime.Now:HH:mm:ss} · refreshes every 5 seconds";
-        Card("Players", snapshot.MaxPlayers is { } max ? $"{snapshot.Players.Count} / {max}" : snapshot.Players.Count.ToString());
-        Card("Vessels", snapshot.Vessels.Count(v => v.Type != "SpaceObject").ToString());
-        Card("Asteroids & comets", snapshot.Vessels.Count(v => v.Type == "SpaceObject").ToString());
+        // Clickable: each opens the list of what it counts.
+        Card("Players", snapshot.MaxPlayers is { } max ? $"{snapshot.Players.Count} / {max}" : snapshot.Players.Count.ToString(), () => _tabs.Select("online"));
+        Card("Vessels", snapshot.Vessels.Count(v => v.Type != "SpaceObject").ToString(), () => OpenVessels("Vessels"));
+        Card("Asteroids & comets", snapshot.Vessels.Count(v => v.Type == "SpaceObject").ToString(), () => OpenVessels("Asteroids & comets"));
         Card("Subspaces", snapshot.Subspaces.Count.ToString());
         Card("Server memory", $"{snapshot.BytesUsed / 1024.0 / 1024.0:0} MB");
 
@@ -321,12 +322,13 @@ internal sealed class PlayersPage : IDisposable
         Show(null, "Website turned on for this PC only. Save, then restart the server.");
     }
 
-    private void Card(string label, string value)
+    private void Card(string label, string value, Action? click = null) =>
+        _cards.Children.Add(Ui.Card("players/card/" + label, label, value, click, tip: "Show the list"));
+
+    private void OpenVessels(string kind)
     {
-        var card = new Border { Child = new StackPanel { Spacing = 2, Children = { Ui.Text(label, "sublabel"), Ui.Text(value, "value") } } }
-            .WithId("players/card/" + label);
-        card.Classes.Add("card");
-        _cards.Children.Add(card);
+        _host.Navigate(MainWindow.VesselsKey);
+        _host.Vessels?.ShowKind(kind);
     }
 
 }

@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager/ServerPage.cs
-// [UI] The Server Console page: start/stop/restart, summary cards, live console, commands, log files.
+// [UI] The Server console page: start/stop/restart, summary cards, live console, commands, log files.
 // Used by: MainWindow
 // Guide:   Meat and Potatoes/03-Server-Control.md
 
@@ -187,12 +187,14 @@ internal sealed class ServerPage : IDisposable
 
         string? Get(string file, string setting) => session.GetValue(file, setting);
         var website = Get(LmpRules.Website, "EnableWebsite") == "true" ? $"{Get(LmpRules.Website, "Port")} TCP" : "Off";
-        Card("Server name", Get(LmpRules.General, "ServerName"));
-        Card("Game port", $"{Get(LmpRules.Connection, "Port")} UDP");
-        Card("Website", website);
-        Card("Mode", $"{Get(LmpRules.General, "GameMode")} · {Get(LmpRules.General, "GameDifficulty")}");
-        Card("Max players", Get(LmpRules.General, "MaxPlayers"));
-        Card("Server list", Get("MasterServerSettings.xml", "RegisterWithMasterServer") == "true" ? "Listed" : "Hidden");
+        // Click a card to change it right here (saved with a backup) or, for the bigger ones, to open the setting.
+        Card("Server name", Get(LmpRules.General, "ServerName"), () => _host.QuickEditAsync(LmpRules.General, "ServerName", "Server name"));
+        Card("Game port", $"{Get(LmpRules.Connection, "Port")} UDP", () => _host.QuickEditAsync(LmpRules.Connection, "Port", "Game port (UDP)"));
+        Card("Website", website, () => Go(LmpRules.Website, "EnableWebsite"));
+        Card("Mode", $"{Get(LmpRules.General, "GameMode")} · {Get(LmpRules.General, "GameDifficulty")}", () => Go(LmpRules.General, "GameMode"));
+        Card("Max players", Get(LmpRules.General, "MaxPlayers"), () => _host.QuickEditAsync(LmpRules.General, "MaxPlayers", "Max players"));
+        Card("Server list", Get("MasterServerSettings.xml", "RegisterWithMasterServer") == "true" ? "Listed" : "Hidden",
+            () => Go("MasterServerSettings.xml", "RegisterWithMasterServer"));
 
         // Make it obvious when the server is reachable from the internet (UPnP opens router ports without asking).
         var exposure = LmpRules.InternetExposure(session);
@@ -411,7 +413,7 @@ internal sealed class ServerPage : IDisposable
         {
             _incoming.Enqueue(LogLine.FromManager("The server keeps crashing (3 times in 10 minutes), so LUNA EVO stopped restarting it. Check the errors above."));
             _host.Notify(new Notification(NotificationKind.AutoRestartGaveUp, $"{_host.ServerName} keeps crashing",
-                "3 crashes in 10 minutes, so LUNA EVO stopped restarting it. Check the Server Console.", _host.ServerName));
+                "3 crashes in 10 minutes, so LUNA EVO stopped restarting it. Check the Server console.", _host.ServerName));
             return;
         }
 
@@ -496,7 +498,7 @@ internal sealed class ServerPage : IDisposable
         actions.Children.Add(_stop);
         actions.Children.Add(_start);
 
-        var title = new StackPanel { Spacing = 2, Children = { Ui.Text("Server Console", "headline"), _status } };
+        var title = new StackPanel { Spacing = 2, Children = { Ui.Text("Server console", "headline"), _status } };
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         header.Children.Add(title);
         Grid.SetColumn(actions, 1);
@@ -516,6 +518,9 @@ internal sealed class ServerPage : IDisposable
 
         _exposure.Classes.Add("banner");
         _exposure.Child = _exposureText;
+        _exposure.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
+        ToolTip.SetTip(_exposure, "Go to the Upnp setting");
+        _exposure.PointerPressed += (_, _) => _host.GoToSetting(LmpRules.Connection, "Upnp");
         var top = new StackPanel { Children = { header, _cards, _health, _exposure, _banner, tabs } };
         var page = new DockPanel { Margin = new Thickness(28, 20, 28, 20) };
         DockPanel.SetDock(top, Dock.Top);
@@ -654,15 +659,18 @@ internal sealed class ServerPage : IDisposable
         };
     }
 
-    private void Card(string label, string? value)
+    private Task<bool> Go(string fileName, string setting)
     {
-        var card = new Border
-        {
-            Child = new StackPanel { Spacing = 2, Children = { Ui.Text(label, "sublabel"), Ui.Text(string.IsNullOrEmpty(value) ? "-" : value, "value") } },
-        }.WithId("console/card/" + label);
-        card.Classes.Add("card");
-        _cards.Children.Add(card);
+        _host.GoToSetting(fileName, setting);
+        return Task.FromResult(true);
     }
+
+    private void Card(string label, string? value, Func<Task<bool>> open) =>
+        _cards.Children.Add(Ui.Card("console/card/" + label, label, string.IsNullOrEmpty(value) ? "-" : value, async () =>
+        {
+            if (await open())
+                RefreshSummary();
+        }, tip: "Click to change"));
 
     private bool Passes(LogLine line)
     {
@@ -758,7 +766,7 @@ internal sealed class ServerPage : IDisposable
     private string? _announceSetting;
     private IReadOnlyList<Announcement> _announceItems = [];
 
-    /// <summary>Sends scheduled chat announcements (LUNA EVO Settings → Automation). Runs every second; tests call it with a chosen time.</summary>
+    /// <summary>Sends scheduled chat announcements (LUNA EVO App settings → Automation). Runs every second; tests call it with a chosen time.</summary>
     internal void CheckAnnouncements(DateTime now)
     {
         if (_runner.State != ServerState.Running)

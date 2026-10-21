@@ -28,7 +28,7 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
    (`SettingRow.View.BringIntoView()`). Rows are in `_rows`.
 3. ~~Universe backup on every stop and before an LMP update~~ (done in 0.7.1: `UniverseBackups.Safety`).
 4. ~~**Scheduled chat announcements.**~~ (done in 0.8.0: `Core/Ops/Announcements.cs`, `ServerPage.CheckAnnouncements`) `AppSettings`: list of (minutes, text). `ServerPage.Tick` sends `/say <text>` via
-   `TrySend` when due (LMP takes one command per 500 ms). Settings → Automation tab gets an editor.
+   `TrySend` when due (LMP takes one command per 500 ms). App settings → Automation tab gets an editor.
 5. ~~**Copy invite**~~ (done in 0.9.0: `ConnectPage.Invite`, `ServerAddress.Parse` reads pasted invites). Was: (Connect page): one button copying "Server: <name>, address <addr>:<port>, LMP <version>, password: yes/no".
    `ServerAddress.Parse` on the Join page should accept it pasted (take the first `host:port` in the text).
 6. ~~**Crafts page screenshots**~~ (done in 0.9.0). for the README (demo copy only; keep UI automation short, it steals focus).
@@ -44,6 +44,8 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 - ~~**Install missing mods with CKAN.**~~ (done in 1.2.0: CKAN page → Install a mod list, names only, never `-c`.)
   1.3.0 added Export mod list / Use as mod list per install and using your own ckan.exe.
   Next: share the host's export through Connect/invites, and show which mods are already installed.
+- ~~**A server browser in LUNA EVO.**~~ (done in 1.4.0, from LMP's master servers: [23](23-Server-Browser.md)).
+  Next: show ping per server, remember favourites, and the owner's CKAN failure if `errors.log` shows one.
 - **Kystack server browser** (see the conversation notes): own LMP master server (`LmpMasterServer`, Docker), PR to
   LMP's `MasterServersList.txt`, a web list with "Join with LUNA EVO" links.
 

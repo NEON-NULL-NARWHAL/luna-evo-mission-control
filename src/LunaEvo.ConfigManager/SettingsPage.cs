@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager/SettingsPage.cs
-// [UI] The LUNA EVO Settings page: color wheel, theme, behavior options, versions, folders, links.
+// [UI] The App settings page: color wheel, theme, behavior options, versions, folders, links.
 // Used by: MainWindow
 // Guide:   Meat and Potatoes/04-App-UI.md
 
@@ -105,7 +105,7 @@ internal sealed class SettingsPage
         };
 
         var page = new StackPanel { Margin = new Thickness(28, 20, 28, 28) };
-        page.Children.Add(Ui.Text("LUNA EVO Settings", "headline"));
+        page.Children.Add(Ui.Text("App settings", "headline"));
         var stored = Ui.Text($"Preferences for this app, saved to {host.SettingsPath}", "sublabel");
         stored.Margin = new Thickness(0, 2, 0, 20);
         page.Children.Add(stored);
@@ -144,6 +144,10 @@ internal sealed class SettingsPage
 
         // Behavior
         var (behavior, rows, _) = Ui.Group("Behavior");
+        rows.Children.Add(Ui.Row("Simple mode",
+            "Only what you need to run a server and join a game: Server console, Connect, the Essentials settings, Join and CKAN. " +
+            "Players, Vessels, Mod Control, Profiles & backups, Crafts and the other settings tabs are hidden until you turn it off.",
+            Toggle("settings/simpleMode", s => s.SimpleMode, (s, v) => s with { SimpleMode = v })));
         rows.Children.Add(Ui.Row("Open the last server on startup", "When LUNA EVO isn't sitting next to Server.exe, reopen the folder you used last.",
             Toggle("settings/openLast", s => s.OpenLastServer, (s, v) => s with { OpenLastServer = v })));
         rows.Children.Add(Ui.Row("Config backups to keep", $"Older folders in Config/{BackupService.BackupFolderName} are deleted after each save. 0 keeps them all.",
@@ -191,7 +195,7 @@ internal sealed class SettingsPage
         };
         auto.Children.Add(Ui.Row("Restart every day at", "24-hour time, e.g. 04:00. Players get a chat warning a minute before. Empty = never.",
             new StackPanel { Spacing = 2, Children = { daily, _dailyResult } }));
-        auto.Children.Add(Ui.Row("Back up the Universe every (hours)", "While LUNA EVO runs the server. 0 = off. Backups are on the Profiles & Backups page.",
+        auto.Children.Add(Ui.Row("Back up the Universe every (hours)", "While LUNA EVO runs the server. 0 = off. Backups are on the Profiles & backups page.",
             Number("settings/universeHours", 0, 168, s => s.UniverseBackupHours, (s, v) => s with { UniverseBackupHours = v })));
         auto.Children.Add(Ui.Row("Universe backups to keep", "Older ones are deleted. 0 keeps them all.",
             Number("settings/universeKeep", 0, 1000, s => s.UniverseBackupsToKeep, (s, v) => s with { UniverseBackupsToKeep = v })));

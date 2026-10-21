@@ -4,7 +4,7 @@
 
 ## Startup
 
-`Program.Main` → (Ctrl+C helper? then exit) → `StartupOptions.Parse` → Avalonia → `App.axaml.cs` → `new MainWindow(options)`.
+`Program.Main` → (Ctrl+C helper? then exit) → `StartupOptions.Parse` → error logging hooks (`ErrorLog`) → Avalonia → `App.axaml.cs` → `new MainWindow(options)`.
 
 `MainWindow`'s constructor loads `AppSettings`, applies the theme, builds the rail, then opens a server folder:
 `--server`, else the exe's own folder if `Server.dll` is next to it, else the last one used (if *Open the last server*
@@ -14,32 +14,39 @@ is on), else the welcome page.
 
 ```text
 ┌ rail (260 px) ─────────┬┬ page: Server settings ─────────────────┐
-│ LUNA EVO               ││ Server settings                        │
-│ Server                 ││ Game     [General ②●] Gameplay Warp... │
-│   Server Console   ●   ││ Network  Connection Website ...        │
-│   Players              ││ Advanced Interval Log Debug            │
-│   Connect              ││ General                                │
-│   Server settings ② ●  ││ path                                   │
-│   Mod Control          ││ ┌ group: FileName.xml ────────────────┐ │
-│   Profiles & Backups   ││ │ Label            [editor]   ↺       │ │
-│ Play                   ││ │ description                         │ │
-│   Join a server        ││ │ error / reason line                 │ │
-│ LUNA EVO               ││ └─────────────────────────────────────┘ │
-│   Settings             ││                                        │
+│ LUNA EVO               ││ Server settings      [search]          │
+│ Server                 ││ Start here [Essentials]                │
+│   Server console   ●   ││ Game     General ②● Gameplay Warp...   │
+│   Players              ││ Network  Connection Website ...        │
+│   Vessels              ││ Advanced Interval Log Debug            │
+│   Connect              ││ Essentials                             │
+│   Server settings ② ●  ││ ┌ group: Server basics ──────────────┐ │
+│   Mod Control          ││ │ Label            [editor]   ↺       │ │
+│   Profiles & backups   ││ │ description                         │ │
+│ Play                   ││ │ error / reason line                 │ │
+│   Server browser       ││ └─────────────────────────────────────┘ │
+│   Join a server        ││                                        │
+│   Crafts · CKAN mods   ││                                        │
+│ LUNA EVO               ││                                        │
+│   App settings         ││                                        │
 │ ● Server running · 5m  ││                                        │
+│ LUNA EVO 1.4 · LMP ... ││  ← versions in use (ShowVersions)      │
+│ 2 warning(s)           ││  ← click: ShowIssues                   │
 │ [Open server] [ Save ] ││                                        │
 └────────────────────────┴┴────────────────────────────────────────┘
 ```
 
+- **Simple mode** (`AppSettings.SimpleMode`, `ApplySimpleMode`) hides Players, Vessels, Mod Control, Profiles &
+  backups, Crafts, every settings tab but Essentials, and the settings search. See [23](23-Server-Browser.md).
 - **Pages** are registered with `AddNav(key, navContent, page)`. `Navigate(key)` switches pages; a config file name
   opens **Server settings** with that file's tab selected (`_settingsTabs`), and `LMPModControl.xml` is its own rail
   entry ("Mod Control"). Tab buttons keep the old ids (`nav/GeneralSettings.xml`), so automation and tests still find them.
 - **Badges**: red count = errors in that file (on the tab, and the total on "Server settings"); green dot = unsaved
-  changes. The Server Console item shows a dot while the server runs.
+  changes. The Server console item shows a dot while the server runs.
 - **`TabSet`** gives a page tabs: `Strip` (the buttons; `AddLabel` starts a labeled row) and `Content` (the pages).
   Every page stays in the visual tree with `IsVisible` toggled, so state survives switching and UI tests can find
   controls on any tab. Note: a hidden tab isn't laid out, so its text isn't in the visual tree until it's shown; open
-  the tab before reading text from it. Used by Server settings, Players, Join and LUNA EVO Settings.
+  the tab before reading text from it. Used by Server settings, Players, Join and App settings.
 - `Refresh()` is the single place that re-validates and updates every row, badge, banner and the status area. Call it
   after any edit. Rows and list editors take it as their `changed` callback.
 
@@ -49,13 +56,13 @@ is on), else the welcome page.
 |---|---|---|
 | `SettingRow` | One setting row | Editor by `SettingKind`. Number boxes have **no Min/Max** on purpose: the control would silently clamp a bad value from the file instead of flagging it. Passwords use `PasswordChar` plus a reveal button. Descriptions that only repeat the name are hidden. |
 | `ListEditor` | One list group (mod control) | Items are `Entry(index, text, isDuplicate)` so identical names can be selected one at a time. |
-| `ServerPage` | The Server Console | See [03](03-Server-Control.md). |
-| `SettingsPage` | LUNA EVO Settings | Color wheel (`ColorView`, ring shape), presets, theme, behavior, automation, notifications ([17](17-Notifications.md)), LMP updates, about, folders, links. |
+| `ServerPage` | The Server console | See [03](03-Server-Control.md). |
+| `SettingsPage` | App settings | Color wheel (`ColorView`, ring shape), presets, theme, behavior, automation, notifications ([17](17-Notifications.md)), LMP updates, about, folders, links. |
 | `ObjectListEditor` | One record list (plugins, mandatory parts) | See [12](12-Mod-Control-From-GameData.md). |
 | `ModImportPanel` | Import from GameData | See [12](12-Mod-Control-From-GameData.md). |
 | `SetupWizard` | Set up a new server | Shown from the welcome page. See [10](10-Setup-and-Updates.md). |
 | `PlayersPage` | Players | See [11](11-Live-Players.md) and [16](16-Players-History-And-Alerts.md). |
-| `ConnectPage` / `ProfilesPage` | Connect / Profiles & Backups | See [13](13-Automation.md). |
+| `ConnectPage` / `ProfilesPage` | Connect / Profiles & backups | See [13](13-Automation.md). |
 | `JoinPage` | Join a server | Works with no server open. See [15](15-Joining-Servers.md). |
 
 Every interactive control gets an **AutomationId** via `.WithId(...)`, e.g. `GeneralSettings.xml/ServerName`,

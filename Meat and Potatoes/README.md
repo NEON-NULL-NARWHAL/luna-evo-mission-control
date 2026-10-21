@@ -38,6 +38,7 @@ Every source file starts with a short header pointing back here, like this:
 | 20 | [Next steps (handoff)](20-Next-Steps.md) | pick up the next task: house rules, quick wins with file pointers, the LMP fork list |
 | 21 | [Vessel cleanup](21-Vessel-Cleanup.md) | change the Vessels page or how Universe vessels are read and removed |
 | 22 | [CKAN and the LMP client](22-CKAN-and-LMP-Client.md) | change how CKAN is downloaded or read, or how the LMP client is installed |
+| 23 | [Server browser, simple mode, quick access](23-Server-Browser.md) | change the server browser, simple mode, Essentials, the clickable cards, the versions list or the error log |
 
 ## 🔣 Legend
 
@@ -101,6 +102,8 @@ Symbols used in the map below and throughout these chapters:
 | 🧠🔌 | `Setup/ConfigGenerator.cs` | Writes a new server's config from the schema and the wizard's choices. |
 | 🧠 | `Setup/RuntimeInstaller.cs` | Installs the .NET runtime with winget. |
 | 🧠🔌⚠️ | `Setup/Tools.cs` | CKAN copies (verified, per version), CKAN's instances and launch options, mod lists for CKAN (`CkanModList`), the LMP client installer. See [22](22-CKAN-and-LMP-Client.md). |
+| 🧠 | `Setup/CkanOutput.cs` | Reads ckan.exe's output: a dry run's plan, and its errors in plain words. See [22](22-CKAN-and-LMP-Client.md). |
+| 🧠 | `ErrorLog.cs` | Unexpected errors to `logs/errors.log`. See [23](23-Server-Browser.md). |
 | ⭐🧠⚠️ | `Setup/AppUpdater.cs` | LUNA EVO updating itself: check its releases, verified download, swap the running exe. See [18](18-Updating-LUNA-EVO.md). |
 | **Live/** | | *What's happening on the server* ([11](11-Live-Players.md)) |
 | 🧠🔌 | `Live/ServerInfoClient.cs` | Reads LMP's website JSON: players, vessels, subspaces; join/leave diff. |
@@ -116,7 +119,8 @@ Symbols used in the map below and throughout these chapters:
 | 🧠🔌⚠️ | `Ops/NetworkHelper.cs` | Local addresses, LMP's detected public address, Windows Firewall rules (UDP game port, TCP website port), port check. `netsh` by absolute path. |
 | **Join/** | | *The player side* ([15](15-Joining-Servers.md)) |
 | 🧠 | `Join/ServerProbe.cs` | `ServerAddress` parsing; DNS, network kind, ping, and live info from a host's LMP website. |
-| 🧠🔌⚠️ | `Join/KspLauncher.cs` | Finds KSP and the LMP client, plans auto-connect vs server list (LMP's `-lmp` bug), edits LMP's client `settings.xml`, starts KSP. |
+| 🧠🔌⚠️ | `Join/ServerBrowser.cs` | The public server list from LMP's master servers (`/json`), read defensively and merged. See [23](23-Server-Browser.md). |
+| 🧠🔌⚠️ | `Join/KspLauncher.cs` | Finds KSP, its game version and the LMP client, plans auto-connect vs server list (LMP's `-lmp` bug), edits LMP's client `settings.xml`, starts KSP. |
 | 🧠🔌 | `Ops/UniverseVessels.cs` | Universe vessels: list, remove after a backup. See [21](21-Vessel-Cleanup.md). |
 | 🧠 | `Ops/ProfileStore.cs` | Named copies of the whole config. |
 | 🧠⚠️ | `Ops/Notifications.cs` | Notification kinds, Discord posting (no mentions, escaped), `SecretProtector` (DPAPI). See [17](17-Notifications.md). |
@@ -142,12 +146,13 @@ Symbols used in the map below and throughout these chapters:
 | 🖥️ | `ConnectPage.cs` | Addresses to share, firewall, reachability, sharing live info with players. |
 | ⭐🖥️ | `JoinPage.cs` | Join a server (for players): check, save, check my mods, launch KSP into it. `StartKsp` is the test seam. |
 | 🖥️ | `ProfilesPage.cs` | Config profiles and Universe backups. |
-| ⭐🖥️🔌 | `ServerPage.cs` | The Server Console page. |
-| 🖥️ | `SettingsPage.cs` | The LUNA EVO Settings page (color wheel, behavior, about). |
+| ⭐🖥️🔌 | `ServerPage.cs` | The Server console page. |
+| 🖥️ | `SettingsPage.cs` | The App settings page (color wheel, behavior incl. simple mode, about). |
 | 🎨 | `ThemeManager.cs` | Generates the palette from one accent color and applies it live. |
 | 🖥️ | `Ui.cs` | Helpers for building styled controls in code. |
 | 🖥️🔌 | `CraftsPage.cs` | The Crafts page: list, export, import. |
-| 🖥️🔌⚠️ | `CkanPage.cs` | The CKAN page: status, your CKAN installs, install a mod list. See [22](22-CKAN-and-LMP-Client.md). |
+| 🖥️🔌 | `BrowserPage.cs` | The server browser: public servers, filters, Join. See [23](23-Server-Browser.md). |
+| 🖥️🔌⚠️ | `CkanPage.cs` | The CKAN page: status, your CKAN installs, check and install a mod list. See [22](22-CKAN-and-LMP-Client.md). |
 | 🖥️ | `TabSet.cs` | Tabs inside a page (Server settings, Players, Join, Settings). Pages stay in the visual tree; only visibility changes. |
 | 🖥️ | `Dialogs.cs` | Message boxes (with a hook so tests can answer them). |
 | 🎨 | `Assets/` | `icon.png`/`icon.ico`, and `Fonts/` (JetBrains Mono plus its OFL license). |

@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.4.0 (2026-10-20)
+
+From the owner's testing list. Eighth audit; details in `SECURITY.md`.
+
+### Added
+- **Server browser** (Play): every public LMP server from LMP's master servers, with search and filters (your LMP
+  version, no password, has players). **Join** checks the server on the Join page, ready to launch.
+- **Simple mode** (App settings → Behavior): only Server console, Connect, the Essentials settings, Join and CKAN.
+- **Essentials tab** first on Server settings: the dozen settings most servers need.
+- **Editable console cards:** click Server name, Game port or Max players to change it there (validated, saved with a
+  backup); Website, Mode and Server list open their setting.
+- **Clickable cards** on Players (open the list) and Vessels (filter the list to that kind).
+- **Versions at the bottom left:** LUNA EVO, the LMP server and client, KSP and CKAN in use.
+- **The problem count** under the server status opens a list of every problem; each jumps to its setting. The
+  internet-exposure banner jumps to UPnP.
+- **Check my mods → Allow them on my server:** adds the parts and resources the check found to your open server's
+  allowed lists, after explaining that a private server can turn Mod Control off instead (and the risk).
+- **Check with CKAN:** a dry run of a mod list; CKAN's errors are now explained in plain words.
+- An error log (`%APPDATA%\LunaEvo\ConfigManager\logs\errors.log`).
+
+### Changed
+- Naming: "App settings" (LUNA EVO's own) vs "Server settings" (LMP's); sentence case in the rail.
+- README: new description at the top, server browser section, CKAN steps include the check.
+
+### Fixed
+- Ports outside 1-65535 are errors.
+- Two flaky tests (shared temp folder; slow CI runners).
+
 ## 1.3.2 (2026-10-20)
 
 ### Changed

@@ -45,7 +45,7 @@ internal sealed class UiHarness : IDisposable
         CraftsPage.PickImportPath = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
         HomeServer.ApplyStartWithWindows = (_, _) => throw new InvalidOperationException("A test touched the Windows startup list without faking it.");
         CkanPage.StartCkan = _ => throw new InvalidOperationException("A test tried to start CKAN without faking it.");
-        CkanPage.RunCkan = (_, _, _) => throw new InvalidOperationException("A test tried to run CKAN without faking it.");
+        CkanPage.RunCkan = (_, _, _, _) => throw new InvalidOperationException("A test tried to run CKAN without faking it.");
         CkanPage.PickModList = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
         CkanPage.PickCkanExe = _ => throw new InvalidOperationException("A test opened a file dialog without faking it.");
         CkanPage.PickExportPath = (_, _) => throw new InvalidOperationException("A test opened a save dialog without faking it.");
@@ -90,7 +90,8 @@ internal sealed class UiHarness : IDisposable
     /// <summary>Pumps the UI (and the console's line queue) until the condition holds.</summary>
     public void WaitFor(Func<bool> condition, string what, int seconds = 20)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(seconds);
+        // GitHub's runners are much slower under parallel load (a fake server once took over 20 s to start there).
+        var deadline = DateTime.UtcNow.AddSeconds(Environment.GetEnvironmentVariable("CI") == "true" ? seconds * 3 : seconds);
         while (true)
         {
             Pump();

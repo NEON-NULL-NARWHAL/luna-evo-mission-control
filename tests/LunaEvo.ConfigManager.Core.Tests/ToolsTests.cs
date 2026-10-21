@@ -231,4 +231,23 @@ public class ToolsTests
         Assert.Equal([new CkanMod("B9PartSwitch"), new CkanMod("MechJeb2")], mods);
         Assert.Contains("1 \"one of these\"", Assert.Single(problems));
     }
+    [Fact]
+    public void Reads_ckans_dry_run_and_errors_in_plain_words()
+    {
+        // Real ckan.exe 1.36.4 output.
+        var ok = CkanOutput.Check(["About to install:", "", " * Kerbal Engineer Redux 1.1.9.5 (cached)", "", "Continue? [Y/n] Installation aborted: User declined install list"], 1);
+        Assert.True(ok.Ok);
+        Assert.Equal(["Kerbal Engineer Redux 1.1.9.5 (cached)"], ok.WouldInstall);
+        var none = CkanOutput.Check(["", " * Module Manager 4.2.3 (cached)", "", "Continue? [Y/n] Installation aborted: User declined install list"], 1);
+        Assert.True(none.Ok);
+        Assert.Contains("already installed", none.Message);
+
+        var unknown = CkanOutput.Check(["Unhandled Exception: CKAN.ModuleNotFoundKraken: Module not found: NoSuchModXyz ", "   at CKAN.CmdLine.Install.RunCommand()"], 127);
+        Assert.False(unknown.Ok);
+        Assert.Contains("doesn't know the mod \"NoSuchModXyz\"", unknown.Message);
+        Assert.Contains("code 3", CkanOutput.Problem(["Something odd happened", "   at CKAN.Main()"], 3));
+        Assert.Contains("Something odd happened", CkanOutput.Problem(["Something odd happened", "   at CKAN.Main()"], 3));
+
+        Assert.Equal(["install", "--no-recommends", "--gamedir", "K", "A"], Assert.Single(CkanModList.CheckCommands("K", [new CkanMod("A")])));
+    }
 }

@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager/TabSet.cs
-// [UI] A row of tabs over panels, used by Server settings, Players, Join and LUNA EVO Settings.
+// [UI] A row of tabs over panels, used by Server settings, Players, Join and App settings.
 // Used by: MainWindow, PlayersPage, JoinPage, SettingsPage
 // Guide:   Meat and Potatoes/04-App-UI.md
 
@@ -74,6 +74,17 @@ internal sealed class TabSet
             _strip.Children.Add(_row);
         }
         return _row;
+    }
+
+    /// <summary>Hides every tab <paramref name="keep"/> says no to (and rows left empty); null shows them all.</summary>
+    public void ShowOnly(Func<string, bool>? keep)
+    {
+        foreach (var (name, (header, _)) in _tabs)
+            header.IsVisible = keep?.Invoke(name) != false;
+        foreach (var row in _strip.Children.OfType<WrapPanel>())
+            row.IsVisible = row.Children.OfType<Button>().Any(b => b.IsVisible);
+        if (Selected != null && keep?.Invoke(Selected) == false && _tabs.Keys.FirstOrDefault(k => keep(k)) is { } first)
+            Select(first);
     }
 
     public void Select(string key)

@@ -53,6 +53,11 @@ public static class LmpRules
 
         var gamePort = Int(session.GetValue(Connection, "Port"));
         var webPort = Int(session.GetValue(Website, "Port"));
+        // A port is 1-65535; LMP would start, fail to listen, and players couldn't connect.
+        if (gamePort is < 1 or > 65535)
+            yield return new Issue(Connection, "Port", Severity.Error, "Must be a port number from 1 to 65535.");
+        if (webPort is < 1 or > 65535)
+            yield return new Issue(Website, "Port", Severity.Error, "Must be a port number from 1 to 65535.");
         if (IsTrue(session.GetValue(Website, "EnableWebsite")) && gamePort is { } g && g == webPort)
             yield return new Issue(Website, "Port", Severity.Warning, $"Same as the game port in ConnectionSettings ({g}).");
 

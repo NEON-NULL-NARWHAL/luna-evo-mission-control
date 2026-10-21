@@ -24,8 +24,8 @@ release is something you decided to ship.
 
 | Step | Where | Notes |
 |---|---|---|
-| Check | `AppUpdater.CheckAsync`, on startup (Settings → Updates → "Check for new LUNA EVO versions") and "Check now" | `GET api.github.com/repos/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases`. Picks the highest version newer than this one with an asset named `LunaEvo.ConfigManager.exe` **that has a SHA-256 digest**. Pre-releases and drafts are skipped. A 404 means the repo is private (or gone): the page says so. |
-| Tell | Rail note "LUNA EVO x.y.z is available" (click → Settings → Updates) | |
+| Check | `AppUpdater.CheckAsync`, on startup (App settings → Updates → "Check for new LUNA EVO versions") and "Check now" | `GET api.github.com/repos/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases`. Picks the highest version newer than this one with an asset named `LunaEvo.ConfigManager.exe` **that has a SHA-256 digest**. Pre-releases and drafts are skipped. A 404 means the repo is private (or gone): the page says so. |
+| Tell | Rail note "LUNA EVO x.y.z is available" (click → App settings → Updates) | |
 | Ask | `UpdateAppAsync` | Unsaved changes: save / update without saving / cancel. A running server: keep it running (the new version follows its log; console commands come back after the server's next restart) / stop it first / cancel. |
 | Download | `ServerInstaller.DownloadAsync` | The same verified download as LMP updates: HTTPS from GitHub hosts only (also after redirects), size limit, streaming SHA-256, never unverified. |
 | Install | `AppUpdater.Install` | Copies to `<exe>.new`, checks the hash **again** there, checks it starts with `MZ` and that its version is the release's, then renames the running exe to `<exe>.old` (Windows allows renaming a running exe, not overwriting it) and `.new` into its name. Any failure puts the old one back. |
@@ -40,7 +40,7 @@ Checked on real Windows: a running 0.5.0 exe was renamed to `.old`, 0.6.0 starte
 - **Only the published single-file exe updates itself** (`CanUpdateItself`). A development build (DLLs next to the exe,
   or `dotnet run`) shows the release page instead.
 - **The repository must stay public**: the check isn't signed in. If it were made private again, GitHub would answer
-  404 and Settings → Updates would say "The repository may be private." (It was public from 0.6.0's release on; checked
+  404 and App settings → Updates would say "The repository may be private." (It was public from 0.6.0's release on; checked
   that an anonymous request lists v0.6.0 and v0.4.0 with their SHA-256 digests.)
 - Each copy updates itself. The setup wizard copies LUNA EVO into each server folder, so a PC with several copies
   updates each when it's opened.

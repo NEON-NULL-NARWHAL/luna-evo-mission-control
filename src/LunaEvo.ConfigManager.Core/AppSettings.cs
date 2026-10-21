@@ -36,7 +36,7 @@ public sealed record AppSettings
     /// <summary>Show a list of what changed before saving.</summary>
     public bool ReviewChangesBeforeSave { get; init; } = true;
 
-    // Automation (Server Console)
+    // Automation (Server console)
 
     /// <summary>Start the server again if it exits without being asked (gives up after 3 crashes in 10 minutes).</summary>
     public bool AutoRestartOnCrash { get; init; } = true;
@@ -68,6 +68,12 @@ public sealed record AppSettings
     /// the notification area instead of quitting, and keep the PC awake while the server runs.
     /// </summary>
     public bool HomeServerMode { get; init; }
+
+    /// <summary>
+    /// Simple mode: only what's needed to run a server and join a game (Server console, Connect, the Essentials settings,
+    /// Join, CKAN, Settings). Everything else is hidden, not removed; switch back any time.
+    /// </summary>
+    public bool SimpleMode { get; init; }
 
     // Notifications
 

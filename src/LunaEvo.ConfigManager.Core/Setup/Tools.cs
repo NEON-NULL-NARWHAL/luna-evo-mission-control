@@ -371,6 +371,13 @@ public static partial class CkanModList
         return JsonSerializer.Serialize(pack, new JsonSerializerOptions { WriteIndented = true });
     }
 
+    /// <summary>
+    /// The same install commands without --headless: CKAN then works everything out, lists what it would install and asks
+    /// "Continue? [Y/n]". Answered "n" (see <see cref="CkanOutput"/>), nothing is downloaded or changed.
+    /// </summary>
+    public static IReadOnlyList<IReadOnlyList<string>> CheckCommands(string kspFolder, IReadOnlyList<CkanMod> mods) =>
+        InstallCommands(kspFolder, mods).Select(c => (IReadOnlyList<string>)c.Where(a => a != "--headless").ToList()).ToList();
+
     /// <summary>`ckan update`: refresh CKAN's catalog for this install.</summary>
     public static IReadOnlyList<string> UpdateArguments(string kspFolder) => ["update", "--headless", "--gamedir", kspFolder];
 

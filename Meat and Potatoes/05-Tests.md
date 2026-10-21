@@ -13,7 +13,7 @@ dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 | Project | Framework | What it covers |
 |---|---|---|
 | `LunaEvo.ConfigManager.Core.Tests` | xUnit v2 | Round trips of all 13 real files, in-place edits, schema from `Server.dll`, comment parsing, every validation and greying rule, presets, dirty tracking, save/backup/prune, log parsing and tailing, runtime check, app settings, and the real `ServerRunner` against the fake server (clean stop, kill fallback, startup failure). |
-| `LunaEvo.ConfigManager.Tests` | xUnit v3 + Avalonia.Headless | The real `MainWindow`, without a screen: **every tab and every control** edited, saved and re-read; reset everywhere; error badges blocking save; greying across tabs; the list editor; backups; close prompts; the Server Console (start, commands, filters, stop, restart, log files, summary cards); the Settings page (presets, wheel, hex, theme, backups to keep, about). |
+| `LunaEvo.ConfigManager.Tests` | xUnit v3 + Avalonia.Headless | The real `MainWindow`, without a screen: **every tab and every control** edited, saved and re-read; reset everywhere; error badges blocking save; greying across tabs; the list editor; backups; close prompts; the Server console (start, commands, filters, stop, restart, log files, summary cards); the Settings page (presets, wheel, hex, theme, backups to keep, about). |
 | `FakeLmpServer` | console app | Not tests: a stand-in `Server.exe`. |
 
 0.3 added: `SetupTests` (release feed, versions, install/update/zip-slip, generated config read by **LMP's own classes**,
@@ -30,6 +30,10 @@ install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, 
 0.4.1 added `SecurityRound2Tests`: oversized live info, long text cut, Universe restores that escape the folder or are
 damaged (the current Universe must survive), DTDs refused, Windows device names as profile names, weak-password
 warnings, and a hand-edited settings file full of nulls.
+
+1.4.0 added `BrowserTests` (Core: master server lists merged and read defensively, endpoints, KSP's game version, port
+range) and `QuickAccessTests` (UI: versions, issues list, quick edit, vessel cards, simple mode, browser to Join,
+allowing a player's parts). On GitHub, `UiHarness.WaitFor` waits three times longer (`CI=true`).
 
 1.2.1 added `SecurityRound6Tests` (audit 6): `Remove("..")` deletes nothing above its folder, crafts named after
 Windows devices, a release list over 10 MB refused; plus a UI test refusing a `.ckan` file over 5 MB.

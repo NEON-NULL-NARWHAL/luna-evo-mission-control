@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ConfigManager.Tests/ServerConsoleTests.cs
-// [Test] The Server Console page against the fake server: start, commands, filters, stop, restart, log files.
+// [Test] The Server console page against the fake server: start, commands, filters, stop, restart, log files.
 // Used by: dotnet test
 // Guide:   Meat and Potatoes/05-Tests.md
 
@@ -12,7 +12,7 @@ using LunaEvo.ConfigManager.Core.Validation;
 
 namespace LunaEvo.ConfigManager.Tests;
 
-/// <summary>The Server Console page, against the fake LMP server.</summary>
+/// <summary>The Server console page, against the fake LMP server.</summary>
 public class ServerConsoleTests
 {
     [AvaloniaFact]
@@ -163,5 +163,5 @@ public class ServerConsoleTests
     private static IReadOnlyList<string> Messages(UiHarness ui) => ui.Server.VisibleLines.Select(l => l.Message).ToList();
 
     private static string CardText(UiHarness ui, string label) =>
-        ui.Find<Border>("console/card/" + label).GetVisualDescendants().OfType<TextBlock>().Last().Text ?? "";
+        ui.Find<Control>("console/card/" + label).GetVisualDescendants().OfType<TextBlock>().Last().Text ?? "";
 }

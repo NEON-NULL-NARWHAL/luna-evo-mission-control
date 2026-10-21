@@ -337,5 +337,5 @@ public class NewFeatureTests
     private static List<string> Texts(Control control) =>
         control.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
 
-    private static string CardValue(UiHarness ui, string id) => Texts(ui.Find<Border>(id)).Last();
+    private static string CardValue(UiHarness ui, string id) => Texts(ui.Find<Control>(id)).Last();
 }

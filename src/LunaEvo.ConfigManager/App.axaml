@@ -299,6 +299,30 @@
       <Setter Property="MinWidth" Value="150" />
       <Setter Property="Margin" Value="0,0,8,8" />
     </Style>
+    <!-- Clickable cards (Server Console, Players): same look as Border.card, lighter on hover. -->
+    <Style Selector="Button.card">
+      <Setter Property="Background" Value="{DynamicResource SurfaceVariant}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="MinWidth" Value="150" />
+      <Setter Property="Margin" Value="0,0,8,8" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.card /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SurfaceVariant}" />
+    </Style>
+    <Style Selector="Button.card:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SurfaceContainer}" />
+    </Style>
+    <Style Selector="Button.card.selected /template/ ContentPresenter">
+      <Setter Property="BorderBrush" Value="{DynamicResource Primary}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button.card TextBlock.value">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="Foreground" Value="{DynamicResource OnSurface}" />
+    </Style>
     <Style Selector="Border.card TextBlock.value">
       <Setter Property="FontSize" Value="15" />
       <Setter Property="Foreground" Value="{DynamicResource OnSurface}" />
