@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="src/LunaEvo.ConfigManager/Assets/icon.png" width="96" alt="LUNA EVO icon">
+<img src="src/LunaEvo.MissionControl/Assets/icon.png" width="96" alt="LUNA EVO icon">
 
-# LUNA EVO Config Manager
+# LUNA EVO Mission Control
 
 **Host, find and join [Luna Multiplayer](https://github.com/LunaMultiplayer/LunaMultiplayer) (LMP) servers for Kerbal Space Program: set up and run your own server without touching a config file or a console window, browse public servers, and get your game modded with CKAN and straight into a server.**
 
@@ -11,7 +11,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 1.4.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 2.0.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Join a friend](#join-a-friends-server)** · **[No open ports (Tailscale)](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
@@ -23,7 +23,7 @@
 > the LMP quirks we discovered, and step-by-step recipes for common changes.
 
 > [!NOTE]
-> **Security:** downloads are checked against GitHub's SHA-256. All eight security audits (0.4.0 to 1.4.0), their fixes,
+> **Security:** downloads are checked against GitHub's SHA-256. All nine security audits (0.4.0 to 2.0.0), their fixes,
 > and the versions of LMP, KSP and CKAN each release was tested with are in [`SECURITY.md`](SECURITY.md), newest first.
 
 > [!NOTE]
@@ -36,12 +36,15 @@
 ## Download
 
 **[⬇️ Download the latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest)**:
-`LunaEvo.ConfigManager.exe`, one file for Windows 10/11 (x64), nothing to install. Put it next to your LMP
+`LunaEvo.MissionControl.exe`, one file for Windows 10/11 (x64), nothing to install. Put it next to your LMP
 `Server.exe`, or anywhere if you're setting up a new server or just joining one. The exe isn't code-signed yet, so
 Windows SmartScreen may ask you to confirm the first time (**More info → Run anyway**). Each release lists the exe's
-SHA-256 so you can check your download.
+SHA-256 so you can check your download. (`LunaEvo.ConfigManager.exe` on a release is the same file under the old
+name, so copies from before the rename keep updating.)
 
-**LUNA EVO 1.4: server browser, simple mode, quick edits.** **You only download it once.** From 0.6, LUNA EVO tells you when there's a new version and updates itself with one
+**LUNA EVO Config Manager is now LUNA EVO Mission Control (2.0).** It does far more than configs now: host, find, mod
+and join. Already have the Config Manager? It updates itself to Mission Control and keeps your settings.
+**You only download it once.** From 0.6, LUNA EVO tells you when there's a new version and updates itself with one
 click (App settings → Updates): it checks the download against GitHub's SHA-256, swaps the exe and restarts.
 
 ## What it does
@@ -117,7 +120,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | 🌐 **Says when it's on the internet** | A banner on the Server console whenever UPnP or the public list makes the server reachable from the internet. |
 | 🏠 **Private until you say so** | New servers aren't on the public list, don't touch your router, and keep live info on this PC. The Connect page explains each step before you open anything up. |
 | 🤫 **No secrets in the open** | LUNA EVO never stores passwords; a Discord webhook is kept encrypted for your Windows account. No telemetry, no account. See [`SECURITY.md`](SECURITY.md). |
-| 🧾 **Error log** | Anything unexpected is written to `%APPDATA%\LunaEvo\ConfigManager\logs\errors.log` instead of crashing, so a bug report can say what happened. |
+| 🧾 **Error log** | Anything unexpected is written to `%APPDATA%\LunaEvo\MissionControl\logs\errors.log` instead of crashing, so a bug report can say what happened. |
 | ⚠️ **Warns before it matters** | Saving while the server runs, stopping it (players get disconnected), closing with unsaved changes, settings LMP would reject. |
 
 ## Screenshots
@@ -159,11 +162,11 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | ![Settings](docs/screenshots/settings.png) | ![Light theme](docs/screenshots/light.png) |
 | **App settings:** color wheel, presets, theme. | **Light theme.** |
 
-<sub>Screenshots are LUNA EVO 0.6 to 1.2 running a sandbox copy of a real LMP 0.29.2 server, with personal details removed (network addresses are replaced with examples; the players are made-up Kerbals). The setup wizard is shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
+<sub>Screenshots are LUNA EVO 0.6 to 2.0 (the older ones still say "Config Manager", its name before 2.0) running a sandbox copy of a real LMP 0.29.2 server, with personal details removed (network addresses are replaced with examples; the players are made-up Kerbals). The setup wizard is shown step by step in [Set up a new server](#set-up-a-new-server-step-by-step).</sub>
 
 ## Getting started
 
-Get `LunaEvo.ConfigManager.exe` from the [latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest),
+Get `LunaEvo.MissionControl.exe` from the [latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-multiplayer-config-manager/releases/latest),
 or build it with `publish.ps1` (see [Build it](#build-it)). It's a single file with nothing to install.
 
 - **No server yet?** Follow [Set up a new server](#set-up-a-new-server-step-by-step) below. It takes about two minutes.
@@ -389,19 +392,19 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 276 tests: core logic and the real UI, headless; no network, no real server
-.\publish.ps1                    # -> dist\LunaEvo-ConfigManager-<version>-win-x64\LunaEvo.ConfigManager.exe
+dotnet test                      # 282 tests: core logic and the real UI, headless; no network, no real server
+.\publish.ps1                    # -> dist\LunaEvo-MissionControl-<version>-win-x64\LunaEvo.MissionControl.exe
 .\release.ps1                    # tests, build, and a GitHub release with the exe: every copy then offers the update
 ```
 
 Run from source against the copies in `tests/Fixtures` (no real server needed):
 
 ```powershell
-dotnet run --project src/LunaEvo.ConfigManager --launch-profile "Fixtures (in repo)"
+dotnet run --project src/LunaEvo.MissionControl --launch-profile "Fixtures (in repo)"
 ```
 
 Command-line options: `--server <folder>` (contains Server.dll), `--config <folder>` (defaults to `<server>\Config`),
-`--settings <file>` (LUNA EVO's own preferences, for portable use; defaults to `%APPDATA%\LunaEvo\ConfigManager\settings.json`).
+`--settings <file>` (LUNA EVO's own preferences, for portable use; defaults to `%APPDATA%\LunaEvo\MissionControl\settings.json`).
 
 ### Repository layout
 
@@ -409,12 +412,12 @@ Command-line options: `--server <folder>` (contains Server.dll), `--config <fold
 ConfigManager/
 ├── Meat and Potatoes/        📖 the maintainer's guide: start here
 ├── src/
-│   ├── LunaEvo.ConfigManager.Core/   🧠 all the logic, no UI: schema, XML editing, validation, server control,
+│   ├── LunaEvo.MissionControl.Core/   🧠 all the logic, no UI: schema, XML editing, validation, server control,
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, joining
-│   └── LunaEvo.ConfigManager/        🖥️ the Avalonia desktop app
+│   └── LunaEvo.MissionControl/        🖥️ the Avalonia desktop app
 ├── tests/
-│   ├── LunaEvo.ConfigManager.Core.Tests/   🧪 logic tests (161)
-│   ├── LunaEvo.ConfigManager.Tests/        🧪 UI tests: the real window, driven headlessly (79)
+│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (161)
+│   ├── LunaEvo.MissionControl.Tests/        🧪 UI tests: the real window, driven headlessly (79)
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
 ├── docs/screenshots/
@@ -436,7 +439,7 @@ We want to be completely clear about this.
 |---|---|
 | Set the goals: a GUI config manager, then server control, theming, this repo, the 0.3 feature set (wizard, players, mod import, automation...), 0.4 (a security audit, the Join page, removing Discord), 0.5 (player history, alerts, bans, mod check, notifications), 0.6 (self-update, a tidier layout), then crafts sharing, home server mode, vessel cleanup, CKAN and the LMP client, and installing mod lists with CKAN (0.7 to 1.2), with a security audit at each milestone. Found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API and mod checks really work. |
 | Made the decisions: desktop app, Avalonia, .NET 10, GPL-3.0 (the repo started private and is now public), the look (inspired by [NOMM](https://github.com/Combat787/NOMM)). | Wrote all of the code: the C#, XAML and build scripts. |
-| Supplied the real server, its configs and the requirements. | Wrote all 276 automated tests, a fake LMP server, and fakes for every network call. |
+| Supplied the real server, its configs and the requirements. | Wrote all 282 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP (below), took the screenshots, and wrote these docs. |
 
 - **Model and tool:** Claude Opus 5.5 by Anthropic, working in Claude Code (an AI coding agent that can read files, run commands and build/test the code) inside VS Code.
@@ -447,7 +450,7 @@ We want to be completely clear about this.
 
 AI-written code can look right and still be wrong, so nothing here is trusted on looks:
 
-- **276 automated tests.** They also run on GitHub on every push. Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
+- **282 automated tests.** They also run on GitHub on every push. Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
 - **Against the real thing:**
   - The wizard downloaded the real LMP 0.29.2 from GitHub, and the real server started on the generated config **with no errors**.
   - The Players page read the real server's live JSON. A Universe backup was taken while it ran, and it stopped cleanly.
@@ -468,10 +471,10 @@ it makes. The exe isn't code-signed, so Windows SmartScreen may warn the first t
 
 ## Credits and licenses
 
-- **LUNA EVO Config Manager**: GPL-3.0, see [LICENSE](LICENSE).
+- **LUNA EVO Mission Control**: GPL-3.0, see [LICENSE](LICENSE).
 - **[Luna Multiplayer](https://github.com/LunaMultiplayer/LunaMultiplayer)** by Gabriel Vazquez and contributors: MIT. LUNA EVO contains no LMP source code; it reads your server's `Server.dll` at runtime and downloads LMP's official releases. The test fixtures include LMP 0.29.2's server binaries under their MIT license ([`tests/Fixtures/LMPServer/LMP-LICENSE.txt`](tests/Fixtures/LMPServer/LMP-LICENSE.txt)).
 - **[Avalonia UI](https://avaloniaui.net/)**: MIT.
-- **[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono)** font: SIL Open Font License 1.1 ([`Assets/Fonts/OFL.txt`](src/LunaEvo.ConfigManager/Assets/Fonts/OFL.txt)).
+- **[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono)** font: SIL Open Font License 1.1 ([`Assets/Fonts/OFL.txt`](src/LunaEvo.MissionControl/Assets/Fonts/OFL.txt)).
 - **Material Symbols** icons by Google: Apache 2.0.
 - Look and feel inspired by **[NOMM](https://github.com/Combat787/NOMM)**, the Nuclear Option Mod Manager.
 

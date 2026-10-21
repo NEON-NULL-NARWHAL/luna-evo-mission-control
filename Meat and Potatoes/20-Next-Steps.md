@@ -12,8 +12,8 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 - Never commit real passwords, IPs, player names or user paths. The repo is **public**.
 - Every change gets tests; `dotnet test` must be green (CI runs it on every push).
 - Match the code around you: file header (`// LUNA EVO · path`, `[Core]/[UI]`, `Used by`, `Guide`), comment style, `.WithId(...)` on every control.
-- Ship with: bump `**Version x.y.z**` at the top of README.md (release.ps1 checks it), `<Version>` in `src/LunaEvo.ConfigManager/LunaEvo.ConfigManager.csproj` and the version in
-  `tests/LunaEvo.ConfigManager.Tests/SettingsPageTests.cs`, add a `## x.y.z` CHANGELOG section, commit, push, `.\release.ps1`.
+- Ship with: bump `**Version x.y.z**` at the top of README.md (release.ps1 checks it), `<Version>` in `src/LunaEvo.MissionControl/LunaEvo.MissionControl.csproj` and the version in
+  `tests/LunaEvo.MissionControl.Tests/SettingsPageTests.cs`, add a `## x.y.z` CHANGELOG section, commit, push, `.\release.ps1`.
 - If a UI test fails with "No precompiled XAML found", it's a stale build: `dotnet build-server shutdown`, `dotnet clean`, retest.
 - Bash heredocs mangle `\n` inside C# strings; edit files with a proper editor.
 

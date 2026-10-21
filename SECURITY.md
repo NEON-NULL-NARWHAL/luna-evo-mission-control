@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the eight security audits (0.4.0 to 1.4.0) found and changed, newest first, and which real
+what the nine security audits (0.4.0 to 2.0.0) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
@@ -44,6 +44,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.0.0 | Renamed to LUNA EVO Mission Control (exe, settings folder, startup entry; old copies still update) | **Audit 9** (I1-I8) | Old-name update path and settings migration tested; the published exe started from the demo copy | 282 |
 | 1.4.0 | Server browser, simple mode, quick edits from the console cards, allowing a player's parts, CKAN dry run | **Audit 8** (H1-H3) | The browser read 368 real public servers from LMP's master servers; Check with CKAN dry-ran a real 108-mod list on a throwaway KSP folder | 276 |
 | 1.3.1 | | **Audit 7** (G1) | The owner's own `ckan.exe` identified as official v1.36.4; the export of their real install matched the original modpack they installed it from (same 108 mods) | 260 |
 | 1.3.0 | Use your own ckan.exe, export an install's mod list | Notes below | Exported the owner's real 108-mod CKAN list (no user name in it); the real `ckan.exe` 1.36.4 installed an exported list with `-c` into a throwaway KSP folder | 259 |
@@ -63,6 +64,28 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 9 (2.0.0, October 2026)
+
+A deep dive with the rename: instead of searching for risky patterns, the code that matters most was read line by
+line (server start/stop and the outside-server log follower, config saving, profiles and Universe restore, the
+automation timers, launching KSP and CKAN).
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| I1 | Medium | **LMP's config files were written in place** (truncate, then write). A crash, power cut or full disk mid-save left a half-written XML file, and LMP resets a file it can't read to defaults on its next start. | Written to `<file>.tmp`, flushed to disk, then swapped in. |
+| I2 | Medium | **The outside-server log follower could close the app.** It runs on a timer thread and only caught `IOException`; any other error there (e.g. access denied on the logs folder) ends a .NET app. It could also skip lines written while it read. | Every error is caught (unexpected ones go to `errors.log`); it continues from what it actually read. |
+| I3 | Medium | **A failed backup after stopping stopped the daily restart.** The on-stop Universe copy wasn't caught, so a full disk or locked file meant the server was stopped and never started again. | The copy's failure is reported in the console; the restart goes on. |
+| I4 | Low | **A Server.exe Windows refuses to run** (blocked by antivirus, not a program) left the state on "Starting" for good: Start was dead until the app restarted. | Back to Stopped with the reason in the console. Tested with a fake Server.exe that isn't a program. |
+| I5 | Low | **An instant startup failure could crash the app**: LMP's Fatal line arrived on another thread before the new process was recorded, so the previous, disposed process was used. | The process is recorded before it starts; closing its input never throws. |
+| I6 | Low | **A daily restart time that passed while the server was stopped** was kept, so the next start restarted the server straight away. | Skipped and moved to the next day. |
+| I7 | Low | **Unhandled errors on buttons**: switching or saving a profile, restoring a damaged Universe backup, Windows refusing to start KSP or CKAN, killing an outside server that had just exited. The page said nothing (since 1.4.0 they were only logged). | Each says what happened (a bad backup: "your current Universe wasn't changed"). |
+| I8 | Low | **Commands after LMP closed its input** threw an unexpected error type. | Reported as "the server isn't accepting commands right now". |
+
+The rename itself: the Discord webhook's DPAPI key keeps the old name (changing it would make saved webhooks
+unreadable); settings are copied (not moved) from `%APPDATA%\LunaEvo\ConfigManager`; the old Windows startup entry
+is removed when the new one is written; the updater accepts either exe name and releases carry both, each with its
+own GitHub SHA-256. Re-checked: NuGet packages (no known vulnerabilities).
 
 ## Audit 8 (1.4.0, October 2026)
 

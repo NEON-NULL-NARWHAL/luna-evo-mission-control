@@ -1,12 +1,12 @@
 # 🥩🥔 Meat and Potatoes
 
-**The maintainer's guide to LUNA EVO Config Manager.** The main [README](../README.md) says *what* the app does;
+**The maintainer's guide to LUNA EVO Mission Control.** The main [README](../README.md) says *what* the app does;
 this folder says *how*, *where* and *why*, so you can change it with confidence.
 
 Every source file starts with a short header pointing back here, like this:
 
 ```csharp
-// LUNA EVO · LunaEvo.ConfigManager.Core/Server/ServerRunner.cs
+// LUNA EVO · LunaEvo.MissionControl.Core/Server/ServerRunner.cs
 // [Core] Starts Server.exe hidden with its console piped to us; sends commands; stops it cleanly.
 // Used by: ServerPage
 // Guide:   Meat and Potatoes/03-Server-Control.md
@@ -47,8 +47,8 @@ Symbols used in the map below and throughout these chapters:
 | Symbol | Meaning |
 |:---:|---|
 | ⭐ | **Start here.** A good first file to read in its area. |
-| 🧠 | **Core logic.** No UI, so it can be unit-tested directly. Lives in `LunaEvo.ConfigManager.Core`. |
-| 🖥️ | **UI.** Avalonia controls and pages. Lives in `LunaEvo.ConfigManager`. |
+| 🧠 | **Core logic.** No UI, so it can be unit-tested directly. Lives in `LunaEvo.MissionControl.Core`. |
+| 🖥️ | **UI.** Avalonia controls and pages. Lives in `LunaEvo.MissionControl`. |
 | 🔌 | **Touches LMP.** Reads its `Server.dll`, edits its XML, or runs its `Server.exe`. Behavior depends on LMP's version. |
 | ⚠️ | **Gotcha inside.** There's a non-obvious reason for how it's written; read its comments before changing it. |
 | 🧪 | **Tests or test data.** |
@@ -61,7 +61,7 @@ Symbols used in the map below and throughout these chapters:
 
 | | File | What it is |
 |:---:|---|---|
-| 📦 | `LunaEvo.ConfigManager.slnx` | The solution (new XML format). Open this in VS Code or Visual Studio. |
+| 📦 | `LunaEvo.MissionControl.slnx` | The solution (new XML format). Open this in VS Code or Visual Studio. |
 | 📦 | `publish.ps1` | Builds the single self-contained exe into `dist/`. See [06](06-Build-and-Release.md). |
 | 📦 | `release.ps1` | Ships a version: tests, exe, GitHub release with notes. See [18](18-Updating-LUNA-EVO.md). |
 | | `README.md` | The front page. |
@@ -72,7 +72,7 @@ Symbols used in the map below and throughout these chapters:
 | | `.gitignore` | Build output, `dist/`, backups, and dev settings. |
 | | `docs/screenshots/` | Images used by the README. |
 
-### `src/LunaEvo.ConfigManager.Core/`: the logic 🧠
+### `src/LunaEvo.MissionControl.Core/`: the logic 🧠
 
 | | File | What it is |
 |:---:|---|---|
@@ -126,11 +126,11 @@ Symbols used in the map below and throughout these chapters:
 | 🧠⚠️ | `Ops/Notifications.cs` | Notification kinds, Discord posting (no mentions, escaped), `SecretProtector` (DPAPI). See [17](17-Notifications.md). |
 | 🧠🔌 | `Ops/UniverseBackups.cs` | Zips and restores the Universe. |
 
-### `src/LunaEvo.ConfigManager/`: the app 🖥️
+### `src/LunaEvo.MissionControl/`: the app 🖥️
 
 | | File | What it is |
 |:---:|---|---|
-| 📦 | `LunaEvo.ConfigManager.csproj` | App project. **The version number lives here.** |
+| 📦 | `LunaEvo.MissionControl.csproj` | App project. **The version number lives here.** |
 | ⚠️ | `Program.cs` | Entry point. First runs the Ctrl+C helper if asked, then parses options and starts Avalonia. |
 | 🎨 | `App.axaml` | **All colors, icons and styles.** Theme dictionaries (dark and light) and style classes. |
 | | `App.axaml.cs` | Loads `App.axaml`, opens the main window. |
@@ -162,9 +162,9 @@ Symbols used in the map below and throughout these chapters:
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.ConfigManager.Core.Tests/` | xUnit tests for everything in Core (152 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
-| 🧪🖥️ | `LunaEvo.ConfigManager.Tests/` | Headless UI tests: the real window, clicked through like a user (71 tests). |
-| ⭐🧪 | `LunaEvo.ConfigManager.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
+| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (152 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (71 tests). |
+| ⭐🧪 | `LunaEvo.MissionControl.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |
 | 🧪🔌 | `Fixtures/LMPServer/` | LMP 0.29.2's `Server.dll` and dependencies (MIT), plus synthetic sample logs. |

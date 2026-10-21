@@ -4,7 +4,7 @@
 
 ```powershell
 dotnet test                                             # everything (214 tests, ~50 s)
-dotnet test tests/LunaEvo.ConfigManager.Core.Tests      # logic only (~3 s)
+dotnet test tests/LunaEvo.MissionControl.Core.Tests      # logic only (~3 s)
 dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 ```
 
@@ -12,8 +12,8 @@ dotnet test --filter "FullyQualifiedName~ServerConsole" # one class
 
 | Project | Framework | What it covers |
 |---|---|---|
-| `LunaEvo.ConfigManager.Core.Tests` | xUnit v2 | Round trips of all 13 real files, in-place edits, schema from `Server.dll`, comment parsing, every validation and greying rule, presets, dirty tracking, save/backup/prune, log parsing and tailing, runtime check, app settings, and the real `ServerRunner` against the fake server (clean stop, kill fallback, startup failure). |
-| `LunaEvo.ConfigManager.Tests` | xUnit v3 + Avalonia.Headless | The real `MainWindow`, without a screen: **every tab and every control** edited, saved and re-read; reset everywhere; error badges blocking save; greying across tabs; the list editor; backups; close prompts; the Server console (start, commands, filters, stop, restart, log files, summary cards); the Settings page (presets, wheel, hex, theme, backups to keep, about). |
+| `LunaEvo.MissionControl.Core.Tests` | xUnit v2 | Round trips of all 13 real files, in-place edits, schema from `Server.dll`, comment parsing, every validation and greying rule, presets, dirty tracking, save/backup/prune, log parsing and tailing, runtime check, app settings, and the real `ServerRunner` against the fake server (clean stop, kill fallback, startup failure). |
+| `LunaEvo.MissionControl.Tests` | xUnit v3 + Avalonia.Headless | The real `MainWindow`, without a screen: **every tab and every control** edited, saved and re-read; reset everywhere; error badges blocking save; greying across tabs; the list editor; backups; close prompts; the Server console (start, commands, filters, stop, restart, log files, summary cards); the Settings page (presets, wheel, hex, theme, backups to keep, about). |
 | `FakeLmpServer` | console app | Not tests: a stand-in `Server.exe`. |
 
 0.3 added: `SetupTests` (release feed, versions, install/update/zip-slip, generated config read by **LMP's own classes**,

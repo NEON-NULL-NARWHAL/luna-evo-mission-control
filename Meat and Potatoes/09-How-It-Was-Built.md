@@ -2,7 +2,7 @@
 
 [← Meat and Potatoes](README.md)
 
-LUNA EVO Config Manager was written by **Claude** (Anthropic's AI model, Claude Opus 5.5) working as a coding agent
+LUNA EVO Mission Control was written by **Claude** (Anthropic's AI model, Claude Opus 5.5) working as a coding agent
 in **Claude Code** inside VS Code, directed by the project owner. This chapter records how, so the project can keep
 being developed the same way, or by hand, with full knowledge of where things came from.
 

@@ -6,14 +6,14 @@
 
 ```mermaid
 flowchart LR
-    subgraph App["🖥️ LunaEvo.ConfigManager (Avalonia app)"]
+    subgraph App["🖥️ LunaEvo.MissionControl (Avalonia app)"]
         MW[MainWindow] --> SR[SettingRow]
         MW --> LE[ListEditor]
         MW --> SP[ServerPage]
         MW --> ST[SettingsPage]
         ST --> TM[ThemeManager]
     end
-    subgraph Core["🧠 LunaEvo.ConfigManager.Core (no UI)"]
+    subgraph Core["🧠 LunaEvo.MissionControl.Core (no UI)"]
         CS[ConfigSession] --> SL[LmpSchemaLoader]
         CS --> CF[ConfigFile]
         CS --> V[SettingValidator + LmpRules]

@@ -9,7 +9,7 @@
 //   --fatal           fail during startup and wait on stdin like LMP does
 //   --crash           exit with code 3 shortly after starting (tests auto-restart)
 using System.Text;
-using LunaEvo.ConfigManager.Core.Server;
+using LunaEvo.MissionControl.Core.Server;
 
 // Tests point ConsoleControl.HelperPath here, so this exe also plays LUNA EVO's Ctrl+C helper.
 if (ConsoleControl.RunHelper(args) is { } helperExit)

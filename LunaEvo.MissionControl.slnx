@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LunaEvo.MissionControl.Core/LunaEvo.MissionControl.Core.csproj" />
+    <Project Path="src/LunaEvo.MissionControl/LunaEvo.MissionControl.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FakeLmpServer/FakeLmpServer.csproj" />
+    <Project Path="tests/LunaEvo.MissionControl.Core.Tests/LunaEvo.MissionControl.Core.Tests.csproj" />
+    <Project Path="tests/LunaEvo.MissionControl.Tests/LunaEvo.MissionControl.Tests.csproj" />
+  </Folder>
+</Solution>

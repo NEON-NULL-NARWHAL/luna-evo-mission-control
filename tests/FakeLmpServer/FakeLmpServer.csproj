@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\LunaEvo.ConfigManager.Core\LunaEvo.ConfigManager.Core.csproj" />
+    <ProjectReference Include="..\..\src\LunaEvo.MissionControl.Core\LunaEvo.MissionControl.Core.csproj" />
   </ItemGroup>
 
 </Project>

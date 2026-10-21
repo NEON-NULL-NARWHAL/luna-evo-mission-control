@@ -1,6 +1,6 @@
 # 04 · App UI
 
-[← Meat and Potatoes](README.md) · Code: `src/LunaEvo.ConfigManager/` 🖥️
+[← Meat and Potatoes](README.md) · Code: `src/LunaEvo.MissionControl/` 🖥️
 
 ## Startup
 

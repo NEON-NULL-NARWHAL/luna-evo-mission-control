@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.0 (2026-10-21)
+
+**LUNA EVO Config Manager is now LUNA EVO Mission Control.** It hosts, finds, mods and joins servers now, not just
+configs. Ninth audit (a deep dive); details in `SECURITY.md`.
+
+### Changed
+- New name everywhere: window, rail, docs, `LunaEvo.MissionControl.exe`, projects and namespaces
+  (`LunaEvo.MissionControl`), settings in `%APPDATA%\LunaEvo\MissionControl\` and the Windows startup entry.
+- **Nothing to do when updating:** copies of the Config Manager (0.6 to 1.4) update themselves as before (every
+  release also carries the exe under its old name), your settings are copied over on first start, and the old startup
+  entry is replaced. A saved Discord webhook keeps working.
+
+### Fixed
+- LMP config files are saved through a temp file, so a crash or full disk can't leave a half-written one.
+- Following a server started outside LUNA EVO can no longer close the app on an unexpected error, nor skip lines.
+- A failed Universe backup after stopping no longer stops a daily restart from starting the server again.
+- A Server.exe Windows refuses to run no longer leaves Start stuck; an instant startup failure can't crash the app.
+- A daily restart time missed while the server was stopped no longer restarts it on the next start.
+- Clear messages instead of silence: profile switch/save failures, restoring a damaged backup, Windows refusing to
+  start KSP or CKAN, killing an outside server that had just stopped, commands after LMP closed its input.
+
 ## 1.4.0 (2026-10-20)
 
 From the owner's testing list. Eighth audit; details in `SECURITY.md`.

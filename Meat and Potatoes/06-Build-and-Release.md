@@ -12,8 +12,8 @@
 ```powershell
 dotnet build
 dotnet test
-dotnet run --project src/LunaEvo.ConfigManager --launch-profile "Fixtures (in repo)"
-dotnet run --project src/LunaEvo.ConfigManager --launch-profile "Local LMP folders"   # ../LMPServer + ../server-configs
+dotnet run --project src/LunaEvo.MissionControl --launch-profile "Fixtures (in repo)"
+dotnet run --project src/LunaEvo.MissionControl --launch-profile "Local LMP folders"   # ../LMPServer + ../server-configs
 ```
 
 > The *Fixtures* profile edits `tests/Fixtures/Config` if you press Save. If you do, put the files back with
@@ -25,7 +25,7 @@ dotnet run --project src/LunaEvo.ConfigManager --launch-profile "Local LMP folde
 .\publish.ps1            # or: .\publish.ps1 -Runtime win-arm64
 ```
 
-This produces `dist\LunaEvo-ConfigManager-<version>-<runtime>\LunaEvo.ConfigManager.exe`:
+This produces `dist\LunaEvo-MissionControl-<version>-<runtime>\LunaEvo.MissionControl.exe`:
 
 | Setting | Why |
 |---|---|
@@ -39,7 +39,7 @@ Each version gets its own folder, so an older exe that's still running doesn't b
 
 ## Releasing a version
 
-1. Bump `<Version>` in `src/LunaEvo.ConfigManager/LunaEvo.ConfigManager.csproj` (shown in App settings → About).
+1. Bump `<Version>` in `src/LunaEvo.MissionControl/LunaEvo.MissionControl.csproj` (shown in App settings → About).
 2. Add a `## <version> (date)` section to `CHANGELOG.md`.
 3. Smoke-test `.\publish.ps1`'s exe in a **copy** of a server folder.
 4. Commit and push.

@@ -1,6 +1,6 @@
 # 02 · Core: settings, files, validation
 
-[← Meat and Potatoes](README.md) · Code: `src/LunaEvo.ConfigManager.Core/` 🧠
+[← Meat and Potatoes](README.md) · Code: `src/LunaEvo.MissionControl.Core/` 🧠
 
 ## `Schema/`: what settings exist 🔌
 
@@ -74,6 +74,6 @@ Save(backupsToKeep)         backup → write → prune → re-snapshot; returns 
 
 ## `AppSettings` / `AppSettingsStore`
 
-A record of LUNA EVO's own preferences, saved as JSON in `%APPDATA%\LunaEvo\ConfigManager\settings.json` (or
+A record of LUNA EVO's own preferences, saved as JSON in `%APPDATA%\LunaEvo\MissionControl\settings.json` (or
 `--settings`). `Load` returns defaults for a missing or corrupt file, so a bad file can never stop the app starting.
 To add a preference, see [08 · Recipes](08-Recipes.md#add-a-luna-evo-preference).

@@ -42,7 +42,7 @@ characters removed, only IP literals accepted as endpoints, website links only i
 
 ## Errors
 
-`Core/ErrorLog` writes to `%APPDATA%\LunaEvo\ConfigManager\logs\errors.log`. `Program.Main` hooks
+`Core/ErrorLog` writes to `%APPDATA%\LunaEvo\MissionControl\logs\errors.log`. `Program.Main` hooks
 `AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException` and `Dispatcher.UIThread.UnhandledException`
 (handled, so the app carries on). Only in `Program`: headless tests rely on errors failing the test.
 

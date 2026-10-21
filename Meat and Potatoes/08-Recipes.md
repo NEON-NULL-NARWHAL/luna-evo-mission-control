@@ -8,14 +8,14 @@ Step-by-step guides for the changes you're most likely to make. Each ends with *
 
 *Example: warn if `MaxPlayers` is over 50.*
 
-1. Open `src/LunaEvo.ConfigManager.Core/Validation/LmpRules.cs`.
+1. Open `src/LunaEvo.MissionControl.Core/Validation/LmpRules.cs`.
 2. In `Check(session)`, read values with `session.GetValue(file, setting)` and `yield return` an `Issue`:
    ```csharp
    if (Int(session.GetValue(General, "MaxPlayers")) is > 50)
        yield return new Issue(General, "MaxPlayers", Severity.Warning, "More than 50 players can be heavy on a home server.");
    ```
    `Severity.Error` blocks saving; `Warning` doesn't. A `null` setting makes it a banner for the whole file.
-3. Add a test in `tests/LunaEvo.ConfigManager.Core.Tests/ConfigSessionTests.cs` (copy `Heartbeat_must_be_lower_than_timeout`).
+3. Add a test in `tests/LunaEvo.MissionControl.Core.Tests/ConfigSessionTests.cs` (copy `Heartbeat_must_be_lower_than_timeout`).
 
 ## Gray out a setting that doesn't apply
 
