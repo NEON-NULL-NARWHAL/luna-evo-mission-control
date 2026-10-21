@@ -36,6 +36,7 @@ Every source file starts with a short header pointing back here, like this:
 | 18 | [Updating LUNA EVO itself](18-Updating-LUNA-EVO.md) | ship a release (`release.ps1`), or change how the app updates itself |
 | 19 | [Sharing crafts](19-Sharing-Crafts.md) | work on the Crafts page, the .lunacraft format, or craft import/export |
 | 20 | [Next steps (handoff)](20-Next-Steps.md) | pick up the next task: house rules, quick wins with file pointers, the LMP fork list |
+| 21 | [Vessel cleanup](21-Vessel-Cleanup.md) | change the Vessels page or how Universe vessels are read and removed |
 
 ## 🔣 Legend
 
@@ -114,6 +115,7 @@ Symbols used in the map below and throughout these chapters:
 | **Join/** | | *The player side* ([15](15-Joining-Servers.md)) |
 | 🧠 | `Join/ServerProbe.cs` | `ServerAddress` parsing; DNS, network kind, ping, and live info from a host's LMP website. |
 | 🧠🔌⚠️ | `Join/KspLauncher.cs` | Finds KSP and the LMP client, plans auto-connect vs server list (LMP's `-lmp` bug), edits LMP's client `settings.xml`, starts KSP. |
+| 🧠🔌 | `Ops/UniverseVessels.cs` | Universe vessels: list, remove after a backup. See [21](21-Vessel-Cleanup.md). |
 | 🧠 | `Ops/ProfileStore.cs` | Named copies of the whole config. |
 | 🧠⚠️ | `Ops/Notifications.cs` | Notification kinds, Discord posting (no mentions, escaped), `SecretProtector` (DPAPI). See [17](17-Notifications.md). |
 | 🧠🔌 | `Ops/UniverseBackups.cs` | Zips and restores the Universe. |
@@ -134,6 +136,7 @@ Symbols used in the map below and throughout these chapters:
 | 🖥️ | `DesktopNotifier.cs` | Windows notifications through the notification area (`Shell_NotifyIcon`). |
 | ⭐🖥️🔌 | `SetupWizard.cs` | "Set up a new server": download, configure, open. |
 | 🖥️🔌 | `PlayersPage.cs` | Live players and vessels, Kick/Ban, alerts, player history and notes, bans with unban. |
+| 🖥️🔌 | `VesselsPage.cs` | The Vessels page: vessel list, quick selections, remove. |
 | 🖥️ | `ConnectPage.cs` | Addresses to share, firewall, reachability, sharing live info with players. |
 | ⭐🖥️ | `JoinPage.cs` | Join a server (for players): check, save, check my mods, launch KSP into it. `StartKsp` is the test seam. |
 | 🖥️ | `ProfilesPage.cs` | Config profiles and Universe backups. |

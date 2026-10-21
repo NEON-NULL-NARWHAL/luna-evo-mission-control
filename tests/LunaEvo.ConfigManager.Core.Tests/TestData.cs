@@ -169,4 +169,17 @@ internal static class TestData
         Directory.CreateDirectory(Path.Combine(ksp, "GameData")); // empty: every part counts as missing
         return ksp;
     }
+
+    /// <summary>A Universe/Vessels folder with a crewed station, two debris (one with a stranded kerbal) and an asteroid.</summary>
+    public static void AddVessels(string serverDirectory)
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(serverDirectory, "Universe", "Vessels")).FullName;
+        void Vessel(string id, string name, string type, string crew = "") => File.WriteAllText(Path.Combine(folder, id + ".txt"),
+            string.Join("\n", $"pid = {id}", $"name = {name}", $"type = {type}", "sit = ORBITING", "ORBIT", "{", "REF = 1", "}",
+                "PART", "{", "name = mk1pod.v2", crew.Length > 0 ? $"crew = {crew}" : "", "}", "PART", "{", "name = fuelTank", "}"));
+        Vessel("a1", "Kerbin Station", "Station", "Jebediah Kerman");
+        Vessel("b2", "Kerbal X Debris", "Debris");
+        Vessel("c3", "Stage with Bob", "Debris", "Bob Kerman");
+        Vessel("d4", "Ast. ABC-123", "SpaceObject");
+    }
 }

@@ -35,6 +35,7 @@ public sealed class MainWindow : Window
     internal const string SettingsKey = "settings";
     internal const string JoinKey = "join";
     internal const string CraftsKey = "crafts";
+    internal const string VesselsKey = "vessels";
     internal const string ServerSettingsKey = "serverSettings";
     internal const string ModControlFile = "LMPModControl.xml";
 
@@ -67,6 +68,7 @@ public sealed class MainWindow : Window
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
+    private VesselsPage? _vesselsPage;
     private PlayerTracker? _tracker;
     private ConnectPage? _connect;
     private ProfilesPage? _profilesPage;
@@ -203,6 +205,7 @@ public sealed class MainWindow : Window
     internal ConfigSession? Session => _session;
     internal ServerPage? Server => _server;
     internal PlayersPage? Players => _players;
+    internal VesselsPage? Vessels => _vesselsPage;
     internal PlayerTracker? Tracker => _tracker;
     internal ConnectPage? Connect => _connect;
     internal ProfilesPage? Profiles => _profilesPage;
@@ -425,6 +428,7 @@ public sealed class MainWindow : Window
             _players?.Dispose();
             _players = new PlayersPage(this);
             _connect = new ConnectPage(this);
+            _vesselsPage = new VesselsPage(this);
             _profilesPage = new ProfilesPage(this);
         }
         UpdateSettings(s => s with { LastServerDirectory = session.ServerDirectory });
@@ -520,6 +524,9 @@ public sealed class MainWindow : Window
             case CraftsKey:
                 _craftsPage.Refresh();
                 break;
+            case VesselsKey:
+                _vesselsPage?.Refresh();
+                break;
         }
     }
 
@@ -586,6 +593,7 @@ public sealed class MainWindow : Window
         _tracker?.Save();
         _tracker = null;
         _connect = null;
+        _vesselsPage = null;
         _profilesPage = null;
         _modImport = null;
         _session = null;
@@ -661,6 +669,7 @@ public sealed class MainWindow : Window
         consoleContent.Children.Add(_consoleDot);
         AddNav(ConsolePage, consoleContent, _server!.View);
         AddNav(PlayersKey, new TextBlock { Text = "Players" }, _players!.View);
+        AddNav(VesselsKey, new TextBlock { Text = "Vessels" }, _vesselsPage!.View);
         AddNav(ConnectKey, new TextBlock { Text = "Connect" }, _connect!.View);
 
 

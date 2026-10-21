@@ -19,7 +19,7 @@ public class NavigationAndUpdateTests
     {
         using var ui = new UiHarness();
         var rail = RailButtons(ui);
-        Assert.Equal(["nav/console", "nav/players", "nav/connect", "nav/serverSettings", "nav/LMPModControl.xml", "nav/profiles", "nav/join", "nav/crafts", "nav/settings"], rail);
+        Assert.Equal(["nav/console", "nav/players", "nav/vessels", "nav/connect", "nav/serverSettings", "nav/LMPModControl.xml", "nav/profiles", "nav/join", "nav/crafts", "nav/settings"], rail);
 
         ui.OpenTab(MainWindow.ConsolePage);
         Assert.Null(ui.TryFind<Button>("nav/WarpSettings.xml")); // not in the rail any more
@@ -165,6 +165,26 @@ public class NavigationAndUpdateTests
         ui.Pump();
         Assert.True(ui.Find<Border>("console/health/Memory").IsEffectivelyVisible);
         Assert.NotNull(ui.Find<Border>("console/health/CPU"));
+    }
+
+    [AvaloniaFact]
+    public void Vessel_cleanup_selects_debris_but_never_crewed_vessels()
+    {
+        using var ui = new UiHarness();
+        TestData.AddVessels(ui.ServerDirectory);
+        ui.OpenTab(MainWindow.VesselsKey);
+        Assert.Equal("2", Texts(ui.Find<Border>("vessels/card/Debris")).Last());
+
+        ui.Click(ui.Find<Button>("vessels/selectDebris"));
+        ui.Pump();
+        Assert.True(ui.Find<CheckBox>("vessels/select/b2").IsChecked);
+        Assert.False(ui.Find<CheckBox>("vessels/select/c3").IsChecked); // debris, but Bob is aboard
+
+        ui.Await(ui.Window.Vessels!.RemoveSelectedAsync());
+        Assert.Contains("Remove 1 vessel(s)?", ui.DialogsShown);
+        Assert.False(File.Exists(Path.Combine(ui.ServerDirectory, "Universe", "Vessels", "b2.txt")));
+        Assert.True(File.Exists(Path.Combine(ui.ServerDirectory, "Universe", "Vessels", "c3.txt")));
+        Assert.StartsWith("Removed 1 vessel(s).", ui.Find<TextBlock>("vessels/result").Text);
     }
 
     [AvaloniaFact]

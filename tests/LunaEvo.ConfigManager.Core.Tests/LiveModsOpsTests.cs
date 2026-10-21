@@ -319,6 +319,27 @@ public class LiveModsOpsTests
         Assert.Equal(2, Announcements.Due(items, sent, start, start.AddMinutes(120)).Count);
     }
 
+    [Fact]
+    public void Lists_universe_vessels_and_removes_them_after_a_backup()
+    {
+        var server = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "vessels-" + Guid.NewGuid().ToString("N"));
+        TestData.AddVessels(server);
+        var vessels = UniverseVessels.List(server);
+        Assert.Equal(4, vessels.Count);
+        var station = vessels.Single(v => v.Id == "a1");
+        Assert.Equal(("Kerbin Station", "Station", "ORBITING", 1, 2), (station.Name, station.Type, station.Situation, station.Body, station.PartCount));
+        Assert.Equal(["Jebediah Kerman"], station.Crew);
+
+        var backup = UniverseVessels.Remove(server, vessels.Where(v => v.IsDebris));
+        Assert.Equal("beforecleanup", backup.Label);
+        Assert.Equal(["a1", "d4"], UniverseVessels.List(server).Select(v => v.Id).Order());
+        using (var zip = System.IO.Compression.ZipFile.OpenRead(backup.Path))
+            Assert.Contains(zip.Entries, e => e.FullName == "Vessels/b2.txt"); // the removed ones are in the backup
+
+        var elsewhere = new UniverseVessel("x", "x", "Debris", "", 1, 1, [], Path.Combine(Path.GetTempPath(), "x.txt"));
+        Assert.Throws<InvalidOperationException>(() => UniverseVessels.Remove(server, [elsewhere]));
+    }
+
     private static async Task Until(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);

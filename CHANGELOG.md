@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0 (2026-10-20)
+
+**LUNA EVO 1.0.** Everything a home LMP host needs, from first download to an always-on server: setup wizard, every
+setting in a searchable GUI read from your own LMP, the server console with health and automation, players with
+history, alerts and bans, Connect and Join (with invites, mod checks and launching KSP straight in), crafts sharing,
+notifications, self-updating, and now vessel cleanup. Three security audits, 234 automated tests.
+
+### Added
+- **Vessels** page (rail → Server): every vessel in the Universe with type, body, situation, parts and crew;
+  "Select all debris" / "Select asteroids & comets" (never crewed vessels), search, and **Remove selected** while the
+  server is stopped, with a whole-Universe backup first (`beforecleanup`, restorable on Profiles & Backups). Fewer
+  vessels means less for every player's game to keep in step.
+
 ## 0.9.0 (2026-10-20)
 
 ### Added
