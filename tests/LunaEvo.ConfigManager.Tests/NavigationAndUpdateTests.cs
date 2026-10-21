@@ -269,6 +269,22 @@ public class NavigationAndUpdateTests
     }
 
     [AvaloniaFact]
+    public void Ckan_page_refuses_a_mod_list_file_that_is_far_too_big()
+    {
+        using var ui = new UiHarness(openServer: false);
+        var file = Path.Combine(Path.GetTempPath(), "LunaEvoTests", Guid.NewGuid().ToString("N") + ".ckan");
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        using (var stream = File.Create(file))
+            stream.SetLength(CkanPage.MaxListBytes + 1);
+        CkanPage.PickModList = _ => Task.FromResult<string?>(file);
+        ui.OpenTab(MainWindow.CkanKey);
+        ui.Click(ui.Find<Button>("ckan/load"));
+        ui.Pump();
+        Assert.Contains("too big", ui.Find<TextBlock>("ckan/result").Text);
+        Assert.True(string.IsNullOrEmpty(ui.Find<TextBox>("ckan/list").Text));
+    }
+
+    [AvaloniaFact]
     public void Ckan_page_refuses_while_ckan_has_the_install_open()
     {
         using var ui = new UiHarness(openServer: false);

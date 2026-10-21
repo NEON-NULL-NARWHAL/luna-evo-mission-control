@@ -30,6 +30,8 @@ internal sealed class CkanPage
             FileTypeFilter = [new FilePickerFileType("CKAN mod list") { Patterns = ["*.ckan"] }],
         })).FirstOrDefault()?.TryGetLocalPath();
 
+    internal const int MaxListBytes = 5 * 1024 * 1024;
+
     private readonly MainWindow _host;
     private readonly StackPanel _status = new() { Spacing = 2 };
     private readonly StackPanel _installs = new() { Spacing = 2 };
@@ -52,8 +54,19 @@ internal sealed class CkanPage
         var load = Ui.Button("Load a .ckan file...", "text", "IconFolder").WithId("ckan/load");
         load.Click += async (_, _) =>
         {
-            if (await PickModList(_host) is { } path)
-                _list.Text = File.ReadAllText(path);
+            if (await PickModList(_host) is not { } path)
+                return;
+            try
+            {
+                // Modpacks are a few KB; a huge file is the wrong one (and would freeze the text box).
+                _list.Text = new FileInfo(path).Length > MaxListBytes
+                    ? throw new IOException("That file is too big for a mod list (over 5 MB).")
+                    : File.ReadAllText(path);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                _result.Text = "Couldn't read that file: " + e.Message;
+            }
         };
         _install.HorizontalAlignment = HorizontalAlignment.Left;
         _install.Click += async (_, _) => await InstallListAsync();
@@ -254,13 +267,14 @@ internal sealed class CkanPage
         var info = new System.Diagnostics.ProcessStartInfo(exe)
         {
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
-            WorkingDirectory = Path.GetDirectoryName(exe)!,
+            RedirectStandardInput = true, WorkingDirectory = Path.GetDirectoryName(exe)!,
         };
         foreach (var argument in arguments)
             info.ArgumentList.Add(argument);
         using var process = System.Diagnostics.Process.Start(info) ?? throw new InvalidOperationException("CKAN didn't start.");
         process.OutputDataReceived += (_, e) => { if (e.Data != null) line(e.Data); };
         process.ErrorDataReceived += (_, e) => { if (e.Data != null) line(e.Data); };
+        process.StandardInput.Close(); // if CKAN ever asks a question, it gets "no answer" instead of waiting forever
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         await process.WaitForExitAsync();

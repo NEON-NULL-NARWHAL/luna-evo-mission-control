@@ -62,10 +62,11 @@ public sealed class ProfileStore(string serverDirectory)
             safe = safe[..80].TrimEnd('.', ' ');
         if (safe.Length == 0)
             return "Profile";
-        // Windows treats these as devices, not folders, even with an extension ("NUL.txt").
-        var stem = safe.Split('.')[0].TrimEnd(' ');
-        return ReservedNames.Contains(stem) ? safe + "-profile" : safe;
+        return IsDeviceName(safe) ? safe + "-profile" : safe;
     }
+
+    /// <summary>True for names Windows treats as devices, not files, even with an extension ("NUL.txt").</summary>
+    public static bool IsDeviceName(string name) => ReservedNames.Contains(name.Split('.')[0].TrimEnd(' '));
 
     private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
     {

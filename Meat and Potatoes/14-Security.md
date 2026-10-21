@@ -57,5 +57,8 @@ their IP addresses (`PlayerTracker`).
 - Anything started as a process: absolute path, arguments as a list (`ArgumentList`), never a shell string.
 - Anything stored: no secrets in `AppSettings`.
 - Anything unpacked: limits, stay-inside check, staging folder.
-- Anything turned into a file or folder name: `SafeName`-style cleaning.
+- Anything turned into a file or folder name: `SafeName`-style cleaning. Also refuse names made only of dots (`..`) and Windows device
+  names (`ProfileStore.IsDeviceName`); audit 6 found both gaps.
+- Any file a user picks or a friend sends: a size limit before reading it (`CkanPage.MaxListBytes`).
+- Any tool started in the background: close or redirect its input, so it can never wait for an answer.
 - A test for each of the above.

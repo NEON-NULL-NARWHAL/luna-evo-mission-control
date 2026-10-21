@@ -120,7 +120,9 @@ public static class CkanTools
         }
     }
 
-    private static string SafeVersion(string tag) => new string(tag.Where(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_').ToArray()) is { Length: > 0 } s ? s : "unknown";
+    // Never "." or "..": Remove("..") would otherwise delete the folder above Root.
+    internal static string SafeVersion(string tag) =>
+        new string(tag.Where(c => char.IsLetterOrDigit(c) || c is '.' or '-' or '_').ToArray()).Trim('.') is { Length: > 0 } s ? s : "unknown";
 
     private static string Str(JsonElement e, string p) => e.TryGetProperty(p, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
 }

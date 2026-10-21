@@ -144,7 +144,9 @@ public static partial class CraftShare
     {
         var invalid = Path.GetInvalidFileNameChars();
         var safe = new string(name.Trim().Select(c => invalid.Contains(c) ? '-' : c).ToArray()).Trim('.', ' ');
-        return safe.Length == 0 ? "Craft" : safe.Length > 80 ? safe[..80] : safe;
+        safe = safe.Length == 0 ? "Craft" : safe.Length > 80 ? safe[..80].TrimEnd('.', ' ') : safe;
+        // A friend's craft called "CON" or "NUL" would name a Windows device, not a file.
+        return Ops.ProfileStore.IsDeviceName(safe) ? safe + "-craft" : safe;
     }
 
     private static string WriteCraft(SharedCraft shared, string folder, string? kspFolder, string? save)

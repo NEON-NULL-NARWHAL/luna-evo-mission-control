@@ -35,13 +35,28 @@ public sealed class LmpReleaseFeed(HttpClient http)
     public async Task<IReadOnlyList<LmpRelease>> GetAsync(bool includePrereleases, CancellationToken cancel = default) =>
         (await GetAllAsync(http, ReleasesUrl, includePrereleases, cancel)).Where(r => r.ServerAsset() != null).ToList();
 
+    public const int MaxFeedBytes = 10 * 1024 * 1024;
+
     /// <summary>Every non-draft release at a GitHub releases API URL, newest first.</summary>
     public static async Task<IReadOnlyList<LmpRelease>> GetAllAsync(HttpClient http, string url, bool includePrereleases, CancellationToken cancel = default)
     {
-        using var response = await http.GetAsync(url, cancel);
+        using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancel);
         response.EnsureSuccessStatusCode();
+        if (response.Content.Headers.ContentLength > MaxFeedBytes)
+            throw new JsonException("GitHub's release list is unexpectedly large.");
         await using var stream = await response.Content.ReadAsStreamAsync(cancel);
-        using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancel);
+        // A page of 30 releases is well under 1 MB; never buffer more than MaxFeedBytes whatever arrives.
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81920];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, cancel)) > 0)
+        {
+            if (buffer.Length + read > MaxFeedBytes)
+                throw new JsonException("GitHub's release list is unexpectedly large.");
+            buffer.Write(chunk, 0, read);
+        }
+        buffer.Position = 0;
+        using var json = await JsonDocument.ParseAsync(buffer, cancellationToken: cancel);
 
         // GitHub's JSON is outside our control: read it defensively, skipping anything that doesn't look right.
         if (json.RootElement.ValueKind != JsonValueKind.Array)

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.1 (2026-10-20)
+
+Sixth security audit, a sweep of the whole codebase; details in `SECURITY.md`.
+
+### Security
+- Names made only of dots can no longer slip through the CKAN version and download file name filters.
+- Loading a `.ckan` file over 5 MB is refused instead of freezing the window.
+- CKAN's command line can't wait forever for an answer (its input is closed).
+- A friend's craft named after a Windows device (`CON`, `NUL`...) gets a safe file name.
+- GitHub release lists are read with a 10 MB cap.
+
+### Changed
+- `SECURITY.md` is in chronological order (oldest audit first), with a release-by-release history of audits, real
+  checks and test counts, and a "Tested with" table. The README lists the tested versions too (Windows 11, LMP 0.29.2,
+  KSP 1.12.5, CKAN 1.36.4) and its security note is up to date.
+
 ## 1.2.0 (2026-10-20)
 
 ### Added

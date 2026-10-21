@@ -2,7 +2,8 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the four security audits (0.4.0, 0.4.1, 0.8.1, 1.0.1) found and changed.
+what the six security audits (0.4.0 to 1.2.1) found and changed, oldest first, and which real
+software each version was tested against.
 
 ## Reporting a problem
 
@@ -25,7 +26,8 @@ response time.
 | **Discord** (`discord.com`) | Only if you save a webhook (Settings → Notifications) | HTTPS posts of the notifications. The URL is stored encrypted for your Windows account (DPAPI) and never shown again; posts can't mention anyone. |
 | **Windows notifications** | Settings → Notifications (on by default) | Shown on this PC only. |
 | **Windows startup list** (`HKCU\...\Run`) | Only while Home server mode is on | One entry, "LUNA EVO Config Manager", for your user only; removed when you switch the mode off. |
-| **CKAN and the LMP client** (GitHub) | Settings → Downloads; setup wizard step 3 if switched on | The same verified download as LMP's server: GitHub only, SHA-256 checked (and again where it's stored or before unpacking). Nothing unverified. The client is unpacked with size and stay-inside checks, only into `GameData/LunaMultiplayer` (and `000_Harmony` if missing). |
+| **CKAN and the LMP client** (GitHub) | CKAN page and Settings → Downloads; setup wizard step 3 if switched on | The same verified download as LMP's server: GitHub only, SHA-256 checked (and again where it's stored or before unpacking). Nothing unverified. The client is unpacked with size and stay-inside checks, only into `GameData/LunaMultiplayer` (and `000_Harmony` if missing). |
+| **CKAN's command line** (`ckan.exe`, LUNA EVO's verified copy) | CKAN page → Install with CKAN, after you confirm | `ckan update` and `ckan install <mod names>` for the KSP install you pick, never while KSP or CKAN has it open. Only mod names and versions from a list are passed (a `.ckan` file itself never is). CKAN then downloads from its own catalogue. |
 | **Crafts from friends** | Crafts page → Import | Read as data with size limits; written only into a KSP save's Ships folder or the server's craft library, never overwriting. |
 
 LUNA EVO has no telemetry, no accounts and no server of its own.
@@ -34,102 +36,29 @@ LUNA EVO has no telemetry, no accounts and no server of its own.
 to unban), when they played, their LMP/KSP versions, wrong admin passwords, ban reasons and your notes. **Never IP
 addresses**, even though LMP's own log lines contain them. It stays next to your server; delete it to forget everyone.
 
-## Security notes on self-update (0.6)
+## Audit and test history
 
-- LUNA EVO only installs an update that GitHub publishes a **SHA-256** for, downloaded over HTTPS from GitHub's own
-  hosts. The copy placed next to the exe is hashed **again**, must be a Windows program (`MZ`) and must carry the
-  release's version number, before the running exe is renamed aside. Any failure leaves the current version as it was.
-- What this protects against: a tampered or corrupted download, a redirect elsewhere, a file swapped after downloading.
-  What it doesn't: someone who can publish releases on this repository (a GitHub account takeover). Protect the
-  maintainers' GitHub accounts with two-factor authentication; code signing (not done yet) would add a second check.
-- Development builds never replace themselves.
+Oldest first. Each audit's findings and fixes are below the table; the real software each version was tested against
+is under [Tested with](#tested-with).
 
-## Security notes on the 0.5 features
+| Version | What it added (security-relevant) | Audit | Checked for real | Tests |
+|---|---|---|---|---|
+| 0.3.0 | Setup wizard and LMP updater, server control, players, mod import | - | The wizard installed the real LMP 0.29.2 server, which started cleanly on the generated config; GameData scan of a real modded KSP 1.12.5 (1,527 parts, 132 plugins) | |
+| 0.4.0 | Join page, verified downloads, Discord removed | **Audit 1** (H1-H3, M1-M5, L1-L6) | The real LMP 0.29.2 release's SHA-256 digest matched; Join checked a real running server | |
+| 0.4.1 | | **Audit 2** (A1-A7) | | 183 |
+| 0.5.0 | Player history, alerts, bans, mod check, notifications | Notes below | | |
+| 0.6.0 / 0.6.1 | Self-update, password generator, internet-exposure banner, CI | Notes below | | |
+| 0.7.x | Crafts sharing, automatic Universe backups | - | | |
+| 0.8.0 | Settings search, chat announcements, home server mode | - | | |
+| 0.8.1 | | **Audit 3** (C1-C3) | | |
+| 0.9.0 / 1.0.0 | Server health, invites, vessel cleanup | - | | 234 |
+| 1.0.1 | | **Audit 4** (D1-D2) | | |
+| 1.1.0 / 1.1.1 | CKAN copies, LMP client installer, Join with CKAN | - | GitHub's digests matched the real CKAN 1.36.4 `ckan.exe` and LMP 0.29.2 client zip | 240 |
+| 1.2.0 | CKAN page, install a mod list with CKAN | **Audit 5** (E1-E4) | The real `ckan.exe` 1.36.4 installed a mod list by name into a throwaway KSP folder | 248 |
+| 1.2.1 | | **Audit 6** (F1-F5) | The real `ckan.exe` 1.36.4 runs with its input closed | 256 |
 
-- **Discord is back, with audit 1's H2 and H3 fixed:** the webhook is encrypted with Windows DPAPI (useless on
-  another account or PC), never displayed again after saving, and every post sends `allowed_mentions: { parse: [] }`
-  and escapes player-controlled text, so a player named `@everyone` can't ping anyone or add links.
-- **Alerts come from LMP's log.** LUNA EVO only reads LMP's own server messages, never chat, and only accepts player
-  names LMP itself allows. A modified client could still fake a log line with a line break in a chat message; the
-  worst that does is a wrong history entry or a false alert, never a command.
-- **Unban edits LMP's ban list** only while the server is stopped, after backing it up.
-- **The mod check** reads files only; it never changes your GameData.
-- **Craft files from friends** (`.lunacraft`, 0.7) are opened as data: only `craft.craft`, `manifest.json` and
-  `thumbnail.png` are accepted (nothing else is ever unpacked), 20 MB at most, and the craft must parse. Imports go
-  only into a KSP save's Ships folder or the server's craft library, and never overwrite.
-
-## Audit 5 (1.2.0, October 2026)
-
-A deeper pass over everything since 1.0 (CKAN and LMP client downloads, the new mod-list install) and a re-read of
-the older hot paths for robustness and wasted work.
-
-| # | Severity | Finding | Fix |
-|---|---|---|---|
-| E1 | High (design) | **A `.ckan` file can carry its own `download` URL** (and `install_to` paths). Handing a pasted file to `ckan install -c` would let whoever wrote it put any DLL into GameData, and KSP runs every DLL there. | The file is **never passed to CKAN**. Only mod identifiers (CKAN's own rule: letters, digits, `-`, `_`, not starting with `-`, so none can read as an option) and versions (`[A-Za-z0-9.:+_~-]`) are read out and passed as `ckan install Mod Mod=version` with `--headless --no-recommends`, so everything comes from CKAN's catalogue. At most 2,000 mods; arguments go through `ArgumentList`, never a shell. Checked with the real ckan.exe 1.36.4 on a throwaway KSP folder. |
-| E2 | Medium | **`settings.json` was written in place**: a crash or power cut mid-write could leave it half-written, losing saved servers and the Discord webhook. | Written to `settings.json.tmp`, then swapped in. |
-| E3 | Low | Mod-list install could run while CKAN had the install open (two writers on CKAN's registry). | Refused while `CKAN/registry.locked` names a live process (or can't be read); a lock left by a closed CKAN doesn't block. Also refused while KSP runs. |
-| E4 | Low (efficiency) | The Players history was rebuilt every 5 s, announcements parsed every second, the Join auto-refresh repeated DNS and four pings every 10 s, and every mod check / craft import re-read thousands of GameData files. | Redraw only on change (tracker version, ban file time, search, online list); parse once per change; auto-refresh reads only live info; GameData scans reused for 2 minutes. |
-
-Reviewed and fine: the CKAN page shows `%LOCALAPPDATA%` instead of user paths; the process list check disposes what
-it opens; CKAN's own output is shown as plain text, never run or parsed for commands. Spelling: a dictionary pass over
-every string, comment and doc found only LMP's own `Hearbeat`, now shown spelled right.
-
-## Audit 4 (1.0.1, October 2026)
-
-The 1.0 review: vessel cleanup, server health, invites and the notification icon's timer, plus the usual re-checks
-(NuGet packages: no known vulnerabilities; the whole git history: no passwords, IP addresses, player names or user
-paths).
-
-| # | Severity | Finding | Fix |
-|---|---|---|---|
-| D1 | Medium | **Vessel cleanup deleted vessels even if its safety backup had skipped files** (a file another program had open is skipped, not copied). The "undo" could then be missing data. | If the backup couldn't read every Universe file, the incomplete backup is deleted and **nothing is removed**; the page says why. Tested with a locked vessel file. |
-| D2 | Low | **The notification icon's removal timer ran on another thread** with no lock, so a notification arriving at the same moment could lose its icon (and not show). | One lock around showing and removing. |
-
-Reviewed and fine: vessel cleanup only removes files inside this server's `Universe/Vessels`, only while the server is
-stopped, never crewed vessels in a bulk selection; server health only reads the server's own process; the invite
-never contains the password or your internet address (it prefers your VPN/mesh address, then your home network).
-
-## Audit 3 (0.8.1, October 2026)
-
-Everything added since audit 2: player history and bans, the mod check, Windows and Discord notifications, the
-self-updater, craft sharing, home server mode, chat announcements and settings search. Also re-checked, now that the
-repository is public: NuGet packages (no known vulnerabilities) and **the whole git history** (no passwords, IP
-addresses, player names or user paths; commits do carry the maintainers' contact email as author).
-
-| # | Severity | Finding | Fix |
-|---|---|---|---|
-| C1 | Medium | **`.lunacraft` files from friends were read up to the size each entry *claims*.** A zip's sizes are written by whoever made it, so a crafted file could claim a small craft and unpack to gigabytes (a "zip bomb"), filling memory. | Each entry is now read with a hard 20 MB limit, whatever it claims; a test opens a real bomb (under 1 MB on disk) and is refused. |
-| C2 | Low | **Mod rules files from a host had no size limit.** | 20 MB cap before parsing (they're a few MB even for big modpacks). |
-| C3 | Low | **The post-update clean-up read the exe path when it ran, 15 s later**, not when it was scheduled. Harmless in normal use (one window per process), but a second window could delete another's `.old` file. | The path is captured when the clean-up is scheduled. |
-
-Reviewed and fine as designed: Discord webhook (encrypted, never shown, no mentions, escaped); the updater (GitHub only,
-SHA-256 twice, `MZ` and version checks, rename with rollback, never unverified); home server mode (a per-user Windows
-startup entry with the exe path quoted, removed when switched off; keep-awake only while the server runs; no admin);
-chat announcements (your own text, one line each, sent through the same path that strips line breaks); player
-history (LMP's own messages only, names checked, never IPs); craft import (only into a KSP save's Ships folder or the
-server's library, never overwriting, file names cleaned).
-
-Known and accepted: a modified game client can fake a log line inside a chat message (worst case: a wrong history
-entry or a false alert); craft files are KSP's own format and are passed to KSP as they are, so a hostile craft can
-only do what KSP lets a craft file do.
-
-## Audit 2 (0.4.1, October 2026)
-
-A second pass over the whole codebase, focused on the 0.4.0 Join code and on areas the first audit only skimmed:
-files LUNA EVO unpacks or names, XML parsing, text sent to the server console, and the release itself. Also checked:
-NuGet packages (no known vulnerabilities), console commands (line breaks are already stripped, so a kick reason
-can't smuggle in a second command), the published exe (no build paths or user names inside), and **the whole git
-history** (no real passwords, IP addresses, player names or user paths).
-
-| # | Severity | Finding | Fix |
-|---|---|---|---|
-| A1 | Medium | **LMP itself doesn't limit password guesses.** The admin password is compared on every admin message with no rate limit, and the admin can ban, kick, clear the KSC and restart the server. A short admin password can be guessed by any connected player in seconds. | LUNA EVO now warns when the admin password is under 10 characters and the server password under 6 (saving still works). The real fix, rate limiting, belongs in our LMP fork. **If your passwords are short numbers, change them.** |
-| A2 | Medium | **Live info had no size limit.** The Join page reads from any address you type; whatever answers could send a reply of up to 2 GB (memory) or follow a redirect to another host. | Headers first, a 4 MB cap, a 15-second limit, no redirect to another host, text cut to 256 characters. |
-| A3 | Medium | **Universe restore deleted the current Universe before unpacking.** A damaged or hostile backup zip would leave a half-restored Universe (the safety snapshot made it recoverable, but by hand). No size limits on unpacking. | Unpacks into a staging folder with file-count, size and stay-inside checks, and only then swaps it in. |
-| A4 | Low | **XML files could contain a DTD**, allowing entity expansion (bounded by .NET to 10 million characters). | DTDs are refused; LMP's files never have one. |
-| A5 | Low | **A profile named `CON`, `NUL`, `COM1`...** maps to a Windows device, not a folder. | Such names get a suffix; names are capped at 80 characters. |
-| A6 | Low | **A hand-edited LUNA EVO settings file with `null` values** could cause errors later. | Values are normalised on load. |
-| A7 | Low | **Plugin hashing read whole DLLs into memory.** | Streamed. |
+Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
+automated test suite before release.
 
 ## Audit 1 (0.4.0, October 2026)
 
@@ -169,9 +98,142 @@ weakened anywhere.
 
 ### How the fixes were checked
 
-Each fix has automated tests (183 in total after audit 2): tampered, oversized, wrong-host, redirected and unverified downloads; a
+Each fix has automated tests: tampered, oversized, wrong-host, redirected and unverified downloads; a
 zip changed between download and install; a zip with too many entries; hostile and malformed website, GitHub and
 runtimeconfig JSON; the absolute `netsh` path; the webhook scrub; `Ui.Open` refusing programs and `file:` links. The
-checksum check was also run against the real LMP 0.29.2 release, whose published digest matched. Audit 2's fixes
-are covered by `SecurityRound2Tests`: oversized and long-text live info, escaping and damaged Universe zips (the
-current Universe survives), DTDs, device names, password warnings and null settings.
+checksum check was also run against the real LMP 0.29.2 release, whose published digest matched.
+
+## Audit 2 (0.4.1, October 2026)
+
+A second pass over the whole codebase, focused on the 0.4.0 Join code and on areas the first audit only skimmed:
+files LUNA EVO unpacks or names, XML parsing, text sent to the server console, and the release itself. Also checked:
+NuGet packages (no known vulnerabilities), console commands (line breaks are already stripped, so a kick reason
+can't smuggle in a second command), the published exe (no build paths or user names inside), and **the whole git
+history** (no real passwords, IP addresses, player names or user paths).
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| A1 | Medium | **LMP itself doesn't limit password guesses.** The admin password is compared on every admin message with no rate limit, and the admin can ban, kick, clear the KSC and restart the server. A short admin password can be guessed by any connected player in seconds. | LUNA EVO now warns when the admin password is under 10 characters and the server password under 6 (saving still works). The real fix, rate limiting, belongs in our LMP fork. **If your passwords are short numbers, change them.** |
+| A2 | Medium | **Live info had no size limit.** The Join page reads from any address you type; whatever answers could send a reply of up to 2 GB (memory) or follow a redirect to another host. | Headers first, a 4 MB cap, a 15-second limit, no redirect to another host, text cut to 256 characters. |
+| A3 | Medium | **Universe restore deleted the current Universe before unpacking.** A damaged or hostile backup zip would leave a half-restored Universe (the safety snapshot made it recoverable, but by hand). No size limits on unpacking. | Unpacks into a staging folder with file-count, size and stay-inside checks, and only then swaps it in. |
+| A4 | Low | **XML files could contain a DTD**, allowing entity expansion (bounded by .NET to 10 million characters). | DTDs are refused; LMP's files never have one. |
+| A5 | Low | **A profile named `CON`, `NUL`, `COM1`...** maps to a Windows device, not a folder. | Such names get a suffix; names are capped at 80 characters. |
+| A6 | Low | **A hand-edited LUNA EVO settings file with `null` values** could cause errors later. | Values are normalised on load. |
+| A7 | Low | **Plugin hashing read whole DLLs into memory.** | Streamed. |
+
+How they were checked: `SecurityRound2Tests` covers oversized and long-text live info, escaping and damaged Universe
+zips (the current Universe survives), DTDs, device names, password warnings and null settings (183 tests in total).
+
+## Security notes on the 0.5 features
+
+- **Discord is back, with audit 1's H2 and H3 fixed:** the webhook is encrypted with Windows DPAPI (useless on
+  another account or PC), never displayed again after saving, and every post sends `allowed_mentions: { parse: [] }`
+  and escapes player-controlled text, so a player named `@everyone` can't ping anyone or add links.
+- **Alerts come from LMP's log.** LUNA EVO only reads LMP's own server messages, never chat, and only accepts player
+  names LMP itself allows. A modified client could still fake a log line with a line break in a chat message; the
+  worst that does is a wrong history entry or a false alert, never a command.
+- **Unban edits LMP's ban list** only while the server is stopped, after backing it up.
+- **The mod check** reads files only; it never changes your GameData.
+- **Craft files from friends** (`.lunacraft`, 0.7) are opened as data: only `craft.craft`, `manifest.json` and
+  `thumbnail.png` are accepted (nothing else is ever unpacked), 20 MB at most, and the craft must parse. Imports go
+  only into a KSP save's Ships folder or the server's craft library, and never overwrite.
+
+## Security notes on self-update (0.6)
+
+- LUNA EVO only installs an update that GitHub publishes a **SHA-256** for, downloaded over HTTPS from GitHub's own
+  hosts. The copy placed next to the exe is hashed **again**, must be a Windows program (`MZ`) and must carry the
+  release's version number, before the running exe is renamed aside. Any failure leaves the current version as it was.
+- What this protects against: a tampered or corrupted download, a redirect elsewhere, a file swapped after downloading.
+  What it doesn't: someone who can publish releases on this repository (a GitHub account takeover). Protect the
+  maintainers' GitHub accounts with two-factor authentication; code signing (not done yet) would add a second check.
+- Development builds never replace themselves.
+
+## Audit 3 (0.8.1, October 2026)
+
+Everything added since audit 2: player history and bans, the mod check, Windows and Discord notifications, the
+self-updater, craft sharing, home server mode, chat announcements and settings search. Also re-checked, now that the
+repository is public: NuGet packages (no known vulnerabilities) and **the whole git history** (no passwords, IP
+addresses, player names or user paths; commits do carry the maintainers' contact email as author).
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| C1 | Medium | **`.lunacraft` files from friends were read up to the size each entry *claims*.** A zip's sizes are written by whoever made it, so a crafted file could claim a small craft and unpack to gigabytes (a "zip bomb"), filling memory. | Each entry is now read with a hard 20 MB limit, whatever it claims; a test opens a real bomb (under 1 MB on disk) and is refused. |
+| C2 | Low | **Mod rules files from a host had no size limit.** | 20 MB cap before parsing (they're a few MB even for big modpacks). |
+| C3 | Low | **The post-update clean-up read the exe path when it ran, 15 s later**, not when it was scheduled. Harmless in normal use (one window per process), but a second window could delete another's `.old` file. | The path is captured when the clean-up is scheduled. |
+
+Reviewed and fine as designed: Discord webhook (encrypted, never shown, no mentions, escaped); the updater (GitHub only,
+SHA-256 twice, `MZ` and version checks, rename with rollback, never unverified); home server mode (a per-user Windows
+startup entry with the exe path quoted, removed when switched off; keep-awake only while the server runs; no admin);
+chat announcements (your own text, one line each, sent through the same path that strips line breaks); player
+history (LMP's own messages only, names checked, never IPs); craft import (only into a KSP save's Ships folder or the
+server's library, never overwriting, file names cleaned).
+
+Known and accepted: a modified game client can fake a log line inside a chat message (worst case: a wrong history
+entry or a false alert); craft files are KSP's own format and are passed to KSP as they are, so a hostile craft can
+only do what KSP lets a craft file do.
+
+## Audit 4 (1.0.1, October 2026)
+
+The 1.0 review: vessel cleanup, server health, invites and the notification icon's timer, plus the usual re-checks
+(NuGet packages: no known vulnerabilities; the whole git history: no passwords, IP addresses, player names or user
+paths).
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| D1 | Medium | **Vessel cleanup deleted vessels even if its safety backup had skipped files** (a file another program had open is skipped, not copied). The "undo" could then be missing data. | If the backup couldn't read every Universe file, the incomplete backup is deleted and **nothing is removed**; the page says why. Tested with a locked vessel file. |
+| D2 | Low | **The notification icon's removal timer ran on another thread** with no lock, so a notification arriving at the same moment could lose its icon (and not show). | One lock around showing and removing. |
+
+Reviewed and fine: vessel cleanup only removes files inside this server's `Universe/Vessels`, only while the server is
+stopped, never crewed vessels in a bulk selection; server health only reads the server's own process; the invite
+never contains the password or your internet address (it prefers your VPN/mesh address, then your home network).
+
+## Audit 5 (1.2.0, October 2026)
+
+A deeper pass over everything since 1.0 (CKAN and LMP client downloads, the new mod-list install) and a re-read of
+the older hot paths for robustness and wasted work.
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| E1 | High (design) | **A `.ckan` file can carry its own `download` URL** (and `install_to` paths). Handing a pasted file to `ckan install -c` would let whoever wrote it put any DLL into GameData, and KSP runs every DLL there. | The file is **never passed to CKAN**. Only mod identifiers (CKAN's own rule: letters, digits, `-`, `_`, not starting with `-`, so none can read as an option) and versions (`[A-Za-z0-9.:+_~-]`) are read out and passed as `ckan install Mod Mod=version` with `--headless --no-recommends`, so everything comes from CKAN's catalogue. At most 2,000 mods; arguments go through `ArgumentList`, never a shell. Checked with the real ckan.exe 1.36.4 on a throwaway KSP folder. |
+| E2 | Medium | **`settings.json` was written in place**: a crash or power cut mid-write could leave it half-written, losing saved servers and the Discord webhook. | Written to `settings.json.tmp`, then swapped in. |
+| E3 | Low | Mod-list install could run while CKAN had the install open (two writers on CKAN's registry). | Refused while `CKAN/registry.locked` names a live process (or can't be read); a lock left by a closed CKAN doesn't block. Also refused while KSP runs. |
+| E4 | Low (efficiency) | The Players history was rebuilt every 5 s, announcements parsed every second, the Join auto-refresh repeated DNS and four pings every 10 s, and every mod check / craft import re-read thousands of GameData files. | Redraw only on change (tracker version, ban file time, search, online list); parse once per change; auto-refresh reads only live info; GameData scans reused for 2 minutes. |
+
+Reviewed and fine: the CKAN page shows `%LOCALAPPDATA%` instead of user paths; the process list check disposes what
+it opens; CKAN's own output is shown as plain text, never run or parsed for commands. Spelling: a dictionary pass over
+every string, comment and doc found only LMP's own `Hearbeat`, now shown spelled right.
+
+## Audit 6 (1.2.1, October 2026)
+
+A sweep of the whole codebase by pattern, not just the newest code: every process start, every delete, every file
+and network read, every "safe name" helper and every JSON reader. Also re-checked: NuGet packages (no known
+vulnerabilities, including transitive ones), the CI workflow (read-only token), the whole git history and every
+tracked file (no passwords, real IP addresses, player names or user paths; only documentation addresses like
+`203.0.113.9` and fake test webhooks).
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| F1 | Low | **Names made only of dots passed the CKAN version filter.** A release tagged `..` would have made `Remove` delete `%LOCALAPPDATA%\LunaEvo\Tools` and a download land one folder up. Only reachable through CKAN's own GitHub releases or our folder names, but a trap. The server download's file name had the same gap. | Dot-only names become `unknown` / `download.zip`. Tested with `Remove("..")`. |
+| F2 | Low | **Loading a `.ckan` file had no size limit**, so picking a huge file by mistake could freeze the window. | Files over 5 MB are refused with a message (modpacks are a few KB). |
+| F3 | Low | **`ckan.exe` inherited LUNA EVO's input.** If CKAN ever asked a question, the install would wait forever with no way to cancel. | Its input is closed at start, so a question gets "no answer" and CKAN stops with an error instead. Checked with the real ckan.exe. |
+| F4 | Low | **A friend's craft named `CON`, `NUL`, `COM1`...** would be saved under a Windows device name (profiles already handled this). | Shared check; such crafts get a `-craft` suffix. |
+| F5 | Low | **GitHub's release lists were buffered whole**, with no cap (HTTPS from `api.github.com` only, so low risk). | Read with a 10 MB cap, like every other network read. |
+
+Reviewed and fine: every process LUNA EVO starts is a fixed system tool, its own exe, KSP's exe or a verified
+download, with arguments as a list (never a shell); every recursive delete is inside a folder LUNA EVO made, under a
+cleaned name; every JSON reader checks types before reading; CKAN's launch options only pass plain `-option` words.
+Accepted: GitHub Actions are pinned to official major versions (`@v4`), not commit hashes.
+
+## Tested with
+
+The real software LUNA EVO has been run against (not just faked in tests):
+
+| Software | Version | How |
+|---|---|---|
+| Windows | 11 Home (build 26200), x64 | Everything; the app and its tests are Windows-only |
+| Luna Multiplayer server | **0.29.2** (needs the .NET 6 runtime) | Installed by the wizard, started, stopped with Ctrl+C, config edited, live JSON read, Universe backed up while running |
+| Luna Multiplayer server | 0.30.0 (master) | Settings definitions compared with 0.29.2 in LMP's source (identical); not run |
+| Luna Multiplayer client mod | **0.29.2** | Found in a real KSP install; client zip verified against GitHub's digest |
+| Kerbal Space Program | **1.12.5** (Steam, heavily modded) | Found automatically, GameData scanned, CKAN install detected; LUNA EVO never changed its files during testing |
+| CKAN | **1.36.4** (`ckan.exe`) | Download verified; command line used for real (`update`, `install` by name) on a throwaway KSP folder |
+| .NET | 10 (LUNA EVO), 6 (LMP 0.29.x) | Build and runtime checks |

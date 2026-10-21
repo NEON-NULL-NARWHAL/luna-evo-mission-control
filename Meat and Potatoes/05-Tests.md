@@ -31,6 +31,9 @@ install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, 
 damaged (the current Universe must survive), DTDs refused, Windows device names as profile names, weak-password
 warnings, and a hand-edited settings file full of nulls.
 
+1.2.1 added `SecurityRound6Tests` (audit 6): `Remove("..")` deletes nothing above its folder, crafts named after
+Windows devices, a release list over 10 MB refused; plus a UI test refusing a `.ckan` file over 5 MB.
+
 0.5 added `PlayerFeaturesTests` (history from real LMP log lines, replayed and chat lines ignored, no IPs stored,
 admin-password alerts, bans and the ban list, the mod check against LMP's client rules, Discord escaping and
 `allowed_mentions`, DPAPI) and `PlayerFeaturesUiTests` (a running fake server driving history and alerts end to end,

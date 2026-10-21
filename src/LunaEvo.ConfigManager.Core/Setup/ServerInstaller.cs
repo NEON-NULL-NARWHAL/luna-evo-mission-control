@@ -161,7 +161,7 @@ public sealed class ServerInstaller(HttpClient http)
     private static string SafeFileName(string name)
     {
         var file = Path.GetFileName(name.Replace('\\', '/').Split('/')[^1]);
-        return string.IsNullOrWhiteSpace(file) || file.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ? "download.zip" : file;
+        return string.IsNullOrWhiteSpace(file) || file.Trim('.').Length == 0 || file.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ? "download.zip" : file;
     }
 
     private static void TryDelete(string folder)
