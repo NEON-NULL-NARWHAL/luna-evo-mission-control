@@ -1,42 +1,91 @@
 # Quickstart
 
-The short version of everything in the [README](README.md). Pick what you want to do, follow a few steps, and use
-the **Full guide** links whenever you want the details.
+The short version of everything in the [README](README.md). Pick what you want to do and follow a few steps. Under
+each button, **↳** says what it actually does, so nothing happens behind your back. **Full guide** links take you to
+the details.
 
-**[Get it](#get-it)** · **[Host a server](#host-a-server)** · **[Already have a server](#already-have-an-lmp-server)** · **[Play on a server](#play-on-a-server)** · **[Mods with CKAN](#mods-with-ckan)** · **[Play over the internet](#play-over-the-internet-safely)** · **[Leave it running](#leave-it-running)** · **[If something's wrong](#if-somethings-wrong)**
+**[Get it](#get-it)** · **[Where things are](#where-things-are)** · **[Host a server](#host-a-server)** · **[Already have a server](#already-have-an-lmp-server)** · **[Play on a server](#play-on-a-server)** · **[Mods with CKAN](#mods-with-ckan)** · **[Play over the internet](#play-over-the-internet-safely)** · **[Leave it running](#leave-it-running)** · **[If something's wrong](#if-somethings-wrong)**
 
 ## Get it
 
 1. Download **`LunaEvo.MissionControl.exe`** from the [latest release](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases/latest).
    One file, Windows 10/11, nothing to install.
-2. Run it. If Windows SmartScreen asks: **More info → Run anyway** (the exe isn't code-signed yet).
-3. That's the last download: it updates itself (App settings → Updates).
+2. Run it. If Windows SmartScreen asks: **More info → Run anyway**.<br>
+   ↳ The exe isn't code-signed yet, so Windows doesn't recognize it. Each release lists its SHA-256 if you want to check
+   the file (`Get-FileHash .\LunaEvo.MissionControl.exe`).
+3. That's the last download you need.<br>
+   ↳ On startup it asks GitHub whether there's a newer version; **App settings → Updates → Update and restart** downloads
+   it, checks it against GitHub's SHA-256, swaps the exe and restarts. You can turn the check off.
 
-New to all this? Turn on **Simple mode** (App settings → Behavior) to see only what you need.
+💡 **Tips**
+- New to hosting? **App settings → Behavior → Simple mode** hides everything but the basics. Nothing is removed; turn
+  it off any time.
+- Your preferences live in `%APPDATA%\LunaEvo\MissionControl\settings.json`. LUNA EVO never stores passwords there.
 
 Full guide: [Download](README.md#download) · [Getting started](README.md#getting-started)
+
+## Where things are
+
+The rail on the left has everything; the bottom of it shows the server status and every version in use (LUNA EVO,
+LMP server and client, KSP, CKAN).
+
+| Rail | Page | What it's for |
+|---|---|---|
+| Server | **Server console** | Start, stop, restart; the live console; cards you click to change name, port, players |
+| | **Players** · **Vessels** | Who's online, history, kick/ban; every vessel, cleanup |
+| | **Connect** | What to tell friends, firewall, invite |
+| | **Server settings** | Every LMP setting (start with **Essentials**) |
+| | **Mod Control** | Which parts and mods players may use |
+| | **Profiles & backups** | Saved setups; Universe snapshots |
+| Play | **Server browser** · **Join a server** | Find a server; check it; launch KSP into it |
+| | **Crafts** · **CKAN mods** | Share craft files; install and share mod lists |
+| LUNA EVO | **App settings** | Look, behavior (simple mode, home server mode), automation, updates, LMP client downloads |
 
 ## Host a server
 
 About two minutes, no files to edit.
 
 1. Start LUNA EVO and choose **Set up a new server**.
-2. Pick an empty folder (e.g. `D:\Games\LMPServer`) and the LMP version (the newest is picked for you).
-3. Answer the questions: name, password, game mode, difficulty, players. Leave the rest as it is; it starts private.
-4. Press **Download and set up**. Accept the .NET 6 install if it offers one.
-5. Press **Start** and wait for **"All systems up and running"**.
-6. Open **Connect**, press **Copy invite** and send it to your friends.
+2. Pick an empty folder (e.g. `D:\Games\LMPServer`) and the LMP version.<br>
+   ↳ The newest stable version is picked for you from LMP's GitHub. Everyone who plays needs this same version.
+3. Answer the questions: name, password, game mode, difficulty, players. Leave the rest as it is.<br>
+   ↳ The defaults keep it private: not on the public list, no router changes (UPnP off), live player info only on this PC.
+4. Press **Download and set up**.<br>
+   ↳ Downloads the LMP server from GitHub, checks it against GitHub's SHA-256, unpacks it into your folder and writes
+   your settings **before** it ever starts. If the .NET 6 runtime LMP needs is missing, it offers to install it
+   through Windows' `winget` (Windows asks for permission).
+5. Press **Start** and wait for **"All systems up and running"**.<br>
+   ↳ Runs `Server.exe` without a window and shows its console inside LUNA EVO. **Stop** sends it Ctrl+C, so LMP saves
+   the universe before closing (it's only force-closed if it hangs past the timeout), and LUNA EVO keeps a copy of
+   the Universe from that moment.
+6. Open **Connect**, press **Copy invite** and send it to your friends.<br>
+   ↳ Copies a ready-to-send message: server name, the best address to use, the LMP version needed and whether there's
+   a password (never the password itself). Friends can paste the whole message into their Join page.
 
-Players need the **LMP client mod in the same version** as your server; they can install it from LUNA EVO
-(App settings → Downloads).
+💡 **Tips**
+- **Allow through firewall** (Connect) adds one Windows Firewall rule for the game port; Windows asks for permission.
+- **Generate a strong password** sits under the password settings. LMP doesn't limit password guesses, so use it.
+- Players need the **LMP client mod in the same version** as your server; **App settings → Downloads** installs it.
 
 Full guide: [Set up a new server, step by step](README.md#set-up-a-new-server-step-by-step) (every question explained, with screenshots)
 
 ## Already have an LMP server
 
-1. Put the exe next to your `Server.exe` and double-click it. It opens that server by itself.
-2. Change settings on **Server settings** (start with the **Essentials** tab), or click a card on the Server console.
-3. **Save** (Ctrl+S), then **Start** or restart the server. LMP only reads its config when it starts.
+1. Put the exe next to your `Server.exe` and double-click it.<br>
+   ↳ It reads the settings list from your server's own `Server.dll`, so it always matches your LMP version, and opens
+   that server by itself.
+2. Change settings on **Server settings** (start with **Essentials**), or click a card on the Server console.<br>
+   ↳ Every setting shows LMP's own description and is checked as you type; problems appear on the setting, on its
+   tab, and as a count under the server status. The name, port and player cards ask for the new value and save it
+   straight away (checked first, with the same backup as Save).
+3. **Save** (Ctrl+S), then **Start** or restart the server.<br>
+   ↳ Shows every change (old → new) for you to confirm, copies the files it's about to change to
+   `Config\Backups\<date and time>\`, then writes them. LMP only reads its config when it starts.
+
+💡 **Tips**
+- **↺** next to a setting puts LMP's default back.
+- Click the warning count under the server status: every problem is listed, and each one opens the setting to fix.
+- **Search all settings** (top of Server settings) finds a setting by name or description, e.g. "heartbeat".
 
 Full guide: [Configure it](README.md#configure-it) · [Host a server features](README.md#host-a-server)
 
@@ -45,26 +94,52 @@ Full guide: [Configure it](README.md#configure-it) · [Host a server features](R
 You don't need to host anything.
 
 **A public server**
-1. Open **Play → Server browser**. It shows servers that match your LMP version.
-2. Press **Join** on one, then **Launch KSP and join**.
+1. Open **Play → Server browser**.<br>
+   ↳ Asks LMP's own master servers (the list LMP shows in game) for every public server. **Only my LMP version** reads
+   the LMP client in your KSP and hides servers you can't join.
+2. Press **Join** on one, then **Launch KSP and join**.<br>
+   ↳ **Join** fills the server into the Join page and checks it (below).
 
 **A friend's server**
 1. Choose **Join a friend's server** (or **Play → Join a server**).
-2. Paste the address or invite your friend sent and press **Check server**.
-3. Check your KSP folder and that your LMP version matches the server's.
-4. Type the password if there is one and press **Launch KSP and join**.
+2. Paste the address or invite your friend sent and press **Check server**.<br>
+   ↳ Looks the address up, pings it 4 times and asks the server's LMP website for live info: name, mode, players
+   and vessels appear if the host shares them. It sends nothing else.
+3. Check your KSP folder and that your LMP version matches the server's.<br>
+   ↳ Your Steam KSP is found by itself; your CKAN installs are one click away.
+4. Type the password if there is one and press **Launch KSP and join**.<br>
+   ↳ Starts KSP the way CKAN's Play button does. On the default port with no password, LMP connects by itself;
+   otherwise the server (and password) is put at the top of LMP's own server list, so you click it once. That list
+   is backed up first and never changed while KSP runs. LUNA EVO doesn't keep your password.
+
+💡 **Tips**
+- **Save to my servers** remembers the address (never the password).
+- **Check my mods** (Join page) tells you what LMP would refuse before you connect.
 
 Full guide: [Find a public server](README.md#find-a-public-server-server-browser) · [Join a friend's server](README.md#join-a-friends-server)
 
 ## Mods with CKAN
 
 1. Open **Play → CKAN mods**.
-2. **Download CKAN**, or **Choose ckan.exe...** if you already have it.
-3. Close KSP (and CKAN's window), then load or paste the mod list your host sent (a `.ckan` file, or mod names one per line).
-4. Pick your KSP install, press **Check with CKAN** to see that it works, then **Install with CKAN**.
+2. **Download CKAN**, or **Choose ckan.exe...** if you already have it.<br>
+   ↳ **Download** gets the official `ckan.exe` from CKAN's GitHub, checks it against GitHub's SHA-256 and keeps it
+   in `%LOCALAPPDATA%\LunaEvo\Tools\CKAN\`. **Choose** uses yours, and tells you whether it matches an official
+   CKAN release.
+3. Close KSP (and CKAN's window), then load or paste the mod list your host sent.<br>
+   ↳ A `.ckan` file, or mod names one per line. LUNA EVO reads **only the mod names and versions** from it; anything
+   else in a file (like its own download links) is ignored, so CKAN installs only from its official catalog.
+4. Pick your KSP install and press **Check with CKAN**.<br>
+   ↳ A dry run: CKAN works out the whole list and dependencies, then LUNA EVO answers "no" when CKAN asks to
+   continue. Nothing is downloaded or changed. It tells you whether everything can be installed, or which mod CKAN
+   doesn't know.
+5. Press **Install with CKAN** and confirm.<br>
+   ↳ Runs `ckan update`, then `ckan install` with those mod names for that KSP install; CKAN's messages show as it
+   goes. If something fails, CKAN undoes that install and the page says why.
 
-Hosting? **Export mod list...** on your own install gives friends a `.ckan` file, and **Join → Check my mods** shows
-anyone what LMP would refuse before they connect.
+💡 **Tips**
+- Hosting? **Export mod list...** on your own install writes a `.ckan` file for friends: just the mods you picked,
+  without your Windows user name (which CKAN's own file contains). **Exact versions** gives everyone the same versions.
+- **Use as mod list** copies one install's mods into the box, to set up a second KSP install the same way.
 
 Full guide: [Using the CKAN page](README.md#using-the-ckan-page) · [Find, mod and join](README.md#find-mod-and-join-for-players)
 
@@ -72,18 +147,31 @@ Full guide: [Using the CKAN page](README.md#using-the-ckan-page) · [Find, mod a
 
 Use a mesh VPN and never open a port on your router.
 
-1. Everyone installs [Tailscale](https://tailscale.com/download) (free for personal use) and joins your tailnet.
-2. On your server, keep **Upnp** and **Register With Master Server** off, and press **Allow through firewall** on Connect.
-3. Share the Tailscale address (`100.x.y.z`) from **Connect**; friends use it on their Join page.
+1. Everyone installs [Tailscale](https://tailscale.com/download) (free for personal use) and joins your tailnet.<br>
+   ↳ Your PCs get private addresses (`100.x.y.z`) that work over the internet, as if you were on one home network.
+2. On your server, keep **Upnp** and **Register With Master Server** off, and press **Allow through firewall** on
+   Connect.<br>
+   ↳ UPnP would open ports on your router to the whole internet; the master server would list you publicly. A banner
+   on the Server console warns you whenever either is on.
+3. Share the Tailscale address from **Connect**; friends use it on their Join page.
+
+💡 **Tip:** mesh addresses are private to your group, but they're still yours: don't post them publicly.
 
 Full guide: [Play together without opening any ports](README.md#play-together-without-opening-any-ports-tailscale-twingate) (Tailscale and Twingate)
 
 ## Leave it running
 
-- **Home server mode** (App settings → Behavior): starts with Windows, starts the server, keeps the PC awake.
-- **Automation & alerts** (App settings): restart after a crash, a daily restart, scheduled Universe backups,
-  Windows or Discord notifications, chat announcements.
-- **Profiles & backups**: save whole setups, snapshot and restore the Universe.
+- **Home server mode** (App settings → Behavior)<br>
+  ↳ Adds LUNA EVO to Windows' start-up list for your user (removed when you switch it off), starts it in the
+  notification area, starts the server, hides instead of quitting, and keeps the PC awake while the server runs.
+- **Automation & alerts** (App settings)<br>
+  ↳ Restarts the server after a crash (it stops trying after 3 crashes in 10 minutes), a daily restart with a
+  one-minute warning in game chat, scheduled Universe backups, Windows or Discord notifications, chat announcements.
+- **Profiles & backups**<br>
+  ↳ Saves a copy of your whole config as a named profile, and zips the Universe (your game world) to restore later.
+  Restoring makes a backup first, so it can be undone.
+
+💡 **Tip:** these only run while LUNA EVO is open; home server mode makes sure it is.
 
 Full guide: [Keep it running](README.md#keep-it-running)
 
@@ -97,6 +185,7 @@ Full guide: [Keep it running](README.md#keep-it-running)
 | LMP refuses my mods | **Join → Check my mods** lists exactly what and why. |
 | CKAN won't install a list | **Check with CKAN** says which mod it doesn't know; try turning off **Exact versions**. |
 | A warning count under the server status | Click it: every problem is listed and opens the setting to fix. |
+| A setting went wrong | `Config\Backups\` has the files from before every save; **Profiles & backups** has your saved setups. |
 | Something crashed or did nothing | Look in `%APPDATA%\LunaEvo\MissionControl\logs\errors.log` and include it in a bug report. |
 
 Still stuck? [Open an issue](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/issues). For security
@@ -104,4 +193,4 @@ problems, see [SECURITY.md](SECURITY.md) instead.
 
 ---
 
-**Everything else:** [Features](README.md#what-it-does) · [Screenshots](README.md#screenshots) · [Tested with](README.md#tested-with) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+**Everything else:** [Features](README.md#what-it-does) · [Screenshots](README.md#screenshots) · [Tested with](README.md#tested-with) · [What it connects to](README.md#what-it-connects-to) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
