@@ -9,7 +9,7 @@
     <Product>LUNA EVO Config Manager</Product>
     <!-- FileDescription: Windows shows it as the app name on notifications. -->
     <AssemblyTitle>LUNA EVO Config Manager</AssemblyTitle>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>

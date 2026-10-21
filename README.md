@@ -11,6 +11,8 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
+**Version 1.1.1** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+
 **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Join a friend](#join-a-friends-server)** · **[No open ports (Tailscale)](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
 </div>
@@ -129,6 +131,10 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | **Server health:** memory, CPU and threads of the running server. | **Home server mode:** one switch for an always-on host PC. |
 | ![Chat announcements](docs/screenshots/announcements.png) | ![Vessel cleanup](docs/screenshots/vessels.png) |
 | **Chat announcements:** messages to game chat on a schedule. | **Vessel cleanup:** debris selected, crewed ships protected, backup first. |
+| ![Downloads](docs/screenshots/downloads.png) | ![Join with CKAN](docs/screenshots/join-ckan.png) |
+| **Downloads:** verified CKAN copies and the LMP client into any KSP install. | **Join + CKAN:** pick a CKAN install; launch with CKAN's own options. |
+| ![Setup wizard, extras](docs/screenshots/wizard-extras.png) | |
+| **Setup wizard, step 3:** also get CKAN and the matching LMP client. | |
 | ![Profiles and backups](docs/screenshots/profiles.png) | ![A Windows notification](docs/screenshots/notification-toast.png) |
 | **Profiles & Backups:** switch whole configs; snapshot and restore the Universe. | **A Windows notification** from LUNA EVO. |
 | ![Import from GameData](docs/screenshots/mod-import.png) | ![Plugin lists](docs/screenshots/mod-lists.png) |
@@ -221,15 +227,31 @@ server for changes to take effect.
 **What your players need:** KSP 1.12 with the **LMP client mod of the same version** as your server. It's on the same
 [LMP releases page](https://github.com/LunaMultiplayer/LunaMultiplayer/releases) (`LunaMultiplayer-Client-Release.zip`).
 
+### Get set up to play (CKAN and the LMP mod)
+
+You need the **LMP client mod**, in the same version as the server, and most groups use **CKAN** for their other mods.
+LUNA EVO handles both, any time, in **LUNA EVO → Settings → Downloads**:
+
+- **Download the latest CKAN:** the official `ckan.exe`, checked against GitHub's SHA-256 and kept by LUNA EVO
+  (one copy per version, so no mystery copies in Downloads). Press **Open** to run it.
+- **LMP client mod:** pick your KSP install (CKAN's installs are listed too) and the LMP version (the open server's by
+  default), then **Install into this KSP**. Your LMP server list is kept and the old version is backed up.
+
+Setting up a server? Step 3 of the setup wizard can do both for you.
+
+![Downloads](docs/screenshots/downloads.png)
+
 ### Join a friend's server
 
 1. Start LUNA EVO and choose **Join a friend's server** (or **Play → Join a server** in the rail).
 2. Type the address your host gave you (e.g. `192.168.1.20` or `100.101.102.103:8800`) and press **Check server**.
    You see where it is and your ping. Server info, players and vessels appear if the host pressed **Share with
    players** on their Connect page.
-3. Check the **Kerbal Space Program** folder (found automatically for Steam) and that your LMP version matches the server's.
+3. Check the **Kerbal Space Program** folder (found automatically for Steam; your CKAN installs are one click away)
+   and that your LMP version matches the server's (install the right one from Settings → Downloads).
 4. Type the password if there is one, and press **Launch KSP and join**.
-   - Default port (8800), no password: KSP starts and LMP connects by itself.
+   - KSP starts with the same options as CKAN's Play button, so your modded install runs exactly as usual.
+   - Default port (8800), no password: LMP connects by itself.
    - Otherwise: the server is at the top of LMP's server list with your password filled in. Click it and connect.
      (LMP's own command-line option can't handle a port or a password; we plan to fix that in the LUNA EVO fork.)
 5. **Save to my servers** to skip typing next time.

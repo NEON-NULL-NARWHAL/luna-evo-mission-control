@@ -15,6 +15,7 @@ if (-not $gh) { $gh = "C:\Program Files\GitHub CLI\gh.exe" }
 $changelog = Get-Content CHANGELOG.md -Raw
 $section = [regex]::Match($changelog, "(?ms)^## $([regex]::Escape($version))\b.*?(?=^## |\z)").Value.Trim()
 if (-not $section) { throw "CHANGELOG.md has no '## $version' section. Write one first." }
+if (-not (Select-String -Path README.md -SimpleMatch "**Version $version**" -Quiet)) { throw "README.md doesn't say **Version $version**. Update the version line first." }
 if (git status --porcelain) { throw "There are uncommitted changes. Commit and push them first, so the release matches the code." }
 # "release not found" on stderr is the answer we want; Windows PowerShell would treat it as an error under "Stop".
 $ErrorActionPreference = "Continue"

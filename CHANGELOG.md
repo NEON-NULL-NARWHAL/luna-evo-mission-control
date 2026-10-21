@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1 (2026-10-20)
+
+### Changed
+- Paths under your user folder show as `%LOCALAPPDATA%\...` on the Downloads tab and in the wizard log (no user name
+  in screenshots or shared help).
+- README: version line, "Get set up to play (CKAN and the LMP mod)", screenshots of Downloads, Join with CKAN and the
+  wizard's new step. `release.ps1` refuses to ship if the README's version line is out of date.
+
 ## 1.1.0 (2026-10-20)
 
 ### Added

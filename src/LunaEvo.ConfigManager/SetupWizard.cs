@@ -138,7 +138,7 @@ internal sealed class SetupWizard
                 Log("Downloading CKAN...");
                 var available = await CkanTools.AvailableAsync(Http.Client);
                 Log(available.Count == 0 ? "No verifiable CKAN release found; skipped." :
-                    $"CKAN {available[0].Release.Tag} downloaded and verified: {await CkanTools.DownloadAsync(Http.Client, available[0].Release, available[0].Exe)}");
+                    $"CKAN {available[0].Release.Tag} downloaded and verified: {SettingsPage.Friendly(await CkanTools.DownloadAsync(Http.Client, available[0].Release, available[0].Exe))}");
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or DownloadVerificationException or IOException or UnauthorizedAccessException)
             {

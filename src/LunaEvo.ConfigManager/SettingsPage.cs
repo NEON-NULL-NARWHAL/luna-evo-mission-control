@@ -325,7 +325,7 @@ internal sealed class SettingsPage
         getCkan.Click += async (_, _) => await DownloadCkanAsync();
         ckanBody.Children.Add(Ui.Row("LUNA EVO's CKAN copies",
             "The official ckan.exe from CKAN's GitHub releases, checked against GitHub's SHA-256, kept per version in " +
-            CkanTools.Root + ". One known copy instead of several in Downloads; keep older versions if you need them.", null));
+            Friendly(CkanTools.Root) + ". One known copy instead of several in Downloads; keep older versions if you need them.", null));
         ckanBody.Children.Add(_ckanRows);
         ckanBody.Children.Add(new StackPanel { Margin = new Thickness(12, 4, 12, 12), Spacing = 6, Children = { getCkan, _ckanStatus } });
         getCkan.HorizontalAlignment = HorizontalAlignment.Left;
@@ -356,7 +356,7 @@ internal sealed class SettingsPage
                 CkanTools.Remove(version);
                 await RefreshDownloadsAsync();
             };
-            _ckanRows.Children.Add(Ui.Row($"CKAN {version}", exe, new StackPanel { Orientation = Orientation.Horizontal, Children = { open, remove } }));
+            _ckanRows.Children.Add(Ui.Row($"CKAN {version}", Friendly(exe), new StackPanel { Orientation = Orientation.Horizontal, Children = { open, remove } }));
         }
         if (_ckanRows.Children.Count == 0)
             _ckanRows.Children.Add(Ui.Row("None downloaded yet", "CKAN installs and updates KSP mods; LUNA EVO uses it to get you a server's mods.", null));
@@ -395,6 +395,13 @@ internal sealed class SettingsPage
         }
     }
 
+    /// <summary>"%LOCALAPPDATA%\LunaEvo\..." instead of a path with the user name in it (screenshots, shared help).</summary>
+    internal static string Friendly(string path)
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return path.StartsWith(local, StringComparison.OrdinalIgnoreCase) ? "%LOCALAPPDATA%" + path[local.Length..] : path;
+    }
+
     private void ShowClientVersion()
     {
         if (_clientKsp.SelectedItem is not string ksp)
@@ -422,7 +429,7 @@ internal sealed class SettingsPage
             var progress = new Progress<double>(p => { if (!done) _ckanStatus.Text = $"Downloading CKAN {release.Tag}... {p:P0}"; });
             var path = await CkanTools.DownloadAsync(Http.Client, release, exe, progress);
             done = true;
-            _ckanStatus.Text = $"CKAN {release.Tag} downloaded and verified: {path}";
+            _ckanStatus.Text = $"CKAN {release.Tag} downloaded and verified: {Friendly(path)}";
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or DownloadVerificationException or IOException or UnauthorizedAccessException)
         {
