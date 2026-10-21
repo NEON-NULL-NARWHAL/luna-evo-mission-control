@@ -11,7 +11,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 1.3.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 1.3.1** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Join a friend](#join-a-friends-server)** · **[No open ports (Tailscale)](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
@@ -74,7 +74,7 @@ You don't have to host anything to use LUNA EVO. Choose **Join a friend's server
 | 🚀 **Launch KSP straight into it** | One button starts KSP and LMP connects by itself. For a server with a password or a non-default port (which LMP can't take on the command line), it's put at the top of LMP's server list with the password, ready to click. |
 | 🧩 **Check my mods** | Compares your GameData with the server's mod rules exactly the way LMP will when you connect: banned mods, mods it doesn't allow, missing or different-version required mods, missing parts and expansions, and parts the server would drop. |
 | 📌 **My servers** | Save the servers you play on. Passwords are never stored by LUNA EVO. |
-| 🧰 **CKAN and the LMP client, managed** | A CKAN page shows whether CKAN is installed and used, lists your CKAN installs, and **installs a pasted mod list** (a `.ckan` modpack or mod names) with CKAN. Settings → Downloads installs the right LMP client into any KSP install. Launching uses CKAN's own options, then connects. |
+| 🧰 **CKAN and the LMP client, managed** | A CKAN page shows whether CKAN is installed and used, lists your CKAN installs, **exports** their mod lists, and **installs a pasted mod list** (a `.ckan` modpack or mod names) with CKAN, using its own verified copy or yours. Settings → Downloads installs the right LMP client into any KSP install. Launching uses CKAN's own options, then connects. |
 | 🚀 **Share crafts** | The **Crafts** page lists your KSP craft designs and the server's craft library. Export one to a `.lunacraft` file for friends; import theirs into your save or the server, with a check of which parts (mods) you're missing. |
 
 ### Configure it
@@ -345,7 +345,7 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download/d
 
 ```powershell
 dotnet build                     # build everything
-dotnet test                      # 259 tests: core logic and the real UI, headless; no network, no real server
+dotnet test                      # 260 tests: core logic and the real UI, headless; no network, no real server
 .\publish.ps1                    # -> dist\LunaEvo-ConfigManager-<version>-win-x64\LunaEvo.ConfigManager.exe
 .\release.ps1                    # tests, build, and a GitHub release with the exe: every copy then offers the update
 ```
@@ -392,7 +392,7 @@ We want to be completely clear about this.
 |---|---|
 | Set the goals: a GUI config manager, then server control, theming, this repo, the 0.3 feature set (wizard, players, mod import, automation...), 0.4 (a security audit, the Join page, removing Discord), 0.5 (player history, alerts, bans, mod check, notifications), 0.6 (self-update, a tidier layout), then crafts sharing, home server mode, vessel cleanup, CKAN and the LMP client, and installing mod lists with CKAN (0.7 to 1.2), with a security audit at each milestone. Found the first two security issues. | Read LMP's source to learn how settings, logging, commands, shutdown, releases, the web API and mod checks really work. |
 | Made the decisions: desktop app, Avalonia, .NET 10, GPL-3.0 (the repo started private and is now public), the look (inspired by [NOMM](https://github.com/Combat787/NOMM)). | Wrote all of the code: the C#, XAML and build scripts. |
-| Supplied the real server, its configs and the requirements. | Wrote all 259 automated tests, a fake LMP server, and fakes for every network call. |
+| Supplied the real server, its configs and the requirements. | Wrote all 260 automated tests, a fake LMP server, and fakes for every network call. |
 | Reviewed the results and asked for changes. | Ran the tests, checked the real thing against real LMP (below), took the screenshots, and wrote these docs. |
 
 - **Model and tool:** Claude Opus 5.5 by Anthropic, working in Claude Code (an AI coding agent that can read files, run commands and build/test the code) inside VS Code.
@@ -403,7 +403,7 @@ We want to be completely clear about this.
 
 AI-written code can look right and still be wrong, so nothing here is trusted on looks:
 
-- **259 automated tests.** They also run on GitHub on every push. Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
+- **260 automated tests.** They also run on GitHub on every push. Byte-for-byte file round trips; every validation rule; generated and edited configs deserialized by **LMP's own classes** exactly as the server loads them; install/update from zips (including refusing to overwrite your config or escape the folder); a fake server that really starts, takes commands, crashes and stops; and UI tests that click through **every tab and control** plus every new page.
 - **Against the real thing:**
   - The wizard downloaded the real LMP 0.29.2 from GitHub, and the real server started on the generated config **with no errors**.
   - The Players page read the real server's live JSON. A Universe backup was taken while it ran, and it stopped cleanly.

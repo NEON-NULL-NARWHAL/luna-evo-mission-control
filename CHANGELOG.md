@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.1 (2026-10-20)
+
+Seventh audit, with real-world CKAN checks; details in `SECURITY.md`.
+
+### Fixed
+- Mod lists with "one of these mods" choices (`any_of`) now say they were skipped instead of dropping them silently.
+
+### Checked
+- Your own `ckan.exe` is recognised as official CKAN 1.36.4; exporting a real 108-mod install matched the original
+  modpack it was installed from.
+
 ## 1.3.0 (2026-10-20)
 
 ### Added

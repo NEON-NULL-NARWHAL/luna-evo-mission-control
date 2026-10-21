@@ -272,14 +272,23 @@ public static partial class CkanModList
             try
             {
                 using var json = JsonDocument.Parse(text);
+                var choices = 0;
                 foreach (var list in new[] { "depends", "recommends" })
                     if (json.RootElement.TryGetProperty(list, out var items) && items.ValueKind == JsonValueKind.Array)
                         foreach (var item in items.EnumerateArray())
                         {
+                            // "any_of" (one of several mods) has no single name: say so rather than drop it quietly.
+                            if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty("any_of", out _))
+                            {
+                                choices++;
+                                continue;
+                            }
                             var name = item.ValueKind == JsonValueKind.Object && item.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
                             var version = item.ValueKind == JsonValueKind.Object && item.TryGetProperty("version", out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
                             Add(name, version, problems, mods);
                         }
+                if (choices > 0)
+                    problems.Add($"{choices} \"one of these\" choice(s) (any_of) skipped; install those in CKAN.");
                 if (json.RootElement.TryGetProperty("download", out _))
                     problems.Add("This .ckan file has its own download link; it's ignored. Only its list of mods is used, from CKAN's catalogue.");
             }

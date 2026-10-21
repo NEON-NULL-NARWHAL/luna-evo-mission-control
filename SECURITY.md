@@ -43,6 +43,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 1.3.1 | | **Audit 7** (G1) | The owner's own `ckan.exe` identified as official v1.36.4; the export of their real install matched the original modpack they installed it from (same 108 mods) | 260 |
 | 1.3.0 | Use your own ckan.exe, export an install's mod list | Notes below | Exported the owner's real 108-mod CKAN list (no user name in it); the real `ckan.exe` 1.36.4 installed an exported list with `-c` into a throwaway KSP folder | 259 |
 | 1.2.1 | | **Audit 6** (F1-F5) | The real `ckan.exe` 1.36.4 runs with its input closed | 256 |
 | 1.2.0 | CKAN page, install a mod list with CKAN | **Audit 5** (E1-E4) | The real `ckan.exe` 1.36.4 installed a mod list by name into a throwaway KSP folder | 248 |
@@ -60,6 +61,24 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 7 (1.3.1, October 2026)
+
+The day's last review: the 1.3.0 code (your own ckan.exe, exports), tested against the owner's real files, read-only:
+their own `ckan.exe`, their KSP install's CKAN data, and the original modpack (`.ckan`) that install was set up from.
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| G1 | Low (correctness) | **`any_of` entries in a mod list** ("one of these mods", allowed by CKAN's format) were dropped without a word. | Counted and reported ("N choice(s) skipped; install those in CKAN"). A `min_version` is treated as "no exact version". |
+
+Checked for real: the owner's `ckan.exe` is recognised as official CKAN v1.36.4 (SHA-256 matches GitHub) and runs with
+its input closed; importing the original modpack reads all 108 mods with no problems; exporting the install gives the
+same 108 mods (it pins the installed versions, the original pins none, and every one is in CKAN's `registry.json`),
+re-imports identically, and contains no user name. Not done: installing all 108 mods for real (many GB); the command
+line LUNA EVO would run fits in one command (113 arguments).
+
+Reviewed and fine: build has no warnings; no leftover code from the moved Downloads tab; the own-exe check runs once
+per path and never blocks the window.
 
 ## Security notes on 1.3.0 (your own CKAN, exporting mod lists)
 

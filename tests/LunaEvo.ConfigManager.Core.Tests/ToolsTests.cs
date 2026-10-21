@@ -220,4 +220,15 @@ public class ToolsTests
         Assert.False(CkanTools.LooksLikeExe(notExe));
         Assert.False(CkanTools.LooksLikeExe(Path.Combine(folder, "missing.exe")));
     }
+    [Fact]
+    public void A_choice_group_is_reported_and_a_minimum_version_is_not_pinned()
+    {
+        var (mods, problems) = CkanModList.Parse("""
+            { "depends": [ { "name": "B9PartSwitch", "suppress_recommendations": true },
+                           { "any_of": [ { "name": "Kopernicus" }, { "name": "Kopernicus-BE" } ] },
+                           { "name": "MechJeb2", "min_version": "2.14" } ] }
+            """);
+        Assert.Equal([new CkanMod("B9PartSwitch"), new CkanMod("MechJeb2")], mods);
+        Assert.Contains("1 \"one of these\"", Assert.Single(problems));
+    }
 }
