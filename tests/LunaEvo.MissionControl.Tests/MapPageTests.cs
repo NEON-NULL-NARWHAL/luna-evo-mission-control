@@ -31,7 +31,7 @@ public class MapPageTests
         Assert.Equal("18 bodies, 1 added or changed by planet packs in your GameData.", ui.Find<TextBlock>("map/packs").Text);
         Assert.Equal(4, map.Vessels.Count);
         Assert.Contains("4 vessel(s) on the server", ui.Find<TextBlock>("map/time").Text);
-        Assert.Equal("Sun", map.Canvas.Focus);
+        Assert.Equal("Sun", map.Canvas.FocusBody);
         Assert.NotNull(ui.TryFind<Control>("map/vessel/s1")); // the rock orbits the Sun
         Assert.Null(ui.TryFind<Control>("map/vessel/k1"));
 
@@ -53,11 +53,11 @@ public class MapPageTests
         var mun = map.Canvas.BodyMarks.First(m => m.Body == "Mun");
         map.Canvas.Click(mun.At);
         ui.Pump();
-        Assert.Equal("Mun", map.Canvas.Focus);
+        Assert.Equal("Mun", map.Canvas.FocusBody);
         ui.Click(ui.Find<Button>("map/show/m1"));
         Assert.True(Visible(ui, "On the surface at 3.50°, 45.00°"));
         ui.Click(ui.Find<Button>("map/up"));
-        Assert.Equal("Kerbin", map.Canvas.Focus);
+        Assert.Equal("Kerbin", map.Canvas.FocusBody);
 
         // Hiding asteroids takes the rock off the map.
         map.Focus("Sun");

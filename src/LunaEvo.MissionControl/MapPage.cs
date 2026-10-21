@@ -51,7 +51,7 @@ internal sealed class MapPage
         ToolTip.SetTip(up, "Show the body this one orbits");
         up.Click += (_, _) =>
         {
-            if (_system.Find(_canvas.Focus)?.Parent is { } parent)
+            if (_system.Find(_canvas.FocusBody)?.Parent is { } parent)
                 Focus(parent);
         };
         var fit = Ui.Button("Zoom to vessels", "text").WithId("map/fit");
@@ -97,7 +97,7 @@ internal sealed class MapPage
                 Children = { header, controls, new StackPanel { Spacing = 2, Children = { _time, _packs } }, frame, details, list },
             },
         };
-        _canvas.Focus = _system.Star.Name;
+        _canvas.FocusBody = _system.Star.Name;
     }
 
     public Control View { get; }
@@ -115,8 +115,8 @@ internal sealed class MapPage
             _system = SolarSystem.Load(gameData);
             _systemFrom = gameData;
             _canvas.System = _system;
-            if (_system.Find(_canvas.Focus) == null)
-                _canvas.Focus = _system.Star.Name;
+            if (_system.Find(_canvas.FocusBody) == null)
+                _canvas.FocusBody = _system.Star.Name;
             _packs.Text = _system.FromPacks.Count == 0
                 ? gameData == null ? "Stock bodies (no KSP install found for planet packs)." : "Stock bodies."
                 : $"{_system.Bodies.Count} bodies, {_system.FromPacks.Count} added or changed by planet packs in your GameData.";
@@ -134,7 +134,7 @@ internal sealed class MapPage
     {
         if (_system.Find(body) is not { } found)
             return;
-        _canvas.Focus = found.Name;
+        _canvas.FocusBody = found.Name;
         _canvas.ResetView();
         FillFocus();
         Redraw();
@@ -229,14 +229,14 @@ internal sealed class MapPage
         }
         Add(_system.Star, 0);
         _focus.ItemsSource = items;
-        _focus.SelectedItem = items.FirstOrDefault(i => (string)i.Tag! == _canvas.Focus);
+        _focus.SelectedItem = items.FirstOrDefault(i => (string)i.Tag! == _canvas.FocusBody);
         _updatingFocus = false;
     }
 
     private void FillList()
     {
         _list.Children.Clear();
-        var around = _canvas.Vessels.Where(v => string.Equals(_system.ForVessel(v.BodyName, v.Body)?.Name, _canvas.Focus, StringComparison.OrdinalIgnoreCase))
+        var around = _canvas.Vessels.Where(v => string.Equals(_system.ForVessel(v.BodyName, v.Body)?.Name, _canvas.FocusBody, StringComparison.OrdinalIgnoreCase))
             .OrderBy(v => v.IsSpaceObject).ThenBy(v => v.Name, StringComparer.OrdinalIgnoreCase).Take(300).ToList();
         foreach (var vessel in around)
         {
@@ -245,7 +245,7 @@ internal sealed class MapPage
             _list.Children.Add(Ui.Row(vessel.Name, $"{vessel.Type} · {Situation(vessel.Situation)}", show).WithId("map/vessel/" + vessel.Id));
         }
         if (around.Count == 0)
-            _list.Children.Add(Ui.Row(_host.Session == null ? "Open a server to see its vessels" : $"No vessels around {_canvas.Focus}", null, null));
+            _list.Children.Add(Ui.Row(_host.Session == null ? "Open a server to see its vessels" : $"No vessels around {_canvas.FocusBody}", null, null));
     }
 
     private string? GameData()
@@ -289,7 +289,7 @@ internal sealed class MapCanvas : Control
 
     public SolarSystem System { get; set; } = SolarSystem.Stock();
     public IReadOnlyList<UniverseVessel> Vessels { get; set; } = [];
-    public string Focus { get; set; } = "Sun";
+    public string FocusBody { get; set; } = "Sun";
     public string? Selected { get; set; }
     public double Time { get; set; }
 
@@ -343,7 +343,7 @@ internal sealed class MapCanvas : Control
     }
 
     private IEnumerable<UniverseVessel> AroundFocus() =>
-        Vessels.Where(v => string.Equals(System.ForVessel(v.BodyName, v.Body)?.Name, Focus, StringComparison.OrdinalIgnoreCase));
+        Vessels.Where(v => string.Equals(System.ForVessel(v.BodyName, v.Body)?.Name, FocusBody, StringComparison.OrdinalIgnoreCase));
 
     public override void Render(DrawingContext context)
     {
@@ -351,7 +351,7 @@ internal sealed class MapCanvas : Control
         _bodyMarks.Clear();
         _labels.Clear();
         var size = Bounds.Size;
-        if (size.Width < 10 || size.Height < 10 || System.Find(Focus) is not { } focus)
+        if (size.Width < 10 || size.Height < 10 || System.Find(FocusBody) is not { } focus)
             return;
         var text = Brush("OnSurface", Colors.White);
         var muted = Brush("OnSurfaceVariant", Colors.Gray);
@@ -366,11 +366,11 @@ internal sealed class MapCanvas : Control
         Label(context, focus.Name, center + new Vector(focusRadius + 4, -focusRadius - 14), text);
 
         // Moons/planets around it: orbit, position, name (and how many vessels are around them).
-        foreach (var child in System.ChildrenOf(Focus))
+        foreach (var child in System.ChildrenOf(FocusBody))
         {
             var path = Path("body:" + child.Name, () => child.Orbit!.Path());
             Line(context, path, Screen, new Pen(Brushes(child.Color, 0.35), 1));
-            if (System.PositionOf(child.Name, Focus, Time) is not { } at)
+            if (System.PositionOf(child.Name, FocusBody, Time) is not { } at)
                 continue;
             var p = Screen(at);
             var r = Math.Max(MinBodyPixels, child.Radius * scale);
@@ -415,8 +415,8 @@ internal sealed class MapCanvas : Control
 
     private IReadOnlyList<Point3> Path(string key, Func<IReadOnlyList<Point3>> make)
     {
-        if (!_paths.TryGetValue((key, Focus), out var path))
-            _paths[(key, Focus)] = path = make();
+        if (!_paths.TryGetValue((key, FocusBody), out var path))
+            _paths[(key, FocusBody)] = path = make();
         return path;
     }
 
