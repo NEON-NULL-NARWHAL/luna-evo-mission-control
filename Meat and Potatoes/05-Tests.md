@@ -31,8 +31,11 @@ install; too many entries) and `LiveModsOpsTests` (hostile JSON, runtimeconfig, 
 damaged (the current Universe must survive), DTDs refused, Windows device names as profile names, weak-password
 warnings, and a hand-edited settings file full of nulls.
 
-Both test projects use **xunit v3** (the Core tests moved from the legacy xunit 2.9.3 after 2.1.1; v3 test projects
-are `<OutputType>Exe</OutputType>`). Coverage still works with `--collect:"XPlat Code Coverage"`.
+The UI tests use **xunit v3**; the Core tests stay on **xunit 2.9.3** (marked legacy). Moving them to v3 was tried
+after 2.1.1: all 303 passed locally, but on GitHub's runner every UI test that starts the fake server timed out
+("server running"), probably because v3 runs the Core tests as their own process and the console Ctrl+C the server
+tests use then reaches the other test run's fake servers. Before trying again, find that cause (e.g. run the two
+projects one after the other on CI).
 
 2.1.1 (audit 10) added `FuzzTests` (every parser of outside text, 1,500 seeded mutations each; a parser may only throw
 what it documents, and the seed is fixed so a failure reproduces), `CodeHygieneTests` (no `/// <summary>` left above

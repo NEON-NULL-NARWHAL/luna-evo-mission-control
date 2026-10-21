@@ -88,7 +88,7 @@ the real services.
 | J6 | Low | **The LMP server installer checked for unsafe paths while extracting**, so a bad entry could leave a half-updated server, and **its size limit trusted the sizes the zip claims**. (Downloads are SHA-256 checked, so this needs an unverified old release you agreed to.) | Every path is checked before anything is written; the bytes actually written are counted. |
 | J7 | Low | **A netsh that didn't answer within 5 s** made the firewall-rule check throw. | Treated as "don't know". |
 | J8 | Low | **The repository's GitHub security features were off**: secret scanning, push protection, Dependabot alerts and private vulnerability reporting, so "Report a vulnerability" (below) wasn't actually there. | Switched on with the owner's OK after 2.1.1: secret scanning with push protection, Dependabot alerts and security updates, and private vulnerability reporting. GitHub reported no alerts. |
-| J9 | Info | The Core tests used **xunit 2.9.3, marked legacy** (the UI tests are on xunit v3). Test-only. | Moved to xunit v3 after 2.1.1. |
+| J9 | Info | The Core tests used **xunit 2.9.3, marked legacy** (the UI tests are on xunit v3). Test-only. | Tried after 2.1.1 and reverted: with the Core tests on xunit v3 (their own process), GitHub's runner never got the UI tests' fake server running (every server test timed out); locally all passed. Kept on 2.9.3 until that's understood; the warning is a deprecation notice, not a vulnerability. |
 
 Checked and fine: every background event (server output, state, exit, player events) reaches the UI through the
 dispatcher; the self-update swap (SHA-256 checked twice, a Windows program, rename with rollback); the firewall rule
