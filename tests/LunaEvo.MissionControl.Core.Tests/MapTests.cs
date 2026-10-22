@@ -284,4 +284,37 @@ public class MapTests
 
         static bool Finite(Point3 p) => double.IsFinite(p.X) && double.IsFinite(p.Y) && double.IsFinite(p.Z);
     }
+
+    [Fact]
+    public void Pack_bodies_carry_their_own_numbers_and_templates_dont_pass_theirs_on()
+    {
+        // A player's map knows bodies only by number (LMP's website): packs like OPM set flightGlobalsIndex.
+        var gameData = Directory.CreateTempSubdirectory("LunaEvoTests-numbers").FullName;
+        Directory.CreateDirectory(Path.Combine(gameData, "Pack"));
+        File.WriteAllText(Path.Combine(gameData, "Pack", "Bodies.cfg"), """
+            @Kopernicus:FOR[Pack]
+            {
+             Body
+             {
+              name = Sarnus
+              Template { name = Jool }
+              Properties { flightGlobalsIndex = 21 }
+              Orbit { referenceBody = Sun
+               semiMajorAxis = 125798522368 }
+             }
+             Body
+             {
+              name = Hale
+              Template { name = Gilly }
+              Orbit { referenceBody = Sarnus
+               semiMajorAxis = 10000000 }
+             }
+            }
+            """);
+        var system = SolarSystem.Load(gameData);
+        Assert.Equal("Sarnus", system.ForVessel(null, 21)?.Name);
+        Assert.Equal("Jool", system.ForVessel(null, 8)?.Name); // Sarnus doesn't take Jool's number
+        Assert.Equal("Gilly", system.ForVessel(null, 13)?.Name); // nor Hale Gilly's
+        Assert.Null(system.Find("Hale")!.Index);
+    }
 }

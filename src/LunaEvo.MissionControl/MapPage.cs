@@ -221,9 +221,17 @@ internal sealed class MapPage
         MergeLive();
     }
 
-    /// <summary>The running server's latest vessel list (read by the Players page), if it's recent.</summary>
+    /// <summary>
+    /// The running server's latest vessel list (read by the Players page), if it's recent. With no server of their own
+    /// open, a player sees the server they checked on Join (its LMP website, shared by the host).
+    /// </summary>
     private ServerSnapshot? Live() =>
-        _host.Server?.IsRunning == true && _host.Players is { Last: { } last } players && DateTime.UtcNow - players.LastAt < LiveMaxAge ? last : null;
+        _host.Server?.IsRunning == true && _host.Players is { Last: { } last } players && DateTime.UtcNow - players.LastAt < LiveMaxAge ? last
+        : JoinedLive();
+
+    /// <summary>The server checked on Join, when no server is open here and its live info is recent.</summary>
+    private ServerSnapshot? JoinedLive() =>
+        _host.Session == null && _host.Join.Live is { Snapshot: { } snapshot } && DateTime.UtcNow - _host.Join.LiveAt < LiveMaxAge ? snapshot : null;
 
     /// <summary>Older than this, the live list is treated as gone (the website stopped answering).</summary>
     internal static readonly TimeSpan LiveMaxAge = TimeSpan.FromSeconds(30);
@@ -317,9 +325,12 @@ internal sealed class MapPage
         _source.Text = _feed is { } feed
             ? $"Live from the LUNA EVO server plugin, {Math.Max(0, (int)(DateTime.UtcNow - feed.WrittenUtc).TotalSeconds)} s ago · " +
               $"{feed.Players.Count} player(s), {feed.Players.Count(p => p.Vessel != null)} flying."
+            : _liveFrom != null && _host.Session == null
+            ? $"Live from {_liveFrom.ServerName ?? "the server you checked on Join"}, read {Math.Max(0, (int)(DateTime.UtcNow - _host.Join.LiveAt).TotalSeconds)} s ago " +
+              "(shared by its host; planets from your own KSP)."
             : _liveFrom != null && _host.Players is { } players
             ? $"Live from the running server, read {Math.Max(0, (int)(DateTime.UtcNow - players.LastAt).TotalSeconds)} s ago."
-            : _host.Session == null ? ""
+            : _host.Session == null ? "Not hosting? Check a server on Join (its host shares live info on Connect) to see its vessels here."
             : websiteOff ? "From the save, which LMP writes every few minutes. The map can be live while the server runs:"
             : _host.Server?.IsRunning == true ? "From the save for now; live positions appear once the server's website answers."
             : "From the save (the server is stopped).";
@@ -342,7 +353,8 @@ internal sealed class MapPage
     private void UpdateTime()
     {
         // The server's clock; without its files (no server open), the newest vessel epoch.
-        var now = _host.Session is { } session ? UniverseClock.Now(session.ServerDirectory) : null;
+        var now = _host.Session is { } session ? UniverseClock.Now(session.ServerDirectory)
+            : JoinedLive() is { } joined ? UniverseClock.Now(joined) : null;
         now ??= _vessels.Select(v => v.Orbit?.Epoch ?? 0).DefaultIfEmpty(0).Max();
         _canvas.Time = now.Value;
         _time.Text = $"Universe time: {UniverseClock.Kerbin(now.Value)} · {_vessels.Count} vessel(s) on the server";
@@ -380,7 +392,7 @@ internal sealed class MapPage
             _list.Children.Add(Ui.Row(vessel.Name, $"{vessel.Type} · {Situation(vessel.Situation)}", show).WithId("map/vessel/" + vessel.Id));
         }
         if (around.Count == 0)
-            _list.Children.Add(Ui.Row(_host.Session == null ? "Open a server to see its vessels" : $"No vessels around {_canvas.FocusBody}", null, null));
+            _list.Children.Add(Ui.Row(_host.Session == null && _liveFrom == null ? "Open a server, or check one on Join, to see its vessels" : $"No vessels around {_canvas.FocusBody}", null, null));
     }
 
     private string? GameData()

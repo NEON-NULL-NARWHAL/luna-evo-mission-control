@@ -335,6 +335,9 @@ internal sealed class JoinPage : IDisposable
 
     internal ServerAddress? Server => _server;
     internal LiveInfoResult? Live => _live;
+
+    /// <summary>When <see cref="Live"/> was read (the Map shows a checked server to players who host nothing).</summary>
+    internal DateTime LiveAt { get; private set; }
     internal TextBox AddressBox => _address;
     internal TextBox KspBox => _ksp;
     internal TextBox PasswordBox => _password;
@@ -348,6 +351,7 @@ internal sealed class JoinPage : IDisposable
         try
         {
             _live = await ServerProbe.LiveInfoAsync(Http.Client, server);
+            LiveAt = DateTime.UtcNow;
             ShowSnapshot(_live.Snapshot);
         }
         catch (Exception)
@@ -613,6 +617,7 @@ internal sealed class JoinPage : IDisposable
                 null).WithId("join/ping"));
 
             _live = await ServerProbe.LiveInfoAsync(Http.Client, server);
+            LiveAt = DateTime.UtcNow;
             _network.Children.Add(Ui.Row(
                 _live.Reachable ? $"Live info answered in {_live.LatencyMs} ms" : "No live info",
                 _live.Reachable

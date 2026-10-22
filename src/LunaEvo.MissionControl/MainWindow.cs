@@ -959,6 +959,9 @@ public sealed class MainWindow : Window
         AddHeading("Play");
         AddNav(BrowserKey, new TextBlock { Text = "Server browser" }, _browserPage.View);
         AddNav(JoinKey, new TextBlock { Text = "Join a server" }, _joinPage.View);
+        // Hosting nothing, a player still gets the map: of the server they checked on Join. (A host has it above.)
+        if (_session == null)
+            AddNav(MapKey, new TextBlock { Text = "Map" }, _mapPage.View);
         AddNav(CraftsKey, new TextBlock { Text = "Crafts" }, _craftsPage.View);
         AddNav(CkanKey, new TextBlock { Text = "CKAN mods" }, _ckanPage.View);
     }

@@ -71,6 +71,28 @@ public class MapPageTests
     }
 
     [AvaloniaFact]
+    public void A_player_who_hosts_nothing_sees_the_server_they_checked_on_join()
+    {
+        // No server open here: the vessels come from the host's LMP website (as on Join), the planets from this KSP,
+        // and the bodies by their numbers.
+        using var ui = new UiHarness(openServer: false);
+        ui.Web.Text("http://127.0.0.1:8900/", File.ReadAllText(Path.Combine(TestPaths.Fixtures, "Web", "serverinfo.json")));
+        ui.Window.UpdateSettings(s => s with { KspFolder = TestData.FakeKsp(withSettings: false) });
+        ui.Click(ui.Find<Button>("welcome/join"));
+        ui.Find<TextBox>("join/address").Text = "127.0.0.1";
+        ui.Click(ui.Find<Button>("join/check"));
+        ui.WaitFor(() => ui.Window.Join.Live != null, "server checked");
+
+        ui.OpenTab(MainWindow.MapKey);
+        var map = ui.Window.Map;
+        Assert.StartsWith("Live from", ui.Find<TextBlock>("map/source").Text);
+        var kerbalX = Assert.Single(map.Vessels, v => v.Name == "Kerbal X");
+        Assert.Equal("Kerbin", map.System.ForVessel(kerbalX.BodyName, kerbalX.Body)?.Name);
+        var base1 = Assert.Single(map.Vessels, v => v.Name == "Mun Base Alpha");
+        Assert.Equal("Mun", map.System.ForVessel(base1.BodyName, base1.Body)?.Name);
+    }
+
+    [AvaloniaFact]
     public void Typing_a_bodys_name_in_the_focus_list_picks_it()
     {
         using var ui = new UiHarness();

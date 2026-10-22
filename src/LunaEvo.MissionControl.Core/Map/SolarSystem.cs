@@ -332,7 +332,12 @@ public sealed class SolarSystem
         var start = editing ? bodies[name] : template ?? (bodies.TryGetValue(name, out var existing) ? existing : null);
         if (start == null && verb == '@')
             return; // editing a body that doesn't exist
-        var body = (start ?? new CelestialBody(name, "Sun", 100_000, 1e10, null, "#B0B0B0")) with { Name = name, Index = start?.Index };
+        // A new body built from a template (Sarnus from Jool) is a different body: it doesn't take the template's number.
+        var body = (start ?? new CelestialBody(name, "Sun", 100_000, 1e10, null, "#B0B0B0")) with
+        {
+            Name = name,
+            Index = start != null && start != template ? start.Index : null,
+        };
 
         if (Child(node, "Properties") is { } properties)
         {
@@ -342,6 +347,9 @@ public sealed class SolarSystem
                      ?? (Number(properties, "mass") is { } mass ? mass * 6.67430e-11 : (double?)null)
                      ?? (Number(properties, "geeASL") is { } gee ? gee * 9.80665 * radius * radius : (double?)null);
             body = body with { Radius = radius, Mu = mu ?? body.Mu };
+            // The number vessels' orbits use for this body (LMP's website gives only the number). Packs like OPM set it.
+            if (Number(properties, "flightGlobalsIndex") is { } index and >= 0 and < 10_000)
+                body = body with { Index = (int)index };
         }
         if (Child(node, "Orbit") is { } orbit)
         {
@@ -409,6 +417,15 @@ public static class UniverseClock
             return null;
         }
     }
+
+    /// <summary>
+    /// The universe's time from a server's LMP website (for a player, who has no server files): the same sum as
+    /// <see cref="Now(string, DateTime?)"/>, start time plus the furthest subspace.
+    /// </summary>
+    public static double? Now(Live.ServerSnapshot snapshot, DateTime? utcNow = null) =>
+        snapshot.UniverseStart is { } started
+            ? ((utcNow ?? DateTime.UtcNow) - started).TotalSeconds + (snapshot.Subspaces.Count > 0 ? snapshot.Subspaces.Max(s => s.Time) : 0)
+            : null;
 
     /// <summary>"Year 1, day 86, 03:12" on the Kerbin calendar (6-hour days, 426-day years).</summary>
     public static string Kerbin(double seconds)
