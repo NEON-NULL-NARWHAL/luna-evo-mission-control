@@ -30,6 +30,9 @@ public sealed record UniverseVessel(string Id, string Name, string Type, string 
     /// <summary>Altitude above sea level (m) when it was saved.</summary>
     public double? Altitude { get; init; }
 
+    /// <summary>The player flying it right now (from the LUNA EVO server plugin), or null.</summary>
+    public string? FlownBy { get; init; }
+
     public bool IsLanded => Situation is "LANDED" or "SPLASHED" or "PRELAUNCH";
 }
 

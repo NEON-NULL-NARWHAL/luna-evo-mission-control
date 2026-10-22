@@ -182,7 +182,11 @@ Full guide: [Play together without opening any ports](README.md#play-together-wi
 
 - **Map**<br>
   ↳ Reads the server's `Universe/Vessels` and your KSP's GameData (for planet packs) and draws every vessel on its
-  orbit; while the server runs with its website on, positions come live from the server. Read-only: it changes nothing. Pick a body at the top, scroll to zoom, drag to move, click a ship.
+  orbit; while the server runs with its website on, positions come live from the server. Read-only: it changes nothing.
+- **Map → Install the LUNA EVO server plugin** (optional, server stopped)<br>
+  ↳ Copies one DLL into your server's `Plugins` folder. LMP loads it on the next start; it only watches, and writes
+  every vessel's position and who flies what to `LunaEvo\live.json` for the map, every second. No network port.
+  **Remove** takes it out again. Pick a body at the top, scroll to zoom, drag to move, click a ship.
 
 💡 **Tip:** these only run while LUNA EVO is open; home server mode makes sure it is.
 

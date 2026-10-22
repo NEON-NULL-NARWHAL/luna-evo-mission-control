@@ -21,6 +21,17 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\LunaEvo.MissionControl.Core\LunaEvo.MissionControl.Core.csproj" />
     <ProjectReference Include="..\FakeLmpServer\FakeLmpServer.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\src\LunaEvo.ServerPlugin\LunaEvo.ServerPlugin.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The plugin's tests run it against LMP 0.29.2's real message classes. -->
+    <Reference Include="Server">
+      <HintPath>..\Fixtures\LMPServer\Server.dll</HintPath>
+    </Reference>
+    <Reference Include="Lidgren.Core">
+      <HintPath>..\Fixtures\LMPServer\Lidgren.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

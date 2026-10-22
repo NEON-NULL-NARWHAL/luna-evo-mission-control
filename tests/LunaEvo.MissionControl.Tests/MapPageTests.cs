@@ -103,6 +103,48 @@ public class MapPageTests
     }
 
     [AvaloniaFact]
+    public void Map_installs_the_server_plugin_and_shows_who_flies_what()
+    {
+        using var ui = new UiHarness(fakeServer: true);
+        TestData.AddOrbitingVessels(ui.ServerDirectory);
+        ui.Window.UpdateSettings(s => s with { KspFolder = TestData.FakeKsp(withSettings: false) });
+        ui.OpenTab(MainWindow.MapKey);
+        var button = ui.Find<Button>("map/plugin");
+        Assert.True(button.IsVisible); // the fixture server is LMP 0.29.2
+        Assert.StartsWith("Install the LUNA EVO server plugin", button.Content as string);
+
+        ui.Await(ui.Window.Map.TogglePluginAsync());
+        Assert.Contains("Install the LUNA EVO server plugin?", ui.DialogsShown);
+        var dll = Path.Combine(ui.ServerDirectory, "Plugins", "LunaEvo.ServerPlugin.dll");
+        Assert.Equal(MapPage.PluginBytes(), File.ReadAllBytes(dll));
+        Assert.Equal("Remove the LUNA EVO server plugin", button.Content as string);
+
+        // What the plugin writes while the server runs: Jebediah is flying the station, higher than saved.
+        Directory.CreateDirectory(Path.Combine(ui.ServerDirectory, "LunaEvo"));
+        File.WriteAllText(Path.Combine(ui.ServerDirectory, "LunaEvo", "live.json"), $$"""
+            {"Format":1,"Plugin":"1.0.0","Lmp":"0.29.2","WrittenUtc":"{{DateTime.UtcNow:O}}","Players":[{"Name":"Jebediah","Subspace":1,"Vessel":"k1"}],
+             "Vessels":[{"Id":"k1","Body":1,"Lat":0,"Lon":0,"Alt":300000,"Orbit":[0,0,900000,0,0,0,0,1],"Landed":false,"Splashed":false,"FlownBy":"Jebediah"}]}
+            """);
+        var map = ui.Window.Map;
+        map.Refresh();
+        ui.Pump();
+        Assert.StartsWith("Live from the LUNA EVO server plugin", ui.Find<TextBlock>("map/source").Text);
+        Assert.EndsWith("1 player(s), 1 flying.", ui.Find<TextBlock>("map/source").Text);
+        Assert.Equal(900_000, map.Vessels.Single(v => v.Id == "k1").Orbit!.Sma);
+        map.Focus("Kerbin");
+        ui.Click(ui.Find<Button>("map/show/k1"));
+        Assert.Equal("Flown by Jebediah", ui.Find<TextBlock>("map/flownBy").Text);
+
+        // LMP keeps its plugins open while it runs: changing it then is refused, with the reason.
+        ui.OpenTab(MainWindow.ConsolePage);
+        ui.Click(ui.Find<Button>("console/start"));
+        ui.WaitFor(() => ui.Server.State == ServerState.Running, "server running");
+        ui.Await(map.TogglePluginAsync());
+        Assert.Contains("Stop the server first", ui.DialogsShown);
+        Assert.True(File.Exists(dll));
+    }
+
+    [AvaloniaFact]
     public void Map_offers_to_turn_the_website_on_for_a_live_map()
     {
         using var ui = new UiHarness();

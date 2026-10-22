@@ -153,7 +153,8 @@ LMP's own testing is "players try it". For a sync rewrite we'd need numbers firs
 ## Suggested order
 
 1. Map phase 2a from the website: small, useful now, no mods. **Done in 2.3.0.**
-2. The in-game test rig, plus the LUNA EVO server plugin (2b), which also records sync data for the rig.
+2. The in-game test rig, plus the LUNA EVO server plugin (2b), which also records sync data for the rig. **Plugin and
+   a no-KSP fake client done in 2.4.0 ([26](26-Server-Plugin.md)); the KSP part of the rig waits on O3.**
 3. Upstream PRs for the non-protocol fixes (W2 alone-in-subspace, W4 guess limit, `-lmp` port and password, W5 races).
 4. The sync rewrite (W1, then W2) in the fork, measured with the rig.
 5. Server checks (W3/W4) before public servers matter.

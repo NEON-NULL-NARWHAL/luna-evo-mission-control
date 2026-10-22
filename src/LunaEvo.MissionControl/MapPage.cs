@@ -28,13 +28,15 @@ internal sealed class MapPage
     private readonly TextBlock _packs = Ui.Text("", "sublabel").WithId("map/packs");
     private readonly StackPanel _details = new() { Spacing = 2 };
     private readonly StackPanel _list = new() { Spacing = 2 };
-    private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromSeconds(2) };
+    private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromSeconds(1) };
     private SolarSystem _system = SolarSystem.Stock();
     private string? _systemFrom; // the GameData folder the bodies were read from
     private IReadOnlyList<UniverseVessel> _saved = []; // Universe/Vessels as LMP last wrote it
     private IReadOnlyList<UniverseVessel> _vessels = []; // what's shown: the save, or the save merged with the live server
     private DateTime _vesselsRead;
     private ServerSnapshot? _liveFrom; // the live snapshot _vessels was merged from, if any
+    private LiveFeed? _feed; // the LUNA EVO server plugin's live.json, if it's running
+    private readonly Button _plugin = Ui.Button("", "text").WithId("map/plugin");
     private readonly TextBlock _source = Ui.Text("", "sublabel").WithId("map/source");
     private readonly Button _goLive = Ui.Button("Turn on the website for a live map (this PC only)", "text").WithId("map/goLive");
     private bool _updatingFocus;
@@ -69,6 +71,7 @@ internal sealed class MapPage
         };
         var refresh = Ui.Button("Refresh", "text", "IconRestart").WithId("map/refresh");
         refresh.Click += (_, _) => Refresh(force: true);
+        _plugin.Click += async (_, _) => await TogglePluginAsync();
         _goLive.Click += (_, _) =>
         {
             _host.Players?.EnableWebsite();
@@ -105,7 +108,7 @@ internal sealed class MapPage
             Content = new StackPanel
             {
                 Margin = new Thickness(28, 20, 28, 28), Spacing = 12,
-                Children = { header, controls, new StackPanel { Spacing = 2, Children = { _time, _source, _goLive, _packs } }, frame, details, list },
+                Children = { header, controls, new StackPanel { Spacing = 2, Children = { _time, _source, _goLive, _plugin, _packs } }, frame, details, list },
             },
         };
         _canvas.FocusBody = _system.Star.Name;
@@ -180,6 +183,8 @@ internal sealed class MapPage
             }
             if (vessel.HasCrew)
                 _details.Children.Add(Ui.Text("Crew: " + string.Join(", ", vessel.Crew), "sublabel"));
+            if (vessel.FlownBy != null)
+                _details.Children.Add(Ui.Text("Flown by " + vessel.FlownBy, "sublabel").WithId("map/flownBy"));
         }
         _canvas.InvalidateVisual();
     }
@@ -194,11 +199,16 @@ internal sealed class MapPage
             ReadVessels();
             FillList();
         }
-        else if (Live() != _liveFrom)
+        else if (Live() != _liveFrom || _feed != null || LiveFeedFor() != null)
         {
-            // The Players page read the server again (every 5 s): move the vessels to their new orbits.
+            // The Players page read the server again (every 5 s), or the plugin wrote (every second): move the vessels to
+            // their new orbits. The list below only changes when vessels come or go.
+            var before = string.Join(",", _vessels.Select(v => v.Id));
             MergeLive();
-            FillList();
+            if (string.Join(",", _vessels.Select(v => v.Id)) != before)
+                FillList();
+            else if (_canvas.Selected is { } id && _vessels.FirstOrDefault(v => v.Id == id) is { } selected)
+                Select(selected); // its orbit numbers changed
         }
         UpdateTime();
         _canvas.InvalidateVisual();
@@ -218,11 +228,70 @@ internal sealed class MapPage
     /// <summary>Older than this, the live list is treated as gone (the website stopped answering).</summary>
     internal static readonly TimeSpan LiveMaxAge = TimeSpan.FromSeconds(30);
 
+    private LiveFeed? LiveFeedFor() => _host.Session is { } session ? LiveFeed.Read(session.ServerDirectory) : null;
+
     private void MergeLive()
     {
         _liveFrom = Live();
         _vessels = _liveFrom is { } live ? LiveVessels.Merge(_saved, live.Vessels) : _saved;
+        // The server plugin's positions are newer still (every message, not every 2.5 s) and say who flies what.
+        _feed = LiveFeedFor();
+        if (_feed != null)
+            _vessels = LiveVessels.Overlay(_vessels, _feed, LiveVessels.BodyNames(_saved));
         _canvas.Vessels = Shown();
+        UpdateSource();
+    }
+
+    /// <summary>The plugin's DLL, carried inside this exe (see the csproj).</summary>
+    internal static byte[]? PluginBytes()
+    {
+        using var stream = typeof(MapPage).Assembly.GetManifestResourceStream(ServerPluginInstaller.FileName);
+        if (stream == null)
+            return null;
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
+    }
+
+    private PluginStatus? PluginState() =>
+        _host.Session is { } session && PluginBytes() is { } bytes && ServerPluginInstaller.Supports(Core.Setup.LmpVersion.Parse(session.Schema.ServerVersion))
+            ? ServerPluginInstaller.Status(session.ServerDirectory, bytes)
+            : null;
+
+    internal async Task TogglePluginAsync()
+    {
+        if (_host.Session is not { } session || PluginBytes() is not { } bytes || PluginState() is not { } state)
+            return;
+        if (_host.Server?.IsRunning == true)
+        {
+            await Dialogs.InfoAsync(_host, "Stop the server first",
+                "LMP keeps its plugins open while it runs. Stop the server, change the plugin, then start it again.");
+            return;
+        }
+        try
+        {
+            if (state == PluginStatus.Installed)
+            {
+                if (!await Dialogs.ConfirmAsync(_host, "Remove the LUNA EVO server plugin?",
+                        "The map goes back to the server's website (every few seconds) or its save.", "Remove"))
+                    return;
+                ServerPluginInstaller.Remove(session.ServerDirectory);
+            }
+            else
+            {
+                if (!await Dialogs.ConfirmAsync(_host, state == PluginStatus.Different ? "Replace the server plugin?" : "Install the LUNA EVO server plugin?",
+                        $"Copies {ServerPluginInstaller.FileName} into this server's Plugins folder. LMP loads it on its next start. It watches " +
+                        "the server's messages and writes every vessel's latest position, and who flies what, to LunaEvo\\live.json, " +
+                        "next to the server, for this map. It only reads: it never changes or blocks a message, opens no network port " +
+                        "and stores no addresses. Players don't need anything.", state == PluginStatus.Different ? "Replace" : "Install"))
+                    return;
+                ServerPluginInstaller.Install(session.ServerDirectory, bytes);
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            await Dialogs.InfoAsync(_host, "Couldn't change the plugin", e.Message);
+        }
         UpdateSource();
     }
 
@@ -230,7 +299,18 @@ internal sealed class MapPage
     {
         var websiteOff = _host.Session is { } session && ServerInfoClient.EndpointFor(session) == null;
         _goLive.IsVisible = websiteOff && _host.Session != null;
-        _source.Text = _liveFrom != null && _host.Players is { } players
+        var plugin = PluginState();
+        _plugin.IsVisible = plugin != null;
+        _plugin.Content = plugin switch
+        {
+            PluginStatus.Installed => "Remove the LUNA EVO server plugin",
+            PluginStatus.Different => "Update the LUNA EVO server plugin",
+            _ => "Install the LUNA EVO server plugin: live every second, and who flies what",
+        };
+        _source.Text = _feed is { } feed
+            ? $"Live from the LUNA EVO server plugin, {Math.Max(0, (int)(DateTime.UtcNow - feed.WrittenUtc).TotalSeconds)} s ago · " +
+              $"{feed.Players.Count} player(s), {feed.Players.Count(p => p.Vessel != null)} flying."
+            : _liveFrom != null && _host.Players is { } players
             ? $"Live from the running server, read {Math.Max(0, (int)(DateTime.UtcNow - players.LastAt).TotalSeconds)} s ago."
             : _host.Session == null ? ""
             : websiteOff ? "From the save, which LMP writes every few minutes. The map can be live while the server runs:"

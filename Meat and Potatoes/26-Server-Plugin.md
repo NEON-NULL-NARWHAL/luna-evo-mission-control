@@ -1,0 +1,84 @@
+# 26 · The LUNA EVO server plugin and the fake LMP client (2.4)
+
+[← Meat and Potatoes](README.md) · Code: `src/LunaEvo.ServerPlugin/` (`LunaEvoPlugin`, `LiveState`),
+`Core/Live/LiveFeed.cs`, `Core/Map/LiveVessels.cs` (`Overlay`), `Core/Ops/ServerPluginInstaller.cs`, `App/MapPage.cs`,
+`tests/FakeLmpClient/`
+
+The first piece of "fixes as patches through Mission Control" ([25](25-LMP-Under-The-Hood.md)): code that runs inside
+the official LMP server without changing it. Version 1.0.0 only **watches**; it gives the map every vessel's latest
+position and who flies what.
+
+## How LMP loads it
+
+LMP's server loads every DLL in `<server>/Plugins/` at start (`Server/Plugin/LmpPluginHandler.cs`,
+`Assembly.UnsafeLoadFrom`) and calls each class that implements `ILmpPlugin`: `OnServerStart`/`OnServerStop`,
+`OnUpdate` every 10 ms on its main thread, connect/authenticate/disconnect, and `OnMessageReceived`/`OnMessageSent`
+for every message. Exceptions from a plugin are caught and logged at Debug, so a plugin bug can't stop the server, but
+a slow plugin slows everyone: `OnMessageReceived` runs on the receive path, under one lock for all plugins.
+
+Two things learned from LMP's code that matter for any plugin:
+
+- **`OnMessageReceived` runs before LMP checks the sender is logged in** (`Server/Server/MessageReceiver.cs`). So
+  our plugin only listens to `client.Authenticated` players; otherwise someone without the password could put
+  made-up vessels on the map.
+- **A plugin can set `message.Handled = true` and LMP then ignores the message.** That's how the server checks from
+  [25](25-LMP-Under-The-Hood.md) (W3: refuse moving a vessel you don't control) can be built as a plugin later. 1.0.0
+  never sets it.
+
+## What it does
+
+- `Observe` copies each `VesselPositionMsgData` (body, lat/lon/alt, the 8 orbit numbers INC, ECC, SMA, LAN, LPE, MNA,
+  EPH, REF, velocity, game time, subspace, landed/splashed) into `LiveState`, a dictionary by vessel id (at most
+  20,000). LMP recycles message objects, so arrays are cloned. `VesselRemoveMsgData` removes the entry.
+- `OnUpdate` writes `<server>/LunaEvo/live.json` every 500 ms while something changed, otherwise every 2 s (a
+  heartbeat), on a background task (temp file then rename), never two at once. The snapshot adds players (name,
+  subspace, the vessel they control, from LMP's control locks) and subspaces. Non-finite numbers are written as 0, so
+  the file is always valid JSON. Player names and ids only: no addresses.
+- `OnServerStop` deletes the file. After a crash the file stays, so readers judge by `WrittenUtc` (`LiveFeed.MaxAge`, 6 s).
+- No network port, no writes anywhere else, no changes to any message.
+
+It targets **net6.0** (LMP 0.29's runtime) and compiles against `tests/Fixtures/LMPServer/Server.dll` (LMP 0.29.2, MIT;
+LmpCommon is built into it). `ServerPluginInstaller.Supports` offers it only for LMP 0.29.x; 0.30 (.NET 10, changed
+code) needs its own build later.
+
+## Mission Control's side
+
+- The app embeds the built DLL (`LunaEvo.MissionControl.csproj`: a `ProjectReference` with
+  `ReferenceOutputAssembly=false`, then an `EmbeddedResource`), so there's nothing to download. `MapPage.PluginBytes()`.
+- Map → **Install / Update / Remove the LUNA EVO server plugin** (`map/plugin`): only with the server stopped (LMP keeps
+  plugins open), after a dialog that says exactly what it does. `ServerPluginInstaller.Status` compares SHA-256, so an
+  older or foreign copy shows as "Update".
+- `LiveFeed.Read` reads the file defensively (16 MB cap, format 1, finite numbers, text capped, fresh only) and
+  `LiveVessels.Overlay` puts its positions on top of the website/save list: orbit, position, landed or not, **Flown by**.
+  Vessels it knows that the list doesn't are added as "(new vessel)". The map then redraws every second.
+- Order of sources: plugin (every message) > website (2.5 s per vessel, [24](24-Solar-System-Map.md)) > save (minutes).
+
+## The fake LMP client (`tests/FakeLmpClient`)
+
+A console program that joins a real LMP server with **no KSP**, using LMP's own message classes and Lidgren from
+`Server.dll`: connect (password in the hail), `HandshakeRequestMsgData`, ask for subspaces and join the newest, take a
+control lock, then 20 `VesselPositionMsgData` a second on a circular orbit.
+
+```
+dotnet run --project tests/FakeLmpClient -- --port 8810 --password <pw> --name Tester --vessel <guid> --sma 900000 --seconds 20
+```
+
+Only against a sandbox server (never someone else's). It's the first part of the test rig from
+[25](25-LMP-Under-The-Hood.md): server-side behavior can now be tested for real without a game. Next it can grow
+two players, warps and docking messages.
+
+## Checked for real (2026-10-22)
+
+The real LMP 0.29.2 server, in a sandbox copy of the owner's universe (ports 8810/8910, no master server, no UPnP,
+website on localhost): the plugin loaded ("LUNA EVO server plugin 1.0.0: writing live positions"), the fake client
+logged in and flew a saved vessel at 900 km and then 950 km. `live.json` showed the player, their subspace and
+`FlownBy`, and Mission Control's own `LiveFeed.Read` + `Overlay` read it 0.1 s old with the new orbit. LMP's website
+showed the new orbit too. It also showed W3 for real: a client that had never touched that vessel took its control lock
+and moved it, and the server accepted it.
+
+## Tests
+
+`ServerPluginTests` (Core): LMP's real `VesselPositionMsgData` in, `live.json` out, read back by `LiveFeed`
+(the plugin and the app agree on the format); broken and non-finite messages; removals; stale, future and
+wrong-format files; the overlay; install/update/remove. `FuzzTests.Server_plugin_live_feed`. `MapPageTests`: install
+from the Map page, a live file showing "Flown by", and refusal while the server runs.

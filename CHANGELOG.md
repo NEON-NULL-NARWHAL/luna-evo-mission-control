@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.4.0 (2026-10-22)
+
+### Added
+- **The LUNA EVO server plugin** (Map → **Install the LUNA EVO server plugin**, server stopped; LMP 0.29). A small
+  plugin that LMP's own server loads from its `Plugins` folder. The map then shows every vessel where its player's game
+  last said it was (every second) and **who flies what**. It only watches: it never changes a message, opens no network
+  port, ignores anyone who hasn't logged in, and players need nothing. **Remove** takes it out.
+- A pretend LMP player for testing (`tests/FakeLmpClient`): joins a real LMP server without KSP and flies a vessel.
+- Checked for real: the real LMP 0.29.2 server with the plugin, the pretend player flying, and the map reading it
+  0.1 s behind.
+
 ## 2.3.0 (2026-10-22)
 
 ### Added

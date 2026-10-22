@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A plugin that LMP's own server loads from its Plugins folder. It runs inside Server.exe, so it targets the
+       server's .NET: LMP 0.29.x runs on .NET 6. Mission Control carries the built DLL inside itself and copies it into a
+       server's Plugins folder when the host asks for it. -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <AssemblyName>LunaEvo.ServerPlugin</AssemblyName>
+    <RootNamespace>LunaEvo.ServerPlugin</RootNamespace>
+    <!-- .NET 6 is out of support, but it's what LMP 0.29 runs on; the plugin only uses what the server already has. -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- LMP 0.29.2's own server (MIT, the copy the tests use). Compiled against, never copied: the server has its own. -->
+    <Reference Include="Server">
+      <HintPath>..\..\tests\Fixtures\LMPServer\Server.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Lidgren.Core">
+      <HintPath>..\..\tests\Fixtures\LMPServer\Lidgren.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LunaEvo.MissionControl.Core.Tests" />
+  </ItemGroup>
+
+</Project>

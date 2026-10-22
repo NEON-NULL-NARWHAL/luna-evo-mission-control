@@ -129,6 +129,11 @@ public class FuzzTests
         });
 
     [Fact]
+    public void Server_plugin_live_feed() => Fuzz(
+        ["""{"Format":1,"Plugin":"1.0.0","Lmp":"0.29.2","WrittenUtc":"2026-10-22T11:33:00Z","Players":[{"Name":"Jeb","Subspace":99,"Vessel":"0738bb0f-cda0-4e47-938c-07900665ed9b"}],"Subspaces":[{"Id":99,"Time":1.5}],"Vessels":[{"Id":"0738bb0f-cda0-4e47-938c-07900665ed9b","Body":1,"BodyName":"Kerbin","Lat":0,"Lon":1,"Alt":2,"Orbit":[0,0,900000,0,0,6.2,1944034.8,1],"Velocity":[0,1,0],"GameTime":3,"Subspace":99,"Landed":false,"Splashed":false,"From":"Jeb","ReceivedUtc":"2026-10-22T11:33:00Z","FlownBy":"Jeb"}]}"""],
+        text => Live.LiveFeed.Parse(System.Text.Encoding.UTF8.GetBytes(text)));
+
+    [Fact]
     public void Ksp_cfg_files() => Fuzz(
         ["PART\n{\n name = some.part\n MODULE\n {\n  name = ModuleEngines\n }\n}\n", "RESOURCE_DEFINITION { name = LiquidFuel }", "@PART[x]:NEEDS[y] { %a = b }"],
         text => KspConfigParser.Parse(text));

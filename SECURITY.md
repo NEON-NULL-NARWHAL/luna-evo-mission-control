@@ -31,6 +31,7 @@ response time.
 | **CKAN's command line** (`ckan.exe`: LUNA EVO's verified copy, or your own if you chose one) | CKAN page → Install with CKAN, after you confirm | `ckan update` and `ckan install <mod names>` for the KSP install you pick, never while KSP or CKAN has it open. Only mod names and versions from a list are passed (a `.ckan` file itself never is). CKAN then downloads from its own catalog. |
 | **Public servers' addresses** (ICMP ping) | Server browser: the 40 servers at the top of the list, once each | Two pings per server, nothing else, to measure the delay. |
 | **LMP's master servers** (`ms.lmp.dasskelett.dev`, `lmp.nightshade.fun`, and their nightly lists) | Server browser: the first time you open it, and Refresh | One HTTPS GET each for the public list (LMP's own `/json`). Read with an 8 MB cap; names and descriptions cut and cleaned; only IP addresses accepted; a server's website link opens only if it's http(s). Joining a listed server is the Join page's usual check (DNS, pings, its LMP website). |
+| **The LUNA EVO server plugin** (only if you install it from the Map page) | Inside your LMP server, from its next start | Watches the server's messages and writes `<server>/LunaEvo/live.json` (vessel positions, player names, who flies what; no addresses). No network, changes nothing, removed with **Remove**. |
 | **Crafts from friends** | Crafts page → Import | Read as data with size limits; written only into a KSP save's Ships folder or the server's craft library, never overwriting. |
 
 LUNA EVO has no telemetry, no accounts and no server of its own.
@@ -46,6 +47,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.4.0 | LUNA EVO server plugin: runs **inside LMP's server** when the host installs it (carried in the exe, no download). Read-only, no network port, ignores unauthenticated senders (LMP calls plugins before its login check, found while building it), writes one file; Mission Control reads that file defensively (fuzzed). A pretend LMP client for testing | Notes below | The real LMP 0.29.2 server with the plugin and the pretend client in a sandbox | 326 |
 | 2.3.0 | Live map: reuses the Players page's read of the server's own website (localhost by default); nothing new is contacted. The new orbit fields are read defensively (finite numbers only) and fuzzed with the rest of that JSON | - | The real LMP 0.29.2 server's website answer, merged with a sandbox copy of a real universe | 319 |
 | 2.2.0 | Solar system map: reads `Universe/Vessels`, `StartTime.txt`, `Subspace.txt` and Kopernicus `.cfg` files in GameData, read-only | Notes below | The owner's real GameData (47 bodies, 33 from planet packs) and a sanitized copy of a real 51-vessel universe; a looping or star-removing pack fixed before release | 315 |
 | 2.1.1 | | **Audit 10** (J1-J9) | 2.1.0's features against live services (LMP client from GitHub into a sandbox KSP, browser pings, CKAN choices); a 3-minute soak; 10,500 fuzzed parser inputs; firewall rule quoting against the real netsh | 303 |
@@ -71,6 +73,24 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Security notes on 2.4.0 (the server plugin)
+
+- **Code inside the server.** The plugin runs in LMP's process with the server's rights, so it's kept minimal: it
+  copies numbers out of position messages, keeps at most 20,000 vessels, and writes one file off the main thread. A
+  bug in it is caught by LMP (logged at Debug), but a slow plugin would slow the server, so nothing in the receive path
+  does I/O.
+- **Found while building it:** LMP calls plugins **before** it checks that the sender has logged in
+  (`Server/Server/MessageReceiver.cs`). The plugin therefore ignores players who haven't authenticated; otherwise
+  anyone who can reach the port could put made-up vessels on the host's map without the password.
+- **No new way in.** No network port, no commands, no file reads. The file holds player names and vessel ids, never
+  addresses. It's written next to the server, which only the host's account controls.
+- **Mission Control's side:** the file is treated as outside data (anyone on the PC could write it): 16 MB cap, format
+  check, finite numbers only, text capped, and only fresh files count. Fuzzed (`FuzzTests.Server_plugin_live_feed`).
+- **Installing:** only from the Map page, with the server stopped, after a dialog saying what it does. The DLL comes
+  from inside the exe (no download), and is written via a temp file so LMP never loads half a DLL.
+- **Seen while testing, LMP itself (W3 in Meat and Potatoes 25):** any logged-in client can take any vessel's control
+  lock and move it. Fine among friends; the planned server checks address it.
 
 ## Security notes on 2.2.0 (the solar system map)
 

@@ -37,6 +37,10 @@ after 2.1.1: all 303 passed locally, but on GitHub's runner every UI test that s
 tests use then reaches the other test run's fake servers. Before trying again, find that cause (e.g. run the two
 projects one after the other on CI).
 
+2.4.0 added `ServerPluginTests` (the server plugin with LMP 0.29.2's real message classes; Core.Tests references
+`Server.dll` from the fixtures for this) and `tests/FakeLmpClient`, a no-KSP LMP player for sandbox checks against a
+real server (not run by `dotnet test`). 2.3.0 added live-map tests to `MapTests`/`MapPageTests`.
+
 2.2.0 added `MapTests` (Core: Kepler orbits against known answers, stock periods, planet packs with moves, removals
 and a broken pack, the universe clock, vessel orbits, odd orbits fuzzed) and `MapPageTests` (UI: a fake KSP with a
 pack body, vessels from `TestData.AddOrbitingVessels`, focus, click, details, filters). Headless windows don't paint:

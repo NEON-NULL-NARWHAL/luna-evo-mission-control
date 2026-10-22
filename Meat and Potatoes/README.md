@@ -41,6 +41,7 @@ Every source file starts with a short header pointing back here, like this:
 | 23 | [Server browser, simple mode, quick access](23-Server-Browser.md) | change the server browser, simple mode, Essentials, the clickable cards, the versions list or the error log |
 | 24 | [Solar system map](24-Solar-System-Map.md) | change the Map page, the orbit math, how planet packs are read, or the universe clock |
 | 25 | [LMP under the hood](25-LMP-Under-The-Hood.md) | start fork work: how LMP really syncs, what's weak (with file pointers), rewrite or fix, live telemetry, in-game testing |
+| 26 | [The server plugin and the fake LMP client](26-Server-Plugin.md) | change the LUNA EVO server plugin, live.json, the plugin install on the Map page, or the fake client |
 
 ## 🔣 Legend
 
@@ -121,6 +122,8 @@ Symbols used in the map below and throughout these chapters:
 | **Ops/** | | *Keeping it running* ([13](13-Automation.md)) |
 | 🧠 | `Ops/Restarts.cs` | Crash-restart policy (gives up after 3 in 10 min) and daily restart times. |
 | 🧠🔌⚠️ | `Ops/NetworkHelper.cs` | Local addresses, LMP's detected public address, Windows Firewall rules (UDP game port, TCP website port), port check. `netsh` by absolute path. |
+| 🧠🔌⚠️ | `Live/LiveFeed.cs` | Reads the server plugin's `LunaEvo/live.json` (fresh only, defensively). See [26](26-Server-Plugin.md). |
+| 🧠🔌 | `Ops/ServerPluginInstaller.cs` | Copies the LUNA EVO server plugin into `Plugins/`, updates or removes it. See [26](26-Server-Plugin.md). |
 | **Join/** | | *The player side* ([15](15-Joining-Servers.md)) |
 | 🧠 | `Join/ServerProbe.cs` | `ServerAddress` parsing; DNS, network kind, ping, and live info from a host's LMP website. |
 | 🧠🔌⚠️ | `Join/ServerBrowser.cs` | The public server list from LMP's master servers (`/json`), read defensively and merged. See [23](23-Server-Browser.md). |
@@ -128,7 +131,7 @@ Symbols used in the map below and throughout these chapters:
 | 🧠🔌 | `Ops/UniverseVessels.cs` | Universe vessels: list (with orbit and surface position), remove after a backup. See [21](21-Vessel-Cleanup.md). |
 | **Map/** | | *The solar system map's model* ([24](24-Solar-System-Map.md)) |
 | 🧠⚠️ | `Map/SolarSystem.cs` | Kepler orbits, KSP's stock bodies, planet packs from Kopernicus configs, the universe clock. |
-| 🧠🔌 | `Map/LiveVessels.cs` | The live map: the save's vessels merged with the running server's (website) orbits. |
+| 🧠🔌 | `Map/LiveVessels.cs` | The live map: the save's vessels merged with the running server's (website) orbits and the server plugin's positions. |
 | 🧠 | `Ops/ProfileStore.cs` | Named copies of the whole config. |
 | 🧠⚠️ | `Ops/Notifications.cs` | Notification kinds, Discord posting (no mentions, escaped), `SecretProtector` (DPAPI). See [17](17-Notifications.md). |
 | 🧠🔌 | `Ops/UniverseBackups.cs` | Zips and restores the Universe. |
@@ -166,13 +169,21 @@ Symbols used in the map below and throughout these chapters:
 | 🎨 | `Assets/` | `icon.png`/`icon.ico`, and `Fonts/` (JetBrains Mono plus its OFL license). |
 | | `Properties/launchSettings.json` | `dotnet run` profiles: in-repo fixtures, or local LMP folders. |
 
+### `src/LunaEvo.ServerPlugin/`: runs inside LMP's server 🔌
+
+| | File | What it is |
+|:---:|---|---|
+| ⚠️🔌 | `LunaEvoPlugin.cs` | The `ILmpPlugin` LMP loads: watches position messages from logged-in players, writes `LunaEvo/live.json`. net6.0. See [26](26-Server-Plugin.md). |
+| 🔌 | `LiveState.cs` | Each vessel's latest position, and the JSON it writes. |
+
 ### `tests/` 🧪
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (216 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
-| 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (103 tests). |
+| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (222 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (104 tests). |
 | ⭐🧪 | `LunaEvo.MissionControl.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
+| 🧪🔌 | `FakeLmpClient/` | A pretend LMP player with no KSP: logs in to a real (sandbox) LMP server and flies a vessel as position messages. See [26](26-Server-Plugin.md). |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |
 | 🧪🔌 | `Fixtures/LMPServer/` | LMP 0.29.2's `Server.dll` and dependencies (MIT), plus synthetic sample logs. |

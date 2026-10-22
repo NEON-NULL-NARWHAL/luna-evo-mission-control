@@ -1,6 +1,6 @@
 // LUNA EVO · LunaEvo.MissionControl.Core/Map/LiveVessels.cs
 // [Core] The live map: the save's vessels, brought up to date with what the running server holds in memory.
-// Used by: MapPage
+// Used by: MapPage (website orbits, and the LUNA EVO server plugin's live.json)
 // Guide:   Meat and Potatoes/24-Solar-System-Map.md
 
 using LunaEvo.MissionControl.Core.Live;
@@ -67,6 +67,51 @@ public static class LiveVessels
         }
         return merged;
     }
+
+    /// <summary>
+    /// The server plugin's positions on top (newer than the website's, and they say whether it's landed and who flies
+    /// it). Vessels it has seen that aren't in the list yet are added: launched since the last save.
+    /// </summary>
+    public static IReadOnlyList<UniverseVessel> Overlay(IReadOnlyList<UniverseVessel> vessels, LiveFeed feed, IReadOnlyDictionary<int, string> bodyNames)
+    {
+        var positions = new Dictionary<string, LiveVessel>(StringComparer.OrdinalIgnoreCase);
+        foreach (var v in feed.Vessels)
+            positions.TryAdd(Key(v.Id), v);
+        var result = new List<UniverseVessel>(vessels.Count);
+        foreach (var vessel in vessels)
+        {
+            if (!positions.Remove(Key(vessel.Id), out var now))
+            {
+                result.Add(vessel);
+                continue;
+            }
+            var bodyName = bodyNames.GetValueOrDefault(now.Body) ?? (vessel.Body == now.Body ? vessel.BodyName : null);
+            result.Add(vessel with
+            {
+                Body = now.Body,
+                BodyName = bodyName ?? (now.BodyName.Length > 0 ? now.BodyName : null),
+                Orbit = now.Orbit ?? vessel.Orbit,
+                Surface = (now.Lat, now.Lon),
+                Altitude = now.Alt,
+                Situation = Situation(now, vessel.Situation, vessel.IsLanded),
+                FlownBy = now.FlownBy,
+            });
+        }
+        foreach (var now in positions.Values)
+            result.Add(new UniverseVessel(Key(now.Id), "(new vessel)", "Unknown", Situation(now, "", false), now.Body, 0, [], "")
+            {
+                Orbit = now.Orbit,
+                BodyName = bodyNames.GetValueOrDefault(now.Body) ?? (now.BodyName.Length > 0 ? now.BodyName : null),
+                Surface = (now.Lat, now.Lon),
+                Altitude = now.Alt,
+                FlownBy = now.FlownBy,
+            });
+        return result;
+    }
+
+    // The position message says landed or splashed; otherwise it's moving, and a vessel saved as landed has taken off.
+    private static string Situation(LiveVessel now, string saved, bool savedLanded) =>
+        now.Landed ? "LANDED" : now.Splashed ? "SPLASHED" : savedLanded ? "FLYING" : saved;
 
     // LMP's ids are GUIDs (the file name, and "Id" on the website); compare them however they're written.
     private static string Key(string id) => Guid.TryParse(id, out var guid) ? guid.ToString("D") : id.Trim();
