@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.7.1 (2026-10-22)
+
+### Fixed
+- Join → Install the LUNA EVO patches: the dialog now lists what 2.7 added (fewer lost vessel updates, less lag).
+
+### Tested, not shipped
+- **Smoother vessels of other players** (they stop now and then on a jittery connection): two versions measured with two
+  real games, both ways. Neither was reliably better (one sometimes moved vessels backwards, the other stopped them more
+  often), so neither is included.
+- A separate network channel per vessel for staging and docking: could make vessels appear twice, so not included.
+
 ## 2.7.0 (2026-10-22)
 
 ### Added

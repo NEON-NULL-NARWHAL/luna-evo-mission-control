@@ -21,6 +21,8 @@ var seconds = int.Parse(options.GetValueOrDefault("seconds", "25"), CultureInfo.
 var slow = options.GetValueOrDefault("mode", "") == "slow";
 // --mode fleet: stay on the pad while tests/FakeLmpClient --fleet moves a universe of other vessels; reads frames per second.
 var fleetMode = options.GetValueOrDefault("mode", "") == "fleet";
+// --viewer: a second KSP (TestRig/KSP2, kRPC on 50002) parked on the runway records where it shows the rocket (P7).
+var viewerMode = options.ContainsKey("viewer");
 var observerExe = options.GetValueOrDefault("observer",
     Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\FakeLmpClient\bin\Debug\net10.0\FakeLmpClient.exe"));
 var results = Directory.CreateDirectory(Path.Combine(rig, "Results", DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"))).FullName;
@@ -33,26 +35,71 @@ void Log(string text)
 }
 
 // 1. kRPC answers once KSP has loaded and a game is open (it has no main-menu scene): LMP joins the server first.
-Connection? connection = null;
-while (connection == null)
+Connection Connect(string name, int rpcPort)
 {
-    try
+    while (true)
     {
-        connection = new Connection("LUNA EVO rig", IPAddress.Loopback, 50000, 50001);
-    }
-    catch (Exception e) when (clock.Elapsed < TimeSpan.FromMinutes(8))
-    {
-        if (clock.Elapsed.TotalSeconds % 30 < 3)
-            Log($"waiting for kRPC ({e.GetType().Name})");
-        Thread.Sleep(3000);
+        try
+        {
+            return new Connection(name, IPAddress.Loopback, rpcPort, rpcPort + 1);
+        }
+        catch (Exception e) when (clock.Elapsed < TimeSpan.FromMinutes(8))
+        {
+            if (clock.Elapsed.TotalSeconds % 30 < 3)
+                Log($"waiting for kRPC on {rpcPort} ({e.GetType().Name})");
+            Thread.Sleep(3000);
+        }
     }
 }
+var connection = Connect("LUNA EVO rig", 50000);
 var krpc = connection.KRPC();
 while (krpc.GameScene != GameScene.SpaceCenter && krpc.GameScene != GameScene.Flight)
     Thread.Sleep(1000);
 Log($"kRPC {krpc.GetStatus().Version} answered, scene {krpc.GameScene}");
 if (krpc.GameScene == GameScene.Flight)
     return Fail("already in flight: start from the Space Center");
+
+// The viewer goes first, so the rocket has another player's vessel near it from the start (LMP then sends every
+// VesselUpdatesMsInterval rather than SecondaryVesselUpdatesMsInterval), about 1.8 km from the pad.
+Connection? viewerConnection = null;
+if (viewerMode)
+{
+    viewerConnection = Connect("LUNA EVO rig viewer", 50002);
+    var viewerKrpc = viewerConnection.KRPC();
+    while (viewerKrpc.GameScene != GameScene.SpaceCenter)
+        Thread.Sleep(1000);
+    foreach (var save in Directory.GetDirectories(Path.Combine(rig, "KSP2", "saves")))
+    {
+        var sph = Directory.CreateDirectory(Path.Combine(save, "Ships", "SPH")).FullName;
+        if (!File.Exists(Path.Combine(sph, "Bug-E Buggy.craft")))
+            File.Copy(Path.Combine(rig, "KSP2", "Ships", "SPH", "Bug-E Buggy.craft"), Path.Combine(sph, "Bug-E Buggy.craft"));
+    }
+    viewerConnection.SpaceCenter().LaunchVessel("SPH", "Bug-E Buggy", "Runway", null, true, "");
+    while (viewerKrpc.GameScene != GameScene.Flight)
+        Thread.Sleep(500);
+    Thread.Sleep(3000);
+    Log("viewer on the runway as RigViewer");
+    // --drive: out of the runway's safety bubble (100 m on the rig server), where LMP hides a vessel from other players
+    // and the rocket doesn't count it as near (so sends only every SecondaryVesselUpdatesMsInterval).
+    if (options.ContainsKey("drive"))
+    {
+        var buggy = viewerConnection.SpaceCenter().ActiveVessel;
+        var frame = buggy.Orbit.Body.ReferenceFrame;
+        var from = buggy.Position(frame);
+        double Driven()
+        {
+            var p = buggy.Position(frame);
+            return Math.Sqrt(Math.Pow(p.Item1 - from.Item1, 2) + Math.Pow(p.Item2 - from.Item2, 2) + Math.Pow(p.Item3 - from.Item3, 2));
+        }
+        buggy.Control.Brakes = false;
+        buggy.Control.WheelThrottle = 1;
+        var until = DateTime.UtcNow.AddSeconds(90);
+        while (Driven() < 150 && DateTime.UtcNow < until)
+            Thread.Sleep(500);
+        // It keeps driving: the pilot's game is measured showing it, the other way round (peer to peer, both ways).
+        Log($"viewer drove {Driven():0} m along the runway, still driving");
+    }
+}
 
 // 2. Launch Kerbal X straight up, from a fresh rig universe (an old rocket on the pad blocks the launch: Start-Rig.ps1
 //    -Fresh). LMP's save may not have the stock craft yet, so copy it into every save first.
@@ -102,21 +149,86 @@ if (fleetMode)
     connection.Dispose();
     return 0;
 }
-vessel.Control.Throttle = 1;
+// --throttle 0.8: a slower climb, so a long flight stays in the atmosphere (FLYING, where P7 works).
+vessel.Control.Throttle = float.Parse(options.GetValueOrDefault("throttle", "1"), CultureInfo.InvariantCulture);
 vessel.AutoPilot.TargetPitchAndHeading(90, 90);
 vessel.AutoPilot.Engaged = true;
 vessel.Control.ActivateNextStage();
+var liftOff = DateTime.Now;
 Log("lift-off");
 
-// 4. The truth, 10 times a second: the game's own clock and altitude, stamped with the PC's clock.
+// 4. The truth, 20 times a second: the game's own clock and altitude, stamped with the PC's clock.
 var body = vessel.Orbit.Body;
 var bodyFrame = body.ReferenceFrame;
 var flight = vessel.Flight(bodyFrame);
 var root = vessel.Parts.Root;
 var truth = new List<SyncAnalysis.Sample>();
 var end = DateTime.UtcNow.AddSeconds(seconds);
+// And what the viewer's game shows, as often as its kRPC answers (no HoldTick there: it would stall the replay).
+var viewed = new List<SyncAnalysis.Viewed>();
+// The buggy, both ways: where it really is (the viewer's own game) and where the pilot's game shows it.
+var buggyTruth = new List<SyncAnalysis.Point>();
+var buggyShown = new List<SyncAnalysis.Point>();
+var buggyName = viewerConnection?.SpaceCenter().ActiveVessel.Name;
+var viewerThread = viewerConnection == null ? null : new Thread(() =>
+{
+    var center = viewerConnection.SpaceCenter();
+    var own = center.ActiveVessel;
+    var ownFrame = own.Orbit.Body.ReferenceFrame;
+    var ownRoot = own.Parts.Root;
+    var ownFlight = own.Flight(ownFrame);
+    Vessel? remote = null;
+    while (DateTime.UtcNow < end)
+    {
+        try
+        {
+            var (x, y, z) = ownRoot.Position(ownFrame);
+            buggyTruth.Add(new SyncAnalysis.Point(DateTime.UtcNow.Ticks, x, y, z, ownFlight.Speed));
+            // LMP names other players' vessels by KSP's localization key there ("#autoLOC_..."): take the biggest other one
+            // (dropped boosters are debris with fewer parts).
+            remote ??= center.Vessels.Where(v => !v.Equals(own) && v.Situation is VesselSituation.Flying or VesselSituation.SubOrbital)
+                .OrderByDescending(v => v.Parts.All.Count).FirstOrDefault();
+            if (remote == null)
+            {
+                Thread.Sleep(200);
+                continue;
+            }
+            var frame = remote.Orbit.Body.ReferenceFrame;
+            var position = remote.Parts.Root.Position(frame);
+            var wall = DateTime.UtcNow.Ticks;
+            viewed.Add(new SyncAnalysis.Viewed(wall, remote.Orbit.Body.AltitudeAtPosition(position, frame)));
+            // kRPC answers inside the game's frames: asking nonstop slowed the viewer's KSP below real time.
+            Thread.Sleep(10);
+        }
+        catch (Exception)
+        {
+            remote = null; // not loaded yet, or LMP replaced the vessel
+            Thread.Sleep(50);
+        }
+    }
+});
+viewerThread?.Start();
+Vessel? shownBuggy = null;
 while (DateTime.UtcNow < end)
 {
+    if (viewerThread != null)
+    {
+        try
+        {
+            // The other player's buggy in the pilot's game, by name (a probe rover: no crew to go by). LMP names it by
+            // the same localization key ("#autoLOC_...") in both games.
+            shownBuggy ??= space.Vessels.FirstOrDefault(v => !v.Equals(vessel) && v.Name == buggyName);
+            if (shownBuggy != null)
+            {
+                var (x, y, z) = shownBuggy.Parts.Root.Position(bodyFrame);
+                buggyShown.Add(new SyncAnalysis.Point(DateTime.UtcNow.Ticks, x, y, z, 0));
+            }
+        }
+        catch (Exception)
+        {
+            shownBuggy = null;
+        }
+    }
     // Hold the game on one physics tick so the clock and the altitude come from the same moment.
     krpc.HoldTick();
     var ut = space.UT;
@@ -125,7 +237,7 @@ while (DateTime.UtcNow < end)
     var rootAlt = body.AltitudeAtPosition(root.Position(bodyFrame), bodyFrame);
     krpc.ReleaseTick();
     truth.Add(new SyncAnalysis.Sample(DateTime.UtcNow.Ticks, ut, alt, speed, rootAlt));
-    Thread.Sleep(100);
+    Thread.Sleep(50);
 }
 vessel.Control.Throttle = 0;
 vessel.AutoPilot.Engaged = false;
@@ -147,6 +259,34 @@ if (slow)
         $"KSP.log: {lmpJumps} LMP time jump(s), {ownSubspace} LUNA EVO subspace move(s)");
     connection.Dispose();
     return 0;
+}
+if (viewerThread != null)
+{
+    viewerThread.Join();
+    File.WriteAllLines(Path.Combine(results, "viewer.csv"),
+        ["wall_utc_ticks,root_alt", .. viewed.Select(v => v.WallTicks + "," + R(v.RootAlt))]);
+    foreach (var line in SyncAnalysis.AnalyzeView(truth, viewed).Split('\n'))
+        Log(line);
+    foreach (var (name, points) in new[] { ("buggy-truth.csv", buggyTruth), ("buggy-shown.csv", buggyShown) })
+        File.WriteAllLines(Path.Combine(results, name),
+            ["wall_utc_ticks,x,y,z,speed", .. points.Select(p => string.Join(",", p.WallTicks, R(p.X), R(p.Y), R(p.Z), R(p.Speed)))]);
+    var (track, along) = SyncAnalysis.AlongTrack(buggyTruth, buggyShown);
+    foreach (var line in SyncAnalysis.AnalyzeView(track, along, "pilot sees the buggy", minSpeed: 2, minStep: 0.2).Split('\n'))
+        Log(line);
+    // A game that fell behind real time (LMP then moves its clock) makes the numbers above meaningless: say so.
+    foreach (var (who, folder) in new[] { ("pilot", "KSP"), ("viewer", "KSP2") })
+    {
+        string kspLog;
+        using (var stream = new FileStream(Path.Combine(rig, folder, "KSP.log"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        using (var reader = new StreamReader(stream))
+            kspLog = reader.ReadToEnd();
+        var jumps = kspLog.Split('\n').Count(l =>
+            System.Text.RegularExpressions.Regex.Match(l, @"^\[\w+ (\d\d:\d\d:\d\d\.\d+)\] \[LMP\] Adjusted time from") is { Success: true } m &&
+            DateTime.Today.Add(TimeSpan.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)) >= liftOff);
+        Log(jumps == 0 ? $"  {who}'s clock: no LMP time jumps during the flight"
+                       : $"  WARNING {who}'s clock: {jumps} LMP time jump(s) during the flight (the game fell behind): numbers not valid");
+    }
+    viewerConnection!.Dispose();
 }
 observer!.WaitForExit(60_000);
 Log("observer: " + observer.StandardOutput.ReadToEnd().Trim().Replace(Environment.NewLine, " | "));

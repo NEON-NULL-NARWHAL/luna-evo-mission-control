@@ -103,6 +103,12 @@ if (options.TryGetValue("observe", out var csvPath))
     {
         Pump(message =>
         {
+            // Head-of-line test (--hol): small reliable events carry their send time ("t=<UTC ticks>").
+            if (message.Data is VesselActionGroupMsgData ag && ag.ActionGroupString?.StartsWith("t=") == true)
+            {
+                csv.WriteLine(string.Join(",", DateTime.UtcNow.Ticks, "ag:" + ag.VesselId, ag.ActionGroupString.Substring(2), 0, 0, 0, 0));
+                received++;
+            }
             if (message.Data is VesselPositionMsgData p && p.LatLonAlt?.Length == 3)
             {
                 // Copied at once: LMP reuses its message objects.
@@ -113,6 +119,51 @@ if (options.TryGetValue("observe", out var csvPath))
         Thread.Sleep(1);
     }
     Console.WriteLine($"Received {received} position messages.");
+    client.Disconnect("bye");
+    Thread.Sleep(300);
+    return 0;
+}
+
+// --hol <vessel file>: the head-of-line test (audit 11, P2). Vessel X's whole definition (a big real vessel) every
+// 300 ms, and a small reliable event (an action group, carrying its send time) for vessel Y every 100 ms. LMP sends both
+// on one reliable ordered channel (8); with --channels yes, Y's events go on their own channel. Through tests/NetJitter
+// with loss, the observer then sees how long Y's small events wait behind X's resent packets.
+if (options.TryGetValue("hol", out var holFile))
+{
+    var bigVessel = Guid.TryParse(Path.GetFileNameWithoutExtension(holFile), out var named) ? named : Guid.NewGuid();
+    var definition = System.Text.Encoding.UTF8.GetBytes(File.ReadAllText(holFile));
+    var small = Guid.NewGuid();
+    var ownChannel = options.ContainsKey("channels");
+    Console.WriteLine($"Head-of-line test: {definition.Length / 1024} KB definition every 300 ms, events every 100 ms on " +
+                      (ownChannel ? "their own channel" : "LMP's shared channel 8"));
+    var lastBig = DateTime.MinValue;
+    var events = 0;
+    while (DateTime.UtcNow - start < TimeSpan.FromSeconds(15 + seconds) && connection.Status == NetConnectionStatus.Connected)
+    {
+        var now = (DateTime.UtcNow.Ticks - serverStart) / 1e7 + subspaceTime;
+        if (DateTime.UtcNow - lastBig > TimeSpan.FromMilliseconds(300))
+        {
+            var proto = clientFactory.CreateNewMessageData<VesselProtoMsgData>();
+            proto.VesselId = bigVessel;
+            proto.GameTime = now;
+            proto.Data = (byte[])definition.Clone();
+            proto.NumBytes = definition.Length;
+            proto.Reason = "rig head-of-line test";
+            Send(clientFactory.CreateNew<VesselCliMsg>(proto));
+            lastBig = DateTime.UtcNow;
+        }
+        var ag = clientFactory.CreateNewMessageData<VesselActionGroupMsgData>();
+        ag.VesselId = small;
+        ag.GameTime = now;
+        ag.ActionGroup = 1;
+        ag.ActionGroupString = "t=" + DateTime.UtcNow.Ticks;
+        ag.Value = true;
+        Send(clientFactory.CreateNew<VesselCliMsg>(ag), ownChannel ? 20 : null);
+        events++;
+        Pump(_ => { });
+        Thread.Sleep(100);
+    }
+    Console.WriteLine($"Sent {events} small events.");
     client.Disconnect("bye");
     Thread.Sleep(300);
     return 0;

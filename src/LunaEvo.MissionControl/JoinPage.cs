@@ -442,12 +442,13 @@ internal sealed class JoinPage : IDisposable
             else
             {
                 if (!await Dialogs.ConfirmAsync(_host, "Install the LUNA EVO patches for LMP?",
-                        $"Copies one file into GameData\\{ClientPatches.FolderName} of this KSP. When KSP starts, it fixes three things in LMP 0.29:\n" +
+                        $"Copies one file into GameData\\{ClientPatches.FolderName} of this KSP. When KSP starts, it fixes these in LMP 0.29:\n" +
                         "- the server address KSP is started with (a port other than 8800 makes LMP stop starting up), and it uses the " +
                         "password saved in LMP's own server list;\n" +
                         "- when you're alone in your subspace and your game falls behind, you get a subspace at your own time instead of " +
                         "a jump that teleports your vessel and cuts its engines;\n" +
-                        "- each position LMP sends carries the right time (it was one physics tick early).\n" +
+                        "- each position LMP sends carries the right time (it was one physics tick early);\n" +
+                        "- far fewer lost vessel updates on a jittery connection, and less lag.\n" +
                         "No new kind of message is sent, so you play with unpatched players as before. On any other LMP version it turns " +
                         "itself off. Remove takes it out.", "Install"))
                     return;

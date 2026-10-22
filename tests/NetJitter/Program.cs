@@ -17,19 +17,24 @@ var target = new IPEndPoint(IPAddress.Loopback, int.Parse(options.GetValueOrDefa
 var min = int.Parse(options.GetValueOrDefault("min", "20"));
 var max = int.Parse(options.GetValueOrDefault("max", "120"));
 var seconds = int.Parse(options.GetValueOrDefault("seconds", "600"));
+var loss = double.Parse(options.GetValueOrDefault("loss", "0"), System.Globalization.CultureInfo.InvariantCulture); // % of packets dropped
 TimerResolution.Raise(); // delays of a few ms must mean a few ms
 
 using var front = new UdpClient(new IPEndPoint(IPAddress.Loopback, listenPort));
 var back = new ConcurrentDictionary<IPEndPoint, UdpClient>();
 var random = new Random(1);
 long forward = 0, backward = 0;
-Console.WriteLine($"Relaying 127.0.0.1:{listenPort} -> {target}, each packet delayed {min}-{max} ms, for {seconds} s");
+Console.WriteLine($"Relaying 127.0.0.1:{listenPort} -> {target}, each packet delayed {min}-{max} ms, {loss}% lost, for {seconds} s");
 
 void Later(Func<Task> send)
 {
     int delay;
     lock (random)
+    {
+        if (random.NextDouble() * 100 < loss)
+            return; // lost on the way
         delay = random.Next(min, max + 1);
+    }
     _ = Task.Delay(delay).ContinueWith(_ => send());
 }
 
@@ -63,7 +68,15 @@ _ = Task.Run(async () =>
 });
 while (true)
 {
-    var packet = await front.ReceiveAsync();
+    UdpReceiveResult packet;
+    try
+    {
+        packet = await front.ReceiveAsync();
+    }
+    catch (SocketException)
+    {
+        continue; // Windows reports an ICMP "port unreachable" from a client that left as an error here: ignore it
+    }
     var upstream = back.GetOrAdd(packet.RemoteEndPoint, client =>
     {
         var socket = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));

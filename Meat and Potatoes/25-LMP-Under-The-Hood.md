@@ -112,16 +112,33 @@ patched and unpatched players still play together.
 | # | What the code does | Effect between players | Patch idea (protocol-safe?) |
 |---|---|---|---|
 | P1 | All position, flight state, update and resource messages, for **every vessel**, go `UnreliableSequenced` on **one** Lidgren channel (0) (`VesselCliMsg`/`VesselSrvMsg`). Sequenced means anything older than the newest seen on that channel is dropped | When packets arrive out of order (normal over the internet), a fresh update for vessel A is thrown away because one for vessel B arrived first. More players and vessels, more drops: stutter | One channel per vessel (vessel id → channel 0-15). Lidgren delivers any channel and LMP doesn't look at it: yes. Client leg in the client patch, server leg in the server plugin. Measure with LMP's own `-debug` bad-network simulation |
-| P2 | All reliable vessel messages (whole vessels, staging, docking, undocking, part changes, action groups, removals) share **one** `ReliableOrdered` channel (8) | One lost packet, or one big station being sent, holds up every later reliable vessel event of every player until it's resent: staging and docking of others arrive in bursts | Per-vessel reliable channels, keeping messages that touch two vessels (docking) ordered. Yes, with care |
+| P2 | All reliable vessel messages (whole vessels, staging, docking, undocking, part changes, action groups, removals) share **one** `ReliableOrdered` channel (8) | One lost packet, or one big station being sent, holds up every later reliable vessel event of every player until it's resent: staging and docking of others arrive in bursts | Per-vessel reliable channels, keeping messages that touch two vessels (docking) ordered. **Not as a channel-only patch** (2.8, below): needs the server plugin too |
 | P3 | Every hop polls: the client's send and receive threads `Thread.Sleep(3)`, the server's receive loop a 5 ms `PeriodicTimer`, its per-player send loop `Task.Delay(5)`. On Windows these last ~15.6 ms (the default timer resolution) | **Measured: 40-60 ms** from one game to the other on one PC, with no network at all | Ask Windows for 1 ms timers (`timeBeginPeriod(1)`) in the server plugin and the client patch, or wake on arrival instead of polling. Yes (nothing on the wire changes) |
 | P4 | Every physics tick, every remote vessel that has ever sent a position gets its orbit rebuilt and positioned (`VesselPositionSystem.HandleVesselUpdates` → `SetVesselPosition`), loaded or not, near or far | Frame-time cost grows with the number of other players' vessels in the whole universe, not the ones near you (upstream #547 "FPS drop after 30 seconds", #464) | Update far, unloaded vessels a few times a second instead of 50. Yes (local only) |
 | P5 | The server relays every position to **every** player (`MessageQueuer.RelayMessage`), whatever their distance, scene or subspace | Bandwidth grows with players squared; a player in the VAB gets 20 updates a second for a rocket at Duna | Interest management in the server plugin (`message.Handled` + sending only to players who can see it). Yes, but larger |
-| P6 | Flight state is sent every position interval whether or not the controls changed | Constant small traffic | Send on change plus a slow heartbeat. Yes |
-| P7 | Remote vessels: 0.25-2.5 s replay, straight-line blend, no prediction (W1) | Rubber-banding (the rig: exactly 0.25 s behind on one PC) | Predict from the orbit and velocity already sent. Yes; needs a second rig KSP to measure |
+| P6 | ~~Flight state is sent every position interval whether or not the controls changed~~ **Wrong (2.8):** LMP 0.29.2 already sends it only on change, plus a resend every 500 ms (`VesselFlightStateMessageSender.FlightStatesAreEquivalent`, `ForceResyncIntervalMs`) | None | Nothing to do |
+| P7 | Remote vessels: 0.25-2.5 s replay, straight-line blend, no prediction (W1) | Rubber-banding (the rig: exactly 0.25 s behind on one PC) | Predict from the orbit and velocity already sent. **2.7.1: two patch versions measured with a second KSP, neither better:** needs a playback rewrite ([27](27-Client-Patches.md#271-p6-p2-and-p7-looked-at-none-shipped)) |
 
 Already fixed by LUNA EVO patches: the one-tick position stamp, clock jumps when alone (W2), `-lmp` with a port; in 2.7
 **P3** (29 → 22 ms) and **P1** (63% → 18% of updates lost with jitter). **P4 was measured and not shipped** (no
 difference in frames per second with 135 vessels). See [27](27-Client-Patches.md).
+
+**P2, looked at in 2.8: not a channel patch.** Splitting channel 8 by vessel breaks orders LMP relies on:
+
+- **Decouple/undock → new vessel.** The receiver handles a decouple by giving the separated parts the new vessel's id
+  (`VesselDecouple`), without checking whether a vessel with that id already exists. If the new vessel's proto (its own
+  channel) arrives first, the player ends up with two copies.
+- **Couple.** The server removes the absorbed vessel B from its store without adding it to the kill list. A late
+  message about B on another channel brings B back as a ghost in the server's universe.
+- Couple, decouple and undock are also queued by game time on receivers, so their order with the protos matters.
+
+Measured anyway (`FakeLmpClient --hol`: a 455 KB vessel every 300 ms next to small reliable events, through NetJitter
+with 2% loss and 20-60 ms delay, 376 events each): the small events waited 83 ms (median), 213 ms (95%), 338 ms (99%) on
+the shared channel; 69, 136 and 286 ms on their own. A modest gain for real risk. Doing it safely needs the server plugin
+too: keep anything that creates, splits or joins vessels on the shared channel (also for unpatched players, since the
+plugin controls what the server sends), drop late messages for a vessel the server has just merged away, and only move
+updates of vessels that already exist. That's possible as client patch + server plugin (see [27](27-Client-Patches.md)),
+with its own rig test for staging and docking; it is not in 2.8.
 
 ## Ideas from the owner, checked against the code
 

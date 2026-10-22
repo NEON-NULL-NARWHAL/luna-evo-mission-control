@@ -198,9 +198,9 @@ Symbols used in the map below and throughout these chapters:
 | 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (251 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
 | 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (105 tests). |
 | ⭐🧪 | `LunaEvo.MissionControl.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
-| 🧪🔌 | `FakeLmpClient/` | A pretend LMP player with no KSP: logs in to a real (sandbox) LMP server and flies a vessel, or (`--observe`) records what LMP relays to it. See [26](26-Server-Plugin.md). |
+| 🧪🔌 | `FakeLmpClient/` | A pretend LMP player with no KSP: logs in to a real (sandbox) LMP server and flies a vessel, or (`--observe`) records what LMP relays to it; `--fleet` moves many vessels, `--hol` sends a big vessel next to small reliable events (P2). See [26](26-Server-Plugin.md). |
 | 🧪🔌 | `NetJitter/` | A UDP relay that delays every packet 20-120 ms at random: a bad network for the rig (P1). See [27](27-Client-Patches.md). |
-| 🧪🔌 | `RigRunner/` | Drives the test rig's KSP through kRPC and measures sync (`SyncAnalysis.cs`, `--selftest`, `--mode slow`); `Start-Rig.ps1` starts the rig. See [26](26-Server-Plugin.md). |
+| 🧪🔌 | `RigRunner/` | Drives the test rig's KSP through kRPC and measures sync (`SyncAnalysis.cs`, `--selftest`, `--mode slow`, `--viewer --drive`: a second KSP, both ways); `Start-Rig.ps1` starts the rig (`-Viewer` adds the second KSP). See [27](27-Client-Patches.md). See [26](26-Server-Plugin.md). |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |
 | 🧪🔌 | `Fixtures/LMPServer/` | LMP 0.29.2's `Server.dll` and dependencies (MIT), plus synthetic sample logs. |

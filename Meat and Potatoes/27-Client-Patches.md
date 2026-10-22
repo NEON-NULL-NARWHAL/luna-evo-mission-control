@@ -145,9 +145,46 @@ with 135 vessels moved by the fake fleet (`FakeLmpClient --fleet`) and the frame
 within noise. Updating far vessels every tick is cheap here; upstream #547 has another cause. A patch with no measured
 benefit is only risk, so it was removed.
 
+## 2.7.1: P6, P2 and P7 looked at; none shipped
+
+**P6 (flight state only on change):** already in LMP 0.29.2 (`VesselFlightStateMessageSender`: sent when the controls
+change, plus every 500 ms). Audit 11 had it wrong.
+
+**P2 (reliable vessel messages per vessel):** not safe as a channel patch; details and measurements in
+[25](25-LMP-Under-The-Hood.md#client-to-client-performance-audit-11-2026-10-22). Possible later as client patch + server
+plugin together.
+
+**P7 (smoother remote vessels): measured with two real KSPs, not shipped.**
+
+The rig now has a second KSP (`TestRig/KSP2`, a copy with kRPC on 50002, player RigViewer; `Start-Rig.ps1 -Viewer`), joined
+through NetJitter (`-ViewerJitter "20,120,2"`: 20-120 ms delay, 2% lost). `RigRunner --viewer --drive` measures both ways
+in one flight: the viewer's game showing the pilot's rocket, and the pilot's game showing the viewer's buggy (which drives
+out of the runway's safety bubble first: inside it LMP hides it, and the rocket counts it as far away and sends every
+150 ms instead of 50-80). Lessons from setting it up:
+
+- LMP names other players' vessels by KSP's localization key there (`#autoLOC_501232`), not "Kerbal X".
+- The Bug-E Buggy has no crew (a probe rover): find it by name, not by crew.
+- Asking kRPC nonstop slowed the viewer's KSP below real time, and LMP then jumped its clock: the numbers were garbage.
+  The viewer now pauses 10 ms between looks, and every run reports LMP time jumps during the flight in both games.
+- kRPC only focuses the camera on another vessel in map view.
+
+What LMP does today, with a clean network: the other player's rocket is shown a steady 0.27-0.30 s behind, within about
+15 ms. With jitter it stops now and then (LMP holds a vessel at its last update until the next one arrives), shown 3.5-9.7%
+of looks standing still, wobble 80-151 ms (95%).
+
+The patch carried a held flying vessel on along its last segment (LMP's blend isn't clamped, so a blend past 1 extrapolates).
+
+| Version | Result |
+|---|---|
+| 1: carry on, then start the next segment as far in as it was carried | Better in two runs (still 8.1% → 2.0%; wobble 133 → 69 ms), but in a third it went **backwards** 5.1% of looks and ran 80 ms ahead of LMP's schedule: LMP already shortens a late segment to catch up, and skipping frames on top of that overshot |
+| 2: carry on, glide on from where it's shown, or keep it there until LMP passes it | Never backwards in a model of LMP's playback (unit-tested), but in the game: still 21% of looks, wobble 911 ms (95%), against 9.7% and 151 ms without |
+
+LMP's playback (whole-tick segments, catch-up by shortening, holds) reacts to any nudge in ways a small patch can't
+control. Doing this well means replacing how remote vessels are played back (by time, with prediction), not adjusting
+it: a bigger piece of work, for the fork or a larger patch. Run-to-run noise is large too (the buggy, which P7 never
+touched, varied 136-318 ms): judge only on several pairs of runs.
+
 ## Next patches
 
-Smoother remote vessels (W1 in [25](25-LMP-Under-The-Hood.md)): predicting ahead from the orbit and velocity LMP
-already sends, instead of waiting and teleporting. It changes what each player sees, so it must be measured on a real
-second screen: a second rig KSP (Start-Rig.ps1 can grow a `-Second` copy with hard links) with kRPC reading where it
-shows the other player's vessel.
+Plumes of other players' engines (LMP syncs the throttle and ignition, not the engines' actual output), the safe version
+of P2 (client patch + server plugin), and P5 interest management in the server plugin.
