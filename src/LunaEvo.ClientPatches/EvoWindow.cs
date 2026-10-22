@@ -38,6 +38,64 @@ namespace LunaEvo.ClientPatches
         private static Guid _ownVessel; // the player's own vessel while they watch someone else's
         private static string _lastError;
 
+        /// <summary>
+        /// "Stay in step with other players": a player who falls behind another (a slow frame, a load, the other's short
+        /// warp) can't see them until they sync, which in the owner's two-player game (2026-10-22) happened again and
+        /// again. On by default; switched in the window.
+        /// </summary>
+        internal static bool StayInStep = true;
+
+        /// <summary>Auto-sync only for this much (s). More is someone's deliberate warp: the window asks instead.</summary>
+        internal const double AutoSyncLimit = 60;
+
+        private static DateTime _lastStepCheck;
+
+        /// <summary>
+        /// Every 2 s (from PatchLoader.Update): if another player is ahead by 1-60 s and this game isn't warping, sync to
+        /// them, as LMP's own sync button does.
+        /// </summary>
+        internal static void KeepInStep()
+        {
+            if (!StayInStep || DateTime.UtcNow - _lastStepCheck < TimeSpan.FromSeconds(2))
+                return;
+            _lastStepCheck = DateTime.UtcNow;
+            try
+            {
+                if (!InGame || !CanSync())
+                    return;
+                var warp = WarpSystem.Singleton;
+                if (warp == null || warp.CurrentlyWarping || warp.WaitingSubspaceIdFromServer)
+                    return;
+                var behind = Behind(warp, out var latest);
+                if (behind > 1 && behind <= AutoSyncLimit)
+                {
+                    LunaLog.Log($"[LUNA EVO] {behind:0.0} s behind subspace {latest}: syncing to stay in step with the other players");
+                    warp.SyncToSubspace(latest);
+                }
+            }
+            catch (Exception e)
+            {
+                if (_lastError != e.Message)
+                    Debug.LogError("[LUNA EVO] Stay in step: " + e);
+                _lastError = e.Message;
+            }
+        }
+
+        /// <summary>LMP's own scenes for time sync: not while loading, not in the main menu.</summary>
+        private static bool CanSync()
+        {
+            switch (HighLogic.LoadedScene)
+            {
+                case GameScenes.FLIGHT:
+                case GameScenes.SPACECENTER:
+                case GameScenes.TRACKSTATION:
+                case GameScenes.EDITOR:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         internal static void AddButton()
         {
             if (_button != null || ApplicationLauncher.Instance == null)
@@ -147,14 +205,15 @@ namespace LunaEvo.ClientPatches
             }
             var warp = WarpSystem.Singleton;
             var behind = Behind(warp, out var latest);
-            if (!warp.CurrentlyWarping && behind > 1)
+            StayInStep = GUILayout.Toggle(StayInStep, $"Stay in step with other players (sync by itself, up to {AutoSyncLimit:0} s)");
+            if (!warp.CurrentlyWarping && behind > 1 && (!StayInStep || behind > AutoSyncLimit))
             {
                 if (GUILayout.Button($"Sync my clock to the latest player (+{Seconds(behind)})"))
                     warp.SyncToSubspace(latest);
             }
             else
             {
-                GUILayout.Label("Clock: nothing to sync.");
+                GUILayout.Label(behind > 1 ? "Clock: catching up..." : "Clock: in step.");
             }
 
             if (HighLogic.LoadedScene != GameScenes.FLIGHT || !FlightGlobals.ready || FlightGlobals.ActiveVessel == null)
