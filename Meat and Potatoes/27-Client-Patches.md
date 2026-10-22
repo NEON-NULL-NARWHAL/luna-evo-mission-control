@@ -188,3 +188,10 @@ touched, varied 136-318 ms): judge only on several pairs of runs.
 
 Plumes of other players' engines (LMP syncs the throttle and ignition, not the engines' actual output), the safe version
 of P2 (client patch + server plugin), and P5 interest management in the server plugin.
+
+**Plumes, first check (stock KSP, 2026-10-22):** mid-flight, the rocket's engines read through kRPC in both games matched:
+the same engines active, throttle 1.00 on the burning ones, 0.00 and no fuel on the two burned-out boosters in both, and
+thrust within 2% (the viewer's copy is 0.28 s behind, at a slightly different air pressure). So stock plumes have what
+they need on the other player's screen. Still to check: throttle changes and shutdowns (timing), and Waterfall (used in
+the owner's modpack; reads the engine values differently). Waterfall only goes into the rig's KSP copies, after checking
+its license.
