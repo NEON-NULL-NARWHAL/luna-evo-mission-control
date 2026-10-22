@@ -24,11 +24,13 @@ public enum JoinMode
 /// <list type="bullet">
 /// <item>"-lmp lmp://host" connects automatically once the main menu loads, on port 8800.</item>
 /// <item>A port in that address ("lmp://host:9000") is mis-parsed by LMP (it slices with an index from the unsliced
-///   string), so it fails or crashes. And there's no way to pass a password.</item>
+///   string): it throws inside LMP's startup, so LMP never finishes starting (seen in the test rig). And there's no way
+///   to pass a password.</item>
 /// </list>
 /// So: auto-connect only for port 8800 without a password; otherwise add the server (with port and password) to LMP's
-/// own list in GameData/LunaMultiplayer/Data/settings.xml and let the player pick it. Fixing that parser is a good
-/// first change for the LUNA EVO fork of LMP.
+/// own list in GameData/LunaMultiplayer/Data/settings.xml and let the player pick it. With LUNA EVO's client patches
+/// in that KSP (<see cref="ClientPatches"/>), "-lmp lmp://host:port" works and the password comes from that list entry,
+/// so every server auto-connects.
 /// </summary>
 public static class KspLauncher
 {
@@ -72,12 +74,17 @@ public static class KspLauncher
     /// <summary>True if this KSP is running (LMP saves its settings while it runs, so we mustn't edit them then).</summary>
     public static bool IsRunning(string kspFolder) => ServerProcess.IsRunning(kspFolder, ExeName);
 
-    public static JoinMode PlanFor(ServerAddress server, bool hasPassword) =>
-        server.Port == ServerAddress.DefaultPort && !hasPassword ? JoinMode.AutoConnect : JoinMode.PickFromList;
+    public static JoinMode PlanFor(ServerAddress server, bool hasPassword, bool patched = false) =>
+        patched || server.Port == ServerAddress.DefaultPort && !hasPassword ? JoinMode.AutoConnect : JoinMode.PickFromList;
 
-    /// <summary>The command-line arguments for KSP. Empty when LMP can't auto-connect to this server.</summary>
-    public static IReadOnlyList<string> LaunchArguments(ServerAddress server, bool hasPassword) =>
-        PlanFor(server, hasPassword) == JoinMode.AutoConnect ? ["-lmp", "lmp://" + server.Host] : [];
+    /// <summary>
+    /// The command-line arguments for KSP. Empty when LMP can't auto-connect to this server. Never the password: any
+    /// program on the PC can read a command line; the patched LMP takes it from its own server list instead.
+    /// </summary>
+    public static IReadOnlyList<string> LaunchArguments(ServerAddress server, bool hasPassword, bool patched = false) =>
+        PlanFor(server, hasPassword, patched) != JoinMode.AutoConnect ? []
+        : patched ? ["-lmp", $"lmp://{server.HostForUri}:{server.Port}"]
+        : ["-lmp", "lmp://" + server.Host];
 
     /// <summary>
     /// Adds the server to LMP's in-game server list, or updates it if the same address and port is already there.

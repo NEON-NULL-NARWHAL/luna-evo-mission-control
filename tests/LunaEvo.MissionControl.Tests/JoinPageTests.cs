@@ -127,6 +127,44 @@ public class JoinPageTests
     }
 
     [AvaloniaFact]
+    public void With_luna_evos_patches_a_port_and_a_password_still_connect_by_themselves()
+    {
+        var patches = System.Text.Encoding.ASCII.GetBytes("MZ fake patches");
+        var original = JoinPage.PatchBytes;
+        JoinPage.PatchBytes = () => patches; // CI builds have no KSP to compile the real patches against
+        try
+        {
+            using var ui = Player();
+            var (ksp, launches) = FakeKspWithLmp();
+            ui.Window.Navigate(MainWindow.JoinKey);
+            ui.Pump();
+            ui.Window.Join.KspBox.Text = ksp;
+            ui.Pump();
+            Assert.StartsWith("LMP can't join a server by itself", ui.Find<TextBlock>("join/patchesStatus").Text);
+
+            ui.Await(ui.Window.Join.TogglePatchesAsync());
+            Assert.Contains("Install the LUNA EVO patches for LMP?", ui.DialogsShown);
+            Assert.Equal(patches, File.ReadAllBytes(ClientPatches.PathFor(ksp)));
+            Assert.Contains(Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(ui.Find<Button>("join/patches")).OfType<TextBlock>(), t => t.Text == "Remove");
+
+            ui.Find<TextBox>("join/address").Text = Host + ":9000";
+            ui.Window.Join.PasswordBox.Text = "jebediah";
+            ui.Click(ui.Find<Button>("join/launch"));
+            ui.WaitFor(() => launches.Count == 1, "KSP launched");
+            Assert.Equal("-lmp lmp://127.0.0.1:9000", string.Join(" ", launches[0].Arguments)); // the password isn't on the command line...
+            Assert.Equal("jebediah", ConfigFile.Load(KspLauncher.ClientSettingsPath(ksp)).GetObjectList("Servers")![0]["Password"]); // ...it's here
+            Assert.StartsWith("KSP is starting. LMP connects to 127.0.0.1:9000 by itself", ui.Find<TextBlock>("join/launchResult").Text);
+
+            ui.Await(ui.Window.Join.TogglePatchesAsync());
+            Assert.False(File.Exists(ClientPatches.PathFor(ksp)));
+        }
+        finally
+        {
+            JoinPage.PatchBytes = original;
+        }
+    }
+
+    [AvaloniaFact]
     public void Wont_launch_without_ksp_and_lmp()
     {
         using var ui = Player();

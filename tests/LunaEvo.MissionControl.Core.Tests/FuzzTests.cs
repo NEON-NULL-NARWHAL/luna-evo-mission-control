@@ -134,6 +134,11 @@ public class FuzzTests
         text => Live.LiveFeed.Parse(System.Text.Encoding.UTF8.GetBytes(text)));
 
     [Fact]
+    public void Lmp_command_line_addresses() => Fuzz(
+        ["lmp://127.0.0.1:8800", "lmp://[2001:db8::1]:8810/", "kerbin.example.com:65535"],
+        text => LunaEvo.ClientPatches.LmpAddress.TryParse(text, out _, out _));
+
+    [Fact]
     public void Ksp_cfg_files() => Fuzz(
         ["PART\n{\n name = some.part\n MODULE\n {\n  name = ModuleEngines\n }\n}\n", "RESOURCE_DEFINITION { name = LiquidFuel }", "@PART[x]:NEEDS[y] { %a = b }"],
         text => KspConfigParser.Parse(text));

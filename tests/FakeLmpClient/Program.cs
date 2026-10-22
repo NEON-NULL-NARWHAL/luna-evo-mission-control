@@ -1,6 +1,6 @@
 // LUNA EVO · tests/FakeLmpClient/Program.cs
 // [Test] A pretend LMP player: joins a real LMP server and flies one vessel round a circular orbit, as position messages.
-// Used by: the server plugin's real-world check (Meat and Potatoes 26); never against someone else's server
+// Used by: the server plugin's real-world check and the rig's observer (RigRunner); never against someone else's server
 // Guide:   Meat and Potatoes/26-Server-Plugin.md
 
 using System.Net;
@@ -88,6 +88,35 @@ var change = clientFactory.CreateNewMessageData<WarpChangeSubspaceMsgData>();
 change.PlayerName = name;
 change.Subspace = subspace;
 Send(clientFactory.CreateNew<WarpCliMsg>(change));
+
+// --observe <file.csv>: be a second player who only watches. Every position LMP relays to us is written down with
+// the moment it arrived, so the rig can work out what this player's game would show (tests/RigRunner).
+if (options.TryGetValue("observe", out var csvPath))
+{
+    Console.WriteLine($"Observing in subspace {subspace} for {seconds} s, writing {csvPath}");
+    using var csv = new StreamWriter(csvPath);
+    csv.WriteLine("arrival_utc_ticks,vessel,game_time,lat,lon,alt,subspace");
+    var watching = DateTime.UtcNow;
+    var received = 0;
+    while (DateTime.UtcNow - watching < TimeSpan.FromSeconds(seconds) && connection.Status == NetConnectionStatus.Connected)
+    {
+        Pump(message =>
+        {
+            if (message.Data is VesselPositionMsgData p && p.LatLonAlt?.Length == 3)
+            {
+                // Copied at once: LMP reuses its message objects.
+                csv.WriteLine(string.Join(",", DateTime.UtcNow.Ticks, p.VesselId, R(p.GameTime), R(p.LatLonAlt[0]), R(p.LatLonAlt[1]), R(p.LatLonAlt[2]), p.SubspaceId));
+                received++;
+            }
+        });
+        Thread.Sleep(1);
+    }
+    Console.WriteLine($"Received {received} position messages.");
+    client.Disconnect("bye");
+    Thread.Sleep(300);
+    return 0;
+}
+
 var acquire = clientFactory.CreateNewMessageData<LockAcquireMsgData>();
 acquire.Lock = new LockDefinition(LockType.Control, name, vessel);
 Send(clientFactory.CreateNew<LockCliMsg>(acquire));
@@ -147,3 +176,5 @@ static Dictionary<string, string> Args(string[] args)
         result[args[i].TrimStart('-')] = args[i + 1];
     return result;
 }
+
+static string R(double value) => value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);

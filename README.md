@@ -12,7 +12,7 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 2.4.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 2.5.0** · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[⚡ Quickstart](QUICKSTART.md)** · **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](#screenshots)** · **[Host a server](#set-up-a-new-server-step-by-step)** · **[Find and join](#join-a-friends-server)** · **[Mods with CKAN](#using-the-ckan-page)** · **[No open ports](#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](#for-developers)**
 
@@ -109,6 +109,7 @@ You don't have to host anything: choose **Join a friend's server** on the welcom
 | 🔄 **Restarts** | After a crash (giving up if it keeps crashing), and an optional daily restart with an in-game warning. |
 | 🌌 **Universe backups** | Dated snapshots on demand, every few hours, every time the server stops and before every LMP update. One-click restore, which backs up first. |
 | 🧹 **Vessel cleanup** | Remove debris, asteroids and abandoned ships (server stopped, backed up first, crewed ships protected): the biggest performance win a host has. |
+| 🩹 **Fixes for LMP itself** | **Join → Install the LUNA EVO patches** fixes LMP 0.29's client so it can join a server by itself on any port and with a password (LMP's own `-lmp` option breaks its startup when there's a port). Nothing other players see changes. |
 | 🪐 **Solar system map** | Every vessel on the server on its orbit, where it is now (live while the server runs; every second, with who flies what, with the optional LUNA EVO server plugin), around every body, including the planet packs in your GameData (OPM, MPE and other Kopernicus packs). Zoom, pan, click a ship for its orbit and crew. |
 | 💬 **Chat announcements** | Messages to the game chat on a schedule ("every 60 minutes: join our Discord"). |
 | 🗂️ **Config profiles** | Save the whole setup as "Career campaign" or "Sandbox chaos night" and switch in one click. |
@@ -427,11 +428,13 @@ luna-evo-mission-control/
 │   ├── LunaEvo.MissionControl.Core/   🧠 all the logic, no UI: schema, XML editing, validation, server control,
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, CKAN
 │   ├── LunaEvo.MissionControl/        🖥️ the Avalonia desktop app
+│   ├── LunaEvo.ClientPatches/         🔌 LUNA EVO's patches for the LMP client (a KSP mod; builds where KSP is installed)
 │   └── LunaEvo.ServerPlugin/          🔌 the optional plugin that runs inside LMP's server (live map data)
 ├── tests/
-│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (222)
-│   ├── LunaEvo.MissionControl.Tests/        🧪 UI tests: the real window, driven headlessly (104)
+│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (250)
+│   ├── LunaEvo.MissionControl.Tests/        🧪 UI tests: the real window, driven headlessly (105)
 │   ├── FakeLmpClient/                      🧪 a pretend LMP player (no KSP) for testing against a real server
+│   ├── RigRunner/                          🧪 drives the in-game test rig (a stock KSP) through kRPC and measures sync
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
 ├── docs/screenshots/

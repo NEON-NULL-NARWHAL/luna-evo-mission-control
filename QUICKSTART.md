@@ -197,6 +197,7 @@ Full guide: [Keep it running](README.md#keep-it-running)
 | Problem | Try |
 |---|---|
 | Friends can't connect | **Connect** shows what's blocking them; press **Allow through firewall**. Same LMP version on both sides? |
+| Launch KSP and join only adds the server to LMP's list | **Join → Install the LUNA EVO patches** (KSP closed): then any server, any port, with a password, connects by itself. |
 | LMP says the versions don't match | Check the server on the Join page: **Install LMP x.y.z** appears when the version is known. Or App settings → Downloads. |
 | CKAN asks "Which ...?" | A mod needs one of several others; pick one (the first is usually the standard choice). |
 | My changes did nothing | **Save**, then restart the server: LMP reads its config only at start. |

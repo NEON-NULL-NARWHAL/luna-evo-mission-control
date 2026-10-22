@@ -109,6 +109,38 @@ public class JoinTests
             Assert.Empty(arguments);
     }
 
+    [Theory]
+    [InlineData("kerbin.example.com:9000", true, "lmp://kerbin.example.com:9000")]
+    [InlineData("kerbin.example.com", false, "lmp://kerbin.example.com:8800")]
+    [InlineData("[2001:db8::1]:8810", true, "lmp://[2001:db8::1]:8810")]
+    public void With_luna_evos_patches_every_server_auto_connects(string address, bool password, string lmp)
+    {
+        var server = ServerAddress.Parse(address)!;
+        Assert.Equal(JoinMode.AutoConnect, KspLauncher.PlanFor(server, password, patched: true));
+        Assert.Equal(["-lmp", lmp], KspLauncher.LaunchArguments(server, password, patched: true)); // never the password
+    }
+
+    [Fact]
+    public void Installs_updates_and_removes_the_client_patches()
+    {
+        var ksp = TestData.FakeKsp(withSettings: false);
+        var patches = System.Text.Encoding.ASCII.GetBytes("MZ patches v1");
+        Assert.True(Join.ClientPatches.Supports(new Version(0, 29, 2)));
+        Assert.False(Join.ClientPatches.Supports(new Version(0, 30, 0)));
+        Assert.False(Join.ClientPatches.Supports(null));
+        Assert.Equal(Ops.PluginStatus.NotInstalled, Join.ClientPatches.Status(ksp, patches));
+        Assert.False(Join.ClientPatches.IsInstalled(ksp));
+
+        Join.ClientPatches.Install(ksp, patches);
+        Assert.Equal(Path.Combine(ksp, "GameData", "000_LunaEvoPatches", "LunaEvo.ClientPatches.dll"), Join.ClientPatches.PathFor(ksp));
+        Assert.Equal(Ops.PluginStatus.Installed, Join.ClientPatches.Status(ksp, patches));
+        Assert.Equal(Ops.PluginStatus.Different, Join.ClientPatches.Status(ksp, System.Text.Encoding.ASCII.GetBytes("MZ patches v2")));
+        Assert.True(Join.ClientPatches.IsInstalled(ksp));
+
+        Join.ClientPatches.Remove(ksp);
+        Assert.False(Directory.Exists(Path.Combine(ksp, "GameData", "000_LunaEvoPatches")));
+    }
+
     [Fact]
     public void Adds_and_updates_servers_in_lmps_own_list_with_a_backup()
     {

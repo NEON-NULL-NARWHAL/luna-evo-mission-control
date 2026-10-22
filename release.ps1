@@ -29,6 +29,12 @@ if (-not $SkipTests) {
     if ($LASTEXITCODE -ne 0) { throw "Tests failed; nothing was released." }
 }
 .\publish.ps1 | Out-Null
+# The exe must carry both pieces that run inside LMP: the server plugin, and the client patches (built only where a KSP
+# to compile against exists: TestRig/KSP next to the repo, or -p:KspDir).
+$built = "src\LunaEvo.MissionControl\obj\Release\net10.0\win-x64\LunaEvo.MissionControl.dll"
+foreach ($piece in "LunaEvo.ServerPlugin.dll", "LunaEvo.ClientPatches.dll") {
+    if (-not (Select-String -Path $built -SimpleMatch $piece -Quiet)) { throw "The exe doesn't carry $piece. Build it where TestRig\KSP exists." }
+}
 $exe = "dist\LunaEvo-MissionControl-$version-win-x64\LunaEvo.MissionControl.exe"
 $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
 # Copies from 0.6 to 1.4 (LUNA EVO Config Manager) only look for this file name; the same exe under it keeps them updating.

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.5.0 (2026-10-22)
+
+### Added
+- **LUNA EVO patches for the LMP client** (Join → **Install the LUNA EVO patches**, KSP closed; LMP 0.29). The first
+  fix for LMP itself, as a small KSP mod on top of the official client:
+  - LMP's own `-lmp lmp://host:port` option breaks LMP's whole startup when the address has a port (found and checked in
+    the test rig). Patched, it works, IPv6 included.
+  - It can use a password: taken from LMP's own server list, never put on the command line.
+  - So **Launch KSP and join** connects by itself to any server, with any port or password, instead of asking you to pick
+    it from LMP's list. Nothing sent to the server or other players changes; on other LMP versions it turns itself off.
+- **Test rig: what a second player sees.** A pretend second player records what LMP sends it; in the rig, it saw the
+  rocket where it was 0.17 s earlier (23 m behind at 129 m/s), with messages arriving in 54 ms.
+
 ## 2.4.0 (2026-10-22)
 
 ### Added

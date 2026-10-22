@@ -106,7 +106,36 @@ the Space Center, the launch worked.
 Read it as **about 0.4 s behind**, which is LMP's send interval for a player alone (`SecondaryVesselUpdatesMsInterval`,
 150 ms, since nobody else is near) plus the plugin writing `live.json` every 500 ms. That's what the **server** knows.
 Another player sees it later still: LMP replays remote vessels 0.25-2.5 s behind on purpose (W1 in
-[25](25-LMP-Under-The-Hood.md)). Measuring that needs a second player that records what LMP sends it: the next rig step.
+[25](25-LMP-Under-The-Hood.md)). Measuring that needs a second player that records what LMP sends it: done in the second and third runs below.
+
+### What a second player sees (runs 2 and 3, 2026-10-22)
+
+`RigRunner` now starts `FakeLmpClient --observe` as a second player (`RigObserver`) that records every position LMP
+relays to it with its arrival time, samples the game 10 times a second (`krpc.HoldTick()` so the clock and the altitude
+come from the same physics tick), flies 30 s, and `SyncAnalysis` works out:
+
+- **network**: when each message arrived against when the flying game was at that moment;
+- **the second player's view**: LMP's replay rule from its code (play back at the viewer's clock minus
+  ping + their ping, clamped to 0.25-2.5 s; blend between the two messages around that time; hold the last one when the
+  next is late) applied to the messages the observer really received. `--selftest` checks it on known answers.
+
+| | Run 3 (patched client, password server) |
+|---|---|
+| Messages from the rocket | 376 in 30 s, every 60 ms (median; the launch clamps count as "nearby", so LMP sends at the fast rate), longest gap 180 ms |
+| Network, flying game to the second player | 54 ms median, 97 ms at most (one PC, so this is LMP's own queues, not the internet) |
+| Second player's view | the rocket where it really was **0.17 s ago** (median, 0.19 s at most): 23 m behind on average, 54 m at most, climbing at 129 m/s on average |
+
+Two findings:
+
+- **A message's position is about 0.09 s ahead of its own time stamp** (median, measured in both runs, with one-tick
+  sampling in run 3), which is why the view is 0.17 s behind rather than LMP's 0.25 s replay delay. The stamp is
+  `TimeSyncSystem.UniversalTime` and the position `vessel.altitude`, both read in LateUpdate
+  (`VesselPositionMessageSender.CreateMessageFromVessel`); the cause isn't found yet. Open.
+- **The game clock ran 3.7% fast** during the flight: LMP's time sync speeding the game up to catch the server's clock
+  (W2 in [25](25-LMP-Under-The-Hood.md)), seen live.
+
+These are LMP's rules applied to real messages, not a second KSP on screen. A second rig KSP would confirm them, and is
+the way to measure W1 fixes.
 
 ## Checked for real (2026-10-22)
 ## Checked for real (2026-10-22)

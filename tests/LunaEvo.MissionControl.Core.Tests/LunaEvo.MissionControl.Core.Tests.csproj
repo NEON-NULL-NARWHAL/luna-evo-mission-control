@@ -25,6 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The LMP client patch's address parser has no KSP types, so it's compiled and tested here (the patch itself needs KSP to build). -->
+    <Compile Include="..\..\src\LunaEvo.ClientPatches\LmpAddress.cs" Link="Linked\LmpAddress.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The plugin's tests run it against LMP 0.29.2's real message classes. -->
     <Reference Include="Server">
       <HintPath>..\Fixtures\LMPServer\Server.dll</HintPath>

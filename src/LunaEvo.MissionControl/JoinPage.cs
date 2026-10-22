@@ -12,6 +12,7 @@ using LunaEvo.MissionControl.Core;
 using LunaEvo.MissionControl.Core.Join;
 using LunaEvo.MissionControl.Core.Live;
 using LunaEvo.MissionControl.Core.Mods;
+using LunaEvo.MissionControl.Core.Ops;
 using LunaEvo.MissionControl.Core.Setup;
 
 namespace LunaEvo.MissionControl;
@@ -43,6 +44,7 @@ internal sealed class JoinPage : IDisposable
     private readonly Button _addToList = Ui.Button("Add to LMP's server list", "text").WithId("join/addToList");
     private readonly TextBlock _launchResult = Ui.Text("", "sublabel").WithId("join/launchResult");
     private readonly StackPanel _versionMatch = new() { Spacing = 4 };
+    private readonly StackPanel _patches = new() { Spacing = 2 };
     private readonly Button _installMods = Ui.Button("Install the server's mods...", "text").WithId("join/installMods");
     /// <summary>Tests replace this so a check never pings a real address: (address) → result.</summary>
     internal static Func<string, Task<PingResult>> PingServer { get; set; } = address => ServerProbe.PingAsync(address);
@@ -161,7 +163,7 @@ internal sealed class JoinPage : IDisposable
         kspRow.Children.Add(browse);
         kspRow.Children.Add(_ksp);
         playBody.Children.Add(Ui.Row("Kerbal Space Program", null, null));
-        playBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 4, Children = { kspRow, _kspStatus, _versionMatch, _ckanInstances } });
+        playBody.Children.Add(new StackPanel { Margin = new Thickness(12, 0, 12, 8), Spacing = 4, Children = { kspRow, _kspStatus, _versionMatch, _patches, _ckanInstances } });
         ShowCkanInstances();
         playBody.Children.Add(Ui.Row("Server password", "Leave empty if the server has none. It's only given to LMP, never kept by LUNA EVO.", _password));
         playBody.Children.Add(new StackPanel
@@ -364,6 +366,7 @@ internal sealed class JoinPage : IDisposable
     /// </summary>
     private void ShowVersionMatch()
     {
+        ShowPatches();
         _versionMatch.Children.Clear();
         var ksp = _ksp.Text?.Trim() ?? "";
         if (_serverVersion is not { } server || !KspLauncher.IsKspFolder(ksp))
@@ -381,6 +384,76 @@ internal sealed class JoinPage : IDisposable
             : $"This server runs LMP {Show(server)}, but you have {Show(mine)}. LMP only connects when they match.", "sublabel");
         text.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
         _versionMatch.Children.Add(new StackPanel { Spacing = 2, Children = { text, install } }.WithId("join/versionMismatch"));
+    }
+
+    /// <summary>LUNA EVO's patches for the LMP client, carried inside this exe (absent in builds made without KSP).</summary>
+    internal static Func<byte[]?> PatchBytes { get; set; } = () =>
+    {
+        using var stream = typeof(JoinPage).Assembly.GetManifestResourceStream(ClientPatches.FileName);
+        if (stream == null)
+            return null;
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
+    };
+
+    /// <summary>"LUNA EVO patches for LMP: installed / Install", for an LMP 0.29 client in the chosen KSP.</summary>
+    private void ShowPatches()
+    {
+        _patches.Children.Clear();
+        var ksp = _ksp.Text?.Trim() ?? "";
+        if (!KspLauncher.IsKspFolder(ksp) || !ClientPatches.Supports(KspLauncher.ClientVersion(ksp)) || PatchBytes() is not { } bytes)
+            return;
+        var status = ClientPatches.Status(ksp, bytes);
+        var button = Ui.Button(status switch
+        {
+            PluginStatus.Installed => "Remove",
+            PluginStatus.Different => "Update",
+            _ => "Install the LUNA EVO patches",
+        }, "text").WithId("join/patches");
+        button.Click += async (_, _) => await TogglePatchesAsync();
+        var text = Ui.Text(status == PluginStatus.NotInstalled
+            ? "LMP can't join a server by itself when it has a port other than 8800 or a password. LUNA EVO's patch for the " +
+              "LMP client fixes that, without changing anything other players see."
+            : "LUNA EVO patches are in this KSP: Launch KSP and join connects by itself to any server.", "sublabel").WithId("join/patchesStatus");
+        text.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
+        _patches.Children.Add(text);
+        _patches.Children.Add(button);
+    }
+
+    internal async Task TogglePatchesAsync()
+    {
+        var ksp = _ksp.Text?.Trim() ?? "";
+        if (!KspLauncher.IsKspFolder(ksp) || PatchBytes() is not { } bytes)
+            return;
+        var installed = ClientPatches.Status(ksp, bytes) == PluginStatus.Installed;
+        try
+        {
+            if (installed)
+            {
+                if (!await Dialogs.ConfirmAsync(_host, "Remove the LUNA EVO patches?",
+                        "LMP goes back to joining by itself only on port 8800 without a password.", "Remove"))
+                    return;
+                ClientPatches.Remove(ksp);
+                _launchResult.Text = "LUNA EVO patches removed from this KSP.";
+            }
+            else
+            {
+                if (!await Dialogs.ConfirmAsync(_host, "Install the LUNA EVO patches for LMP?",
+                        $"Copies one file into GameData\\{ClientPatches.FolderName} of this KSP. When KSP starts, it fixes LMP 0.29 " +
+                        "reading the server address it's given (a port other than 8800 makes LMP stop starting up), and lets LMP use " +
+                        "the password saved in its own server list. It changes nothing that's sent to the server or other players, " +
+                        "and turns itself off on any other LMP version. Remove takes it out.", "Install"))
+                    return;
+                ClientPatches.Install(ksp, bytes);
+                _launchResult.Text = "LUNA EVO patches installed. Launch KSP and join now connects by itself.";
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _launchResult.Text = e.Message;
+        }
+        ShowPatches();
     }
 
     private static bool SameLmp(Version a, Version b) => a.Major == b.Major && a.Minor == b.Minor && Math.Max(a.Build, 0) == Math.Max(b.Build, 0);
@@ -547,7 +620,8 @@ internal sealed class JoinPage : IDisposable
         }
 
         var hasPassword = !string.IsNullOrEmpty(_password.Text);
-        var mode = KspLauncher.PlanFor(server, hasPassword);
+        var patched = ClientPatches.IsInstalled(ksp);
+        var mode = KspLauncher.PlanFor(server, hasPassword, patched);
         var listed = AddToList(showResult: false);
         if (mode == JoinMode.PickFromList && !listed)
             return; // AddToList explained why
@@ -556,7 +630,7 @@ internal sealed class JoinPage : IDisposable
         bool started;
         try
         {
-            started = StartKsp(ksp, [.. CkanTools.LaunchOptions(ksp), .. KspLauncher.LaunchArguments(server, hasPassword)]);
+            started = StartKsp(ksp, [.. CkanTools.LaunchOptions(ksp), .. KspLauncher.LaunchArguments(server, hasPassword, patched)]);
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
