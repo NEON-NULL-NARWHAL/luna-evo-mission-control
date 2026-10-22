@@ -458,6 +458,21 @@ public class NavigationAndUpdateTests
     }
 
     [AvaloniaFact]
+    public void A_nearly_full_server_drive_gets_a_banner_and_one_alert()
+    {
+        // LMP can lose save files when its drive fills up (it did on the owner's server): say so before it happens.
+        using var ui = new UiHarness();
+        Core.Ops.DiskSpace.FreeBytes = _ => 1L * 1024 * 1024 * 1024;
+        ui.OpenTab(MainWindow.ConsolePage);
+        ui.Window.Server!.CheckDiskSpace(); // its 30 s timer doesn't tick in headless tests
+        ui.Pump();
+        Assert.Contains(ui.Notifications, n => n.Title == "Server drive nearly full");
+        Assert.Contains(ui.Window.GetVisualDescendants().OfType<TextBlock>(),
+            t => t.IsEffectivelyVisible && t.Text?.StartsWith("Only 1.0 GB free on", StringComparison.Ordinal) == true);
+        Assert.True(ui.Notifications.Single(n => n.Title == "Server drive nearly full").Alert);
+    }
+
+    [AvaloniaFact]
     public void A_new_version_at_launch_gets_a_notification_and_whats_new_shows_it()
     {
         using var ui = new UiHarness();

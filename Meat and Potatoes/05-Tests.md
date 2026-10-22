@@ -147,3 +147,12 @@ public void My_feature_works()
 `GameDataScanner.SteamSearch` finds KSP in the Steam libraries of the PC running the tests, which on the owner's PC
 is their real, modded KSP. A CKAN test once picked it up as its target (CKAN itself is faked, so nothing ran). UiHarness
 now sets `SteamSearch = () => null`: tests only ever see the fake KSPs they make.
+
+## Temp folders (2.9.2)
+
+Each UI test copies the fixture server into the temp folder. They were never deleted: 34 GB on the owner's C: drive.
+`TempCleanup` (in Core.Tests, compiled into the UI tests too): `UiHarness.Dispose` deletes the test's server copy,
+settings and CKAN folders, and a module initializer in each test project deletes `LunaEvoTests*` leftovers older than
+2 hours (not newer: the other project may be running). It only ever deletes inside the temp folder. Local runs set
+`TEMP`/`TMP` to `D:\LUNA EVOLVED\TestTemp`. `DiskSpace.FreeBytes` is faked too (100 GB), so a full drive on the test PC
+doesn't change the tests.

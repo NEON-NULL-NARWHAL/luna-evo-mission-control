@@ -47,6 +47,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.9.2 | **Audit 12** (L1-L8): Stay in step follows only occupied subspaces; a low-disk warning for the server's drive; the tests clean up their temp copies | - | Every finding has a test or a rig check; no vulnerable packages in all 13 projects | 370 |
 | 2.9.1 | The client patch now syncs the player's own clock by itself (only forward, only up to 60 s, only what LMP's sync button does; switchable). Owner's live game observed read-only. Tests no longer fill the temp folder | Within audit 11's scope | Rig: both rules checked with two KSPs | 368 |
 | 2.9.0 | Reads the clipboard only when the user pastes into Join's address box; a player's map reads the host's LMP website (same request and parser as Join's live info, nothing new). GitHub release notes are shown as plain text. UI tests can no longer see the PC's real KSP | Within audit 11's scope | Invite paste fixed and tested through the paste path; player map tested from a fake website | 368 |
 | 2.8.0 | In-game window in the client patch: reads LMP's state and calls only what LMP's own windows call (sync, spectate by switching vessel, color Set); nothing new on the wire. More KSP/Unity stand-ins, each checked against the real assemblies by a test. Test-only `LUNAEVO_OPEN_WINDOW` can only open the window | Within audit 11's scope | Window checked in both rig KSPs (connection, players, Watch buttons, translated names); two startup bugs found there and fixed | 357 |
@@ -81,6 +82,30 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 12 (2.9.2, October 2026)
+
+Scope: everything since audit 11 (2.7 to 2.9.1: the network patches, the in-game window and its stand-ins, What's new,
+the invite paste, the players' map, the time fix change and Stay in step), a fresh look at LMP's client and server in
+the light of the owner's real two-player game (watched live and read-only on 2026-10-22), and the test setup.
+
+Checked and clean: no vulnerable packages (13 projects); nothing personal in the 14 commits since audit 11 (no user
+paths, LAN addresses or player names); the clipboard is read only when the user pastes into Join's address box; GitHub
+release notes are shown as plain text; the players' map reads the host's LMP website with the same capped, fuzzed parser
+as Join; every new KSP and Unity stand-in is checked member by member against the real assemblies by a test; the
+in-game window only calls what LMP's own windows call; the owner's LMP client and server are byte-identical to the
+official 0.29.2 release.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| L1 | Medium (gameplay) | Stay in step (2.9.1) and the Sync button picked the latest of all subspaces the server knows, and it keeps empty ones (the owner's server had three, two left over from splits): it could pull a player into an empty future, away from everyone | Only subspaces another player is in now count |
+| L2 | Medium (data) | LMP writes its universe files in place. When the drive filled up during a backup, the owner's server crashed mid-save and left a scenario file empty, and nothing had warned that the drive was full | The Server console warns (banner) and alerts (Windows, Discord) when the server's drive has under 2 GB free. The emptied file is in the universe backup Mission Control made that morning |
+| L3 | Medium (ours) | The UI tests copied the fixture server into the temp folder for every test and never deleted it: 34 GB on the owner's C: drive, which is what filled it (L2) | Each test deletes its copies; both test projects delete leftovers older than 2 hours when they start; local runs use a temp folder on D: |
+| L4 | Low (privacy) | UI tests could find the PC's real KSP through the Steam search (a CKAN test picked it as its target; CKAN is faked, so nothing ran) | The search is replaceable and faked in every UI test (2.9.0) |
+| L5 | Low (gameplay) | The time fix acted whenever nobody else was in the player's subspace, which after any warp is true with others online: in the owner's game it kept splitting the two players | It acts only when nobody else is on the server (2.9.1). Checked in the rig with two KSPs |
+| L6 | Info | Stay in step moves the player's clock forward by itself (up to 60 s): vessels move along their orbits, as with LMP's own corrections | Accepted: switchable in the window; never backwards, never more than 60 s without asking |
+| L7 | Info (LMP) | LMP logs an Error for every unconnected message of a type it doesn't know (from another PC on the owner's network), and Lidgren logged ~45 "Malformed packet" warnings a minute while the friend was connected (also in logs from before the patches) | Not ours; documented in Meat and Potatoes 27. Next: compare the friend's LMP files with 0.29.2 |
+| L8 | Info | The live watch of the owner's game read their KSP and server logs and captured their KSP window | Read-only, captures without taking focus, nothing from it in the repo (names and addresses kept out) |
 
 ## Audit 11 (2.6.1, October 2026)
 

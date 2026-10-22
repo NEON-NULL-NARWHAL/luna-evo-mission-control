@@ -43,6 +43,7 @@ asked), it says so and why, and the owner can overrule it. Those calls are marke
 
 | Date | Version | The owner decided | What was done |
 |---|---|---|---|
+| 2026-10-22 | 2.9.2 | Audit 12 ("run an audit... re-look through LMP client and server and our patches"); KSP Wingman approved as a new public GPL-3.0 repo, after the open list | Audit 12: L1-L8 in SECURITY.md. Next: README reorganized, UI tidy, then KSP Wingman |
 | 2026-10-22 | 2.9.1 | Watch our live game; then: "the update needs to be forced every couple of seconds unless in warp"; "only use D drive" | Live: the time fix split the two players; fixed (only when alone on the server) and auto-sync added (up to 60 s). The tests had filled C: with 34 GB (and the owner's server crashed mid-save): they clean up now and run with TEMP on D: |
 | 2026-10-22 | 2.9.0 | Update notification at launch with a link to the latest updates; a What's new page in the app and the repo; search the map list by typing; fix invite copy/paste; a map for players who don't host. **Owner's pick:** the players' map from the player's side only (host's LMP website + the player's own planets), not extra data from the host's plugin | Done ([18](Meat%20and%20Potatoes/18-Updating-LUNA-EVO.md), [24](Meat%20and%20Potatoes/24-Solar-System-Map.md), [15](Meat%20and%20Potatoes/15-Joining-Servers.md)). Next: audit 12, README reorganized, UI tidy |
 | 2026-10-22 | 2.8.0 | "Can we add a client bar in KSP for LUNA EVO with easier access settings for in-game stuff"; picked: LMP's own settings, quick actions, connection status (not patch switches) | KSP toolbar button + window in the client patch ([27](Meat%20and%20Potatoes/27-Client-Patches.md#28-the-in-game-luna-evo-window)). Plumes via the server: nothing to fix (stock plumes already follow the throttle on other screens) |
@@ -85,6 +86,7 @@ the live map comes first (was O2).
 
 | # | Question | Options |
 |---|---|---|
+| O6 | KSP Wingman (an agent joins as a player): first version wingman + chat companion, MCP for any agent, runs on either PC | Approved; starts after the open list |
 | O5 | Which LMP performance fix next | Done: P3, P1 (2.7); P4 measured and dropped. P6 already in LMP; P7 measured, needs a playback rewrite (2.7.1). Left: **plumes** of other players' engines · P2 as client patch + server plugin · P5 interest management (biggest) |
 | O3 | When may the rig's KSP run? | Set up (2026-10-22). **Only when the owner says so**, since it takes the screen while it opens; or on a separate PC later |
 | O4 | The longer audit before posting publicly | **After the next milestone (the LUNA EVO server plugin)**, so it covers the plugin; or now, on Mission Control as it is |

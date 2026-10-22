@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.9.2 (2026-10-22)
+
+### Added
+- **A warning when the server's drive is nearly full** (under 2 GB): a banner on the Server console and an alert. LMP
+  can lose save files if the drive fills up while it writes them.
+
+### Fixed
+- Stay in step could follow a time nobody was in any more (the server keeps old, empty ones). It only follows other
+  players now.
+
+### Security
+- Audit 12 (see SECURITY.md).
+
 ## 2.9.1 (2026-10-22)
 
 ### Fixed

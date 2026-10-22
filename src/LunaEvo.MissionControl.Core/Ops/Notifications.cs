@@ -21,6 +21,7 @@ public enum NotificationKind
     PlayerLeft,
     AdminPasswordGuessing,
     BannedPlayerTried,
+    LowDiskSpace,
 }
 
 /// <summary><paramref name="Subject"/> is untrusted text (a server or player name); it's escaped wherever it's shown.</summary>
@@ -31,7 +32,7 @@ public sealed record Notification(NotificationKind Kind, string Title, string Me
 
     /// <summary>Alerts are always sent, whatever else is switched off.</summary>
     public bool IsAlert => Kind is NotificationKind.AdminPasswordGuessing or NotificationKind.BannedPlayerTried or
-        NotificationKind.ServerCrashed or NotificationKind.AutoRestartGaveUp;
+        NotificationKind.ServerCrashed or NotificationKind.AutoRestartGaveUp or NotificationKind.LowDiskSpace;
 }
 
 /// <summary>

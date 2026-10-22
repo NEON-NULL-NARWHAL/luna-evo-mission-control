@@ -144,6 +144,7 @@ internal sealed class ServerPage : IDisposable
         _tick.Tick += (_, _) => Tick();
         _flush.Start();
         _tick.Start();
+        Dispatcher.UIThread.Post(CheckDiskSpace); // at once, not after the first 30 s
 
         ShowFiles(false);
         CheckExternal();
@@ -732,6 +733,8 @@ internal sealed class ServerPage : IDisposable
                       "You can stop it from here; to send commands, stop it and start it with LUNA EVO.");
         else if (DotNetRuntime.Check(_serverDirectory) is { Installed: false } runtime)
             SetBanner($"This server needs the .NET {runtime.Major} Runtime, which isn't installed. Get it from {SettingsPage.DotNet6Download}");
+        else if (_lowDisk is { } low)
+            SetBanner(low);
         else
             _banner.IsVisible = false;
 
@@ -744,9 +747,26 @@ internal sealed class ServerPage : IDisposable
         _banner.IsVisible = true;
     }
 
+    /// <summary>The drive's warning (DiskSpace), rechecked every 30 s; alerted once until it's fine again.</summary>
+    private string? _lowDisk;
+
+    internal void CheckDiskSpace()
+    {
+        var low = DiskSpace.Warning(_serverDirectory);
+        if (low != null && _lowDisk == null)
+            _host.Notify(new Notification(NotificationKind.LowDiskSpace, "Server drive nearly full", low, _host.ServerName));
+        if (low != _lowDisk)
+        {
+            _lowDisk = low;
+            UpdateState();
+        }
+    }
+
     private void Tick()
     {
         _ticks++;
+        if (_ticks % 30 == 1)
+            CheckDiskSpace();
         if (_ticks % 2 == 0)
         {
             CheckExternal();

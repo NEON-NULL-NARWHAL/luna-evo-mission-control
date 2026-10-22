@@ -50,3 +50,11 @@ return would need.
 `ConfigSession.GetChanges()` lists every changed setting with its on-disk and in-memory values;
 `MainWindow.DescribeChanges` turns it into "General › Server Name: Luna Server → LUNA EVO" lines, and summarizes list
 changes ("Allowed Parts: 1 added, 531 removed") instead of dumping hundreds of part names.
+
+## A nearly full drive (2.9.2)
+
+`Core/Ops/DiskSpace.cs`: under 2 GB free on the server's drive, the Server console shows a banner and sends a
+`LowDiskSpace` alert (always sent, like a crash), once until the space is back. Checked when the console opens and every
+30 s (`ServerPage.CheckDiskSpace`; dispatcher timers don't tick in headless tests, so the test calls it). Why: LMP writes
+its universe files in place; when the owner's C: filled up during a backup, the server crashed mid-save and one scenario
+file was left empty.

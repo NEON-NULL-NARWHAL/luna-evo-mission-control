@@ -298,7 +298,7 @@ namespace LunaEvo.ClientPatches
             GUILayout.EndHorizontal();
         }
 
-        /// <summary>How far (s) the latest subspace is ahead of ours, and which one it is.</summary>
+        /// <summary>How far (s) the player furthest ahead is ahead of us, and which subspace they're in.</summary>
         private static double Behind(WarpSystem warp, out int latest)
         {
             latest = warp.CurrentSubspace;
@@ -306,7 +306,11 @@ namespace LunaEvo.ClientPatches
                 return 0;
             var mine = warp.GetSubspaceTime(warp.CurrentSubspace);
             var best = mine;
-            foreach (var subspace in warp.Subspaces.Keys.ToList())
+            // Only subspaces another player is in now: the server keeps empty ones too (left behind by splits and
+            // warps), and syncing to one of those would take this player away from everyone (audit 12, L1).
+            var me = SettingsSystem.CurrentSettings.PlayerName;
+            var occupied = warp.ClientSubspaceList.Where(p => p.Key != me && p.Value >= 0).Select(p => p.Value).Distinct().ToList();
+            foreach (var subspace in occupied)
             {
                 var time = warp.GetSubspaceTime(subspace);
                 if (time > best)

@@ -49,6 +49,7 @@ internal sealed class UiHarness : IDisposable
         CkanPage.CopyText = (_, text) => { Copied.Add(text); return Task.CompletedTask; };
         JoinPage.ReadClipboard = _ => Task.FromResult<string?>(null); // never the real clipboard
         GameDataScanner.SteamSearch = () => null; // never the real KSP of this PC (its path, or its GameData)
+        Core.Ops.DiskSpace.FreeBytes = _ => 100L * 1024 * 1024 * 1024; // never this PC's real drives (a full C: shows a banner)
         BrowserPage.Ping = _ => Task.FromResult<long?>(42); // never ping real addresses from tests
         JoinPage.PingServer = _ => Task.FromResult(new Core.Join.PingResult(4, 4, 12, 10));
         CkanPage.RunCkan = (_, _, _, _, _) => throw new InvalidOperationException("A test tried to run CKAN without faking it.");

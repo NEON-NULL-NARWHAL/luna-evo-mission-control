@@ -4,6 +4,10 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.9.2: a warning before the disk is full
+
+- The Server console tells you when the server's drive is nearly full, before LMP can lose save files.
+
 ## 2.9.1: you stay in sight of each other
 
 - Players no longer drift into separate times and lose sight of each other: the game keeps you in step by itself
