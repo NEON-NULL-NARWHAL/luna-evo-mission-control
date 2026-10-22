@@ -79,6 +79,9 @@ internal sealed class PlayersPage : IDisposable
     /// <summary>The latest data, for tests and the console's join/leave notices.</summary>
     internal ServerSnapshot? Last => _last;
 
+    /// <summary>When <see cref="Last"/> was read (UTC); the Map only uses it while it's fresh.</summary>
+    internal DateTime LastAt { get; private set; }
+
     /// <summary>Fetches the JSON once. Runs every 5 s while a server is up; tests call it directly.</summary>
     internal async Task PollAsync()
     {
@@ -96,6 +99,7 @@ internal sealed class PlayersPage : IDisposable
         {
             var snapshot = await new ServerInfoClient(Http.Client).GetAsync(endpoint);
             _last = snapshot;
+            LastAt = DateTime.UtcNow;
             _host.Tracker?.ObserveOnline(snapshot.Players);
             Show(snapshot, null);
         }
@@ -312,7 +316,8 @@ internal sealed class PlayersPage : IDisposable
         RefreshHistory();
     }
 
-    private void EnableWebsite()
+    /// <summary>Turns on LMP's website for this PC only (the Players page and the live Map read it).</summary>
+    internal void EnableWebsite()
     {
         if (_host.Session is not { } session)
             return;

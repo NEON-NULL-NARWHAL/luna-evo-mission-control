@@ -128,6 +128,7 @@ Symbols used in the map below and throughout these chapters:
 | 🧠🔌 | `Ops/UniverseVessels.cs` | Universe vessels: list (with orbit and surface position), remove after a backup. See [21](21-Vessel-Cleanup.md). |
 | **Map/** | | *The solar system map's model* ([24](24-Solar-System-Map.md)) |
 | 🧠⚠️ | `Map/SolarSystem.cs` | Kepler orbits, KSP's stock bodies, planet packs from Kopernicus configs, the universe clock. |
+| 🧠🔌 | `Map/LiveVessels.cs` | The live map: the save's vessels merged with the running server's (website) orbits. |
 | 🧠 | `Ops/ProfileStore.cs` | Named copies of the whole config. |
 | 🧠⚠️ | `Ops/Notifications.cs` | Notification kinds, Discord posting (no mentions, escaped), `SecretProtector` (DPAPI). See [17](17-Notifications.md). |
 | 🧠🔌 | `Ops/UniverseBackups.cs` | Zips and restores the Universe. |
@@ -169,8 +170,8 @@ Symbols used in the map below and throughout these chapters:
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (214 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
-| 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (101 tests). |
+| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (216 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (103 tests). |
 | ⭐🧪 | `LunaEvo.MissionControl.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |

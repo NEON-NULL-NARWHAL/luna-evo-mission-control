@@ -1,6 +1,6 @@
 // LUNA EVO · LunaEvo.MissionControl.Core/Live/ServerInfoClient.cs
 // [Core] Reads the live JSON LMP publishes when EnableWebsite is on: players, vessels, subspaces, memory.
-// Used by: PlayersPage, ServerPage (player join/leave notices)
+// Used by: PlayersPage, ServerPage (player join/leave notices), MapPage (live vessel orbits)
 // Guide:   Meat and Potatoes/11-Live-Players.md
 
 using System.Text.Json;
@@ -8,7 +8,14 @@ using LunaEvo.MissionControl.Core.Validation;
 
 namespace LunaEvo.MissionControl.Core.Live;
 
-public sealed record VesselSummary(string Id, string Name, string Type, double Altitude, int ReferenceBody);
+public sealed record VesselSummary(string Id, string Name, string Type, double Altitude, int ReferenceBody)
+{
+    /// <summary>Its orbit as LMP's server holds it right now (the save's ORBIT values), or null if it's unusable.</summary>
+    public Map.Orbit? Orbit { get; init; }
+
+    public double Lat { get; init; }
+    public double Lon { get; init; }
+}
 
 public sealed record SubspaceSummary(int Id, double Time, string Creator);
 
@@ -100,7 +107,16 @@ public sealed class ServerInfoClient(HttpClient http)
             .Select(x => new VesselSummary(
                 Str(x, "Id"), Str(x, "Name"), Str(x, "Type"),
                 Double(x, "Alt") ?? 0,
-                Int(x, "ReferenceBody") ?? -1)).ToList();
+                Int(x, "ReferenceBody") ?? -1)
+            {
+                // LMP's VesselInfo copies the save's ORBIT values: SMA m, angles in degrees, mean anomaly in radians.
+                Orbit = Double(x, "SemiMajorAxis") is { } sma && Double(x, "Eccentricity") is { } ecc && ecc >= 0 && sma != 0
+                    ? new Map.Orbit(sma, ecc, Double(x, "Inclination") ?? 0, Double(x, "LongitudeOfAscendingNode") ?? 0,
+                        Double(x, "ArgumentOfPeriapsis") ?? 0, Double(x, "MeanAnomaly") ?? 0, Double(x, "Epoch") ?? 0)
+                    : null,
+                Lat = Double(x, "Lat") ?? 0,
+                Lon = Double(x, "Lon") ?? 0,
+            }).ToList();
         var subspaces = Array(state, "Subspaces").Where(x => x.ValueKind == JsonValueKind.Object).Take(1000)
             .Select(x => new SubspaceSummary(
                 Int(x, "Id") ?? -1,
@@ -143,7 +159,7 @@ public sealed class ServerInfoClient(HttpClient http)
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var i) ? i : null;
 
     private static double? Double(JsonElement element, string property) =>
-        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var d) ? d : null;
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var d) && double.IsFinite(d) ? d : null;
 
     private static bool? Bool(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False ? value.GetBoolean() : null;

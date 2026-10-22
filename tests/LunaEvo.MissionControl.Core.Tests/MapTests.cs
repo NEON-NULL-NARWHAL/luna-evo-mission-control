@@ -210,6 +210,61 @@ public class MapTests
     }
 
     [Fact]
+    public void Reads_live_orbits_from_lmps_website()
+    {
+        var json = File.ReadAllText(Path.Combine(TestPaths.Fixtures, "Web", "serverinfo.json"));
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        var rock = Live.ServerInfoClient.Parse(doc.RootElement).Vessels.Single(v => v.Name == "Ast. GHI-046");
+        Assert.Equal(new Orbit(228902176.0, 0.38, 240.6, 300.5, 193.5, 104.9, 1.0), rock.Orbit);
+        Assert.Equal((-56.9, 146.8), (rock.Lat, rock.Lon));
+        using var broken = System.Text.Json.JsonDocument.Parse(
+            """[{"CurrentState":{"CurrentVessels":[{"Id":"x","SemiMajorAxis":"big","Eccentricity":-1},{"Id":"y","SemiMajorAxis":0,"Eccentricity":0}]}}]""");
+        Assert.All(Live.ServerInfoClient.Parse(broken.RootElement).Vessels, v => Assert.Null(v.Orbit));
+    }
+
+    [Fact]
+    public void Live_data_moves_saved_vessels_adds_launches_and_drops_removed_ones()
+    {
+        const string station = "0b6c9a5e-0000-4000-8000-000000000001", lander = "0b6c9a5e-0000-4000-8000-000000000002", gone = "0b6c9a5e-0000-4000-8000-000000000003";
+        var oldOrbit = new Orbit(700_000, 0, 0, 0, 0, 0, 0);
+        UniverseVessel Saved(string id, string name, string sit, int body, string ident, double alt) =>
+            new(id, name, "Ship", sit, body, 5, ["Jebediah Kerman"], id + ".txt") { Orbit = oldOrbit, BodyName = ident, Altitude = alt, Surface = (1, 2) };
+        var saved = new[]
+        {
+            Saved(station, "Station", "ORBITING", 1, "Squad/Kerbin", 100_000),
+            Saved(lander, "Lander", "LANDED", 21, "Sarnus", 1500), // a pack body: the save says what 21 means
+            Saved(gone, "Gone", "ORBITING", 1, "Squad/Kerbin", 100_000),
+        };
+        var newOrbit = new Orbit(800_000, 0.1, 5, 0, 0, 1, 50);
+        var live = new[]
+        {
+            new Live.VesselSummary(station, "Station", "Ship", 150_000, 1) { Orbit = newOrbit },
+            new Live.VesselSummary(lander, "Lander", "Ship", 1520, 21) { Lat = 3, Lon = 4 },            // still on the ground
+            new Live.VesselSummary("0b6c9a5e-0000-4000-8000-000000000009", "New Rocket", "Ship", 5000, 21) { Orbit = newOrbit },
+            new Live.VesselSummary(" ", "Junk", "Ship", 0, 1), // no id
+            new Live.VesselSummary(station.ToUpperInvariant(), "Station", "Ship", 0, 1), // the same one again
+        };
+
+        var merged = LiveVessels.Merge(saved, live);
+        Assert.Equal(3, merged.Count); // "Gone" was removed on the server; junk ignored
+        var s = merged.Single(v => v.Id == station);
+        Assert.Equal(newOrbit, s.Orbit);
+        Assert.Equal(["Jebediah Kerman"], s.Crew); // kept from the save
+        var l = merged.Single(v => v.Id == lander);
+        Assert.True(l.IsLanded);
+        Assert.Equal((3.0, 4.0), l.Surface);
+        Assert.Equal(oldOrbit, l.Orbit); // no live orbit: the saved one stays
+        var n = merged.Single(v => v.Name == "New Rocket");
+        Assert.Equal("Sarnus", n.BodyName);
+        Assert.Equal(0, n.PartCount);
+
+        // A landed vessel that is now 2 km up has taken off.
+        var flying = LiveVessels.Merge(saved, [new Live.VesselSummary(lander, "Lander", "Ship", 3500, 21) { Orbit = newOrbit }]);
+        Assert.False(flying.Single().IsLanded);
+        Assert.Equal(newOrbit, flying.Single().Orbit);
+    }
+
+    [Fact]
     public void Odd_orbits_from_save_files_still_give_finite_positions()
     {
         // Values a save (or a broken mod) can hold: parabolic, nearly so, huge, tiny, far from the epoch.

@@ -46,6 +46,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.3.0 | Live map: reuses the Players page's read of the server's own website (localhost by default); nothing new is contacted. The new orbit fields are read defensively (finite numbers only) and fuzzed with the rest of that JSON | - | The real LMP 0.29.2 server's website answer, merged with a sandbox copy of a real universe | 319 |
 | 2.2.0 | Solar system map: reads `Universe/Vessels`, `StartTime.txt`, `Subspace.txt` and Kopernicus `.cfg` files in GameData, read-only | Notes below | The owner's real GameData (47 bodies, 33 from planet packs) and a sanitized copy of a real 51-vessel universe; a looping or star-removing pack fixed before release | 315 |
 | 2.1.1 | | **Audit 10** (J1-J9) | 2.1.0's features against live services (LMP client from GitHub into a sandbox KSP, browser pings, CKAN choices); a 3-minute soak; 10,500 fuzzed parser inputs; firewall rule quoting against the real netsh | 303 |
 | 2.1.0 | Install the server's mods, LMP version helper, browser pings, CKAN provider choices, Cancel | - | Real ckan.exe 1.36.4: headless installs skip "which provider" questions (found and fixed); the new choice flow dry-ran Parallax with 4 choices on a clean KSP folder | 291 |

@@ -7,7 +7,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media.Imaging;
+using LunaEvo.MissionControl.Core.Server;
 using LunaEvo.MissionControl.Core.Tests;
+using LunaEvo.MissionControl.Core.Validation;
 
 namespace LunaEvo.MissionControl.Tests;
 
@@ -65,6 +67,52 @@ public class MapPageTests
         ui.Pump();
         Assert.DoesNotContain(map.Canvas.Vessels, v => v.Id == "s1");
         Assert.Null(ui.TryFind<Control>("map/vessel/s1"));
+    }
+
+    [AvaloniaFact]
+    public void Map_goes_live_from_the_running_servers_website()
+    {
+        using var ui = new UiHarness(fakeServer: true);
+        TestData.AddOrbitingVessels(ui.ServerDirectory);
+        ui.Window.UpdateSettings(s => s with { KspFolder = TestData.FakeKsp(withSettings: false) });
+        // The server now has the station higher than the save says, and a rocket launched since the last save.
+        ui.Web.Text("http://127.0.0.1:8900/", """
+            [{"CurrentState":{"StartTime":"2026-10-13T03:59:54","CurrentPlayers":["Jebediah"],"CurrentVessels":[
+              {"Id":"k1","Name":"Kerbin Station","Type":"Station","Alt":400000,"SemiMajorAxis":1000000,"Eccentricity":0,"ReferenceBody":1},
+              {"Id":"0b6c9a5e-0000-4000-8000-000000000042","Name":"New Rocket","Type":"Ship","Alt":80000,"SemiMajorAxis":690000,"Eccentricity":0.01,"ReferenceBody":1}
+            ],"Subspaces":[],"BytesUsed":1}}]
+            """);
+
+        ui.OpenTab(MainWindow.MapKey);
+        Assert.StartsWith("From the save (the server is stopped)", ui.Find<TextBlock>("map/source").Text);
+        Assert.False(ui.Find<Button>("map/goLive").IsVisible); // the fixture's website is on
+
+        ui.OpenTab(MainWindow.ConsolePage);
+        ui.Click(ui.Find<Button>("console/start"));
+        ui.WaitFor(() => ui.Server.State == ServerState.Running, "server running");
+        ui.Await(ui.Window.Players!.PollAsync());
+        ui.OpenTab(MainWindow.MapKey);
+        var map = ui.Window.Map;
+        Assert.StartsWith("Live from the running server", ui.Find<TextBlock>("map/source").Text);
+        Assert.Equal(1_000_000, map.Vessels.Single(v => v.Id == "k1").Orbit!.Sma);
+        Assert.Equal(["Jebediah Kerman"], map.Vessels.Single(v => v.Id == "k1").Crew); // the rest from the save
+        Assert.Contains(map.Vessels, v => v.Name == "New Rocket");
+        Assert.DoesNotContain(map.Vessels, v => v.Id == "d1"); // not on the server any more
+        map.Focus("Kerbin");
+        Assert.NotNull(ui.TryFind<Control>("map/vessel/0b6c9a5e-0000-4000-8000-000000000042"));
+    }
+
+    [AvaloniaFact]
+    public void Map_offers_to_turn_the_website_on_for_a_live_map()
+    {
+        using var ui = new UiHarness();
+        ui.Session.SetValue(LmpRules.Website, "EnableWebsite", "false");
+        ui.OpenTab(MainWindow.MapKey);
+        Assert.StartsWith("From the save, which LMP writes every few minutes", ui.Find<TextBlock>("map/source").Text);
+        ui.Click(ui.Find<Button>("map/goLive"));
+        Assert.Equal("true", ui.Session.GetValue(LmpRules.Website, "EnableWebsite"));
+        Assert.Equal("127.0.0.1", ui.Session.GetValue(LmpRules.Website, "ListenAddress"));
+        Assert.StartsWith("Website turned on for this PC only", ui.Find<TextBlock>("map/source").Text);
     }
 
     [Fact]

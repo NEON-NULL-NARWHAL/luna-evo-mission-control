@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.3.0 (2026-10-22)
+
+### Added
+- **The map is live while the server runs.** Positions come from the server itself (its website, which the Players
+  page already reads), a few seconds behind instead of minutes. New launches show up and removed vessels go, before
+  LMP saves them. The line under the time says where positions come from, and **Turn on the website for a live map**
+  switches it on for this PC only. Checked against the real LMP 0.29.2 server.
+- [`DECISIONS.md`](DECISIONS.md): what the owner decided and what was done about it, plus open questions.
+- Maintainer chapter 25: how LMP really works, what's weak in it, and the plan to ship fixes as patches on top of
+  the official LMP.
+
 ## 2.2.0 (2026-10-21)
 
 ### Added

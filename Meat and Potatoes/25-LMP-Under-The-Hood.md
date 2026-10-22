@@ -31,7 +31,7 @@ anything: it **relays messages and keeps the save**.
 | W2 | **Time** | `TimeSync/TimeSyncSystem.cs`: if your game drifts from real time, physics speeds up or slows down (0.85x-1.2x); beyond 3.5 s it **jumps**. It does this even when you're alone in your subspace | Thrust cut and ships teleported seconds ahead on slower PCs; rendezvous broken by time jumps | #469, #255, #426 |
 | W3 | **No authority** | `Server/Message/VesselMsgReader.cs` relays position, update, proto, resource and part messages from **any** client for **any** vessel; only *remove* checks the lock. Clients can take any lock with `force` (`Server/System/LockSystem.cs`) | Fine with friends. On a public server, one modified client can move, replace or wreck anyone's vessel | - |
 | W4 | **Identity and passwords** | A player is their name plus a device ID their own client reports (`HandshakeSystem.cs`, `SystemInfo.deviceUniqueIdentifier`). The server password travels unencrypted in the connect packet (`LidgrenServer.cs`); the admin password has no guess limit (`AdminMsgReader.cs`, found in our audit 2) | Bans are easy to dodge; passwords readable on the network | - |
-| W5 | **Save consistency** | The universe lives in memory as text, patched by background tasks (`Server/System/Vessel/*DataUpdater.cs`). The code itself carries comments about tasks "resurrecting" removed vessels; position is saved at most every 2.5 s, and only from players in the newest subspace | Ships going back in time after a rejoin, vanishing or duplicating; career data drifting | #400, #483, #506, #509 race in backups, #369, #603 |
+| W5 | **Save consistency** | The universe lives in memory as text, patched by background tasks (`Server/System/Vessel/*DataUpdater.cs`). The code itself carries comments about tasks "resurrecting" removed vessels; position is saved at most every 2.5 s, and only from players in the newest subspace. **Seen for real:** 0.29.2 refuses to start (Fatal, `VesselStoreSystem.LoadExistingVessels`) if a single vessel file lacks a field it expects | Ships going back in time after a rejoin, vanishing or duplicating; career data drifting | #400, #483, #506, #509 race in backups, #369, #603 |
 | W6 | **Server threading** | One long-running task per player polling its send queue (`Server/Client/ClientStructure.cs`) | Fine for a handful of players; debated upstream for 50+ | #736 (maintainers: low priority) |
 | W7 | **Tied to KSP's internals** | 85 Harmony patches into KSP (`LmpClient/Harmony/`), from docking and decoupling to contracts and the astronaut complex | Each patch is a place where a mod or a KSP quirk can break sync | #576, #651, #679, #696 |
 | W8 | **Testing and releases** | About 35 automated tests for roughly 82,000 lines, almost none for the client. Since 0.29.0, releases are cherry-picked onto `Release/0_29_x` branches while `master` (0.30, .NET 10) moved on separately | Fixes on master take a long time to reach players; regressions are found by players | #671, #724 |
@@ -78,6 +78,31 @@ players into "LUNA EVO servers" and "LMP servers". Best order:
 2. Protocol-changing work (a new sync model): build it in the LUNA EVO fork, behind a version check, measured with the
    test rig, and offer it upstream once it's proven. Mission Control already installs the matching client, so players
    would get the right one without thinking about it.
+
+## Delivering fixes as patches through Mission Control (owner's idea, 2026-10-22)
+
+LUNA EVO users are already a group: Mission Control installs their LMP client, their CKAN mods and their server. So
+fixes can reach them as **patches on top of the official LMP**, instead of a separate LMP that splits the community.
+
+- **Client side:** a small KSP mod, "LUNA EVO Patches" (`GameData/LunaEvoPatches/`). It uses the Harmony library that
+  LMP itself ships (`000_Harmony`, Harmony 2) to change LMP's methods as KSP loads, including private ones like
+  `TimeSyncSystem.CheckGameTime`. The LMP files stay the official ones.
+- **Server side:** LMP's own plugin folder (`Plugins/`, `ILmpPlugin`). A LUNA EVO plugin can add checks (W3, W4) and,
+  with Harmony, fix server code (W5).
+- **The one rule: never change what goes over the wire.** A patch may change how one game shows or handles things
+  (smoothing other players' ships, W1; not jumping in time when you're alone in your subspace, W2), or what the server
+  accepts. Then patched and unpatched players still play together, on any LMP server. Anything that needs new message
+  fields stays for the fork.
+- **Safety:** each patch names the exact LMP version it was written for and checks the method it changes is there. On
+  any other version it stays off and says so in KSP's log. Each one can be turned off in Mission Control, which also
+  shows which are active. Downloads are verified like the LMP client. A server with Mod Control on must allow the
+  patch DLL (Import from GameData does that).
+- **Building:** the server plugin builds anywhere (LMP's `Server.dll` is MIT and already in `tests/Fixtures`). The client
+  patches compile against KSP's own DLLs from the builder's KSP install, which can't go in a public repo. So CI tests the
+  plugin, and the client patches are built and tested locally, with the in-game rig.
+- **Upstream:** every patch is also a tested, ready-made pull request for LMP.
+
+This covers most of the list above (W1, W2, W3, W4 and parts of W5) without a hard fork.
 
 ## Ideas from the owner, checked against the code
 
@@ -127,7 +152,7 @@ LMP's own testing is "players try it". For a sync rewrite we'd need numbers firs
 
 ## Suggested order
 
-1. Map phase 2a from the website: small, useful now, no mods.
+1. Map phase 2a from the website: small, useful now, no mods. **Done in 2.3.0.**
 2. The in-game test rig, plus the LUNA EVO server plugin (2b), which also records sync data for the rig.
 3. Upstream PRs for the non-protocol fixes (W2 alone-in-subspace, W4 guess limit, `-lmp` port and password, W5 races).
 4. The sync rewrite (W1, then W2) in the fork, measured with the rig.

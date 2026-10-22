@@ -27,6 +27,9 @@ public sealed record UniverseVessel(string Id, string Name, string Type, string 
     /// <summary>Latitude and longitude in degrees, for landed and splashed vessels.</summary>
     public (double Lat, double Lon)? Surface { get; init; }
 
+    /// <summary>Altitude above sea level (m) when it was saved.</summary>
+    public double? Altitude { get; init; }
+
     public bool IsLanded => Situation is "LANDED" or "SPLASHED" or "PRELAUNCH";
 }
 
@@ -85,6 +88,7 @@ public static class UniverseVessels
             Orbit = elements,
             BodyName = orbit?.Get("IDENT") is { Length: > 0 } ident ? ident : null,
             Surface = N(root, "lat") is { } lat && N(root, "lon") is { } lon ? (lat, lon) : null,
+            Altitude = N(root, "alt"),
         };
     }
 

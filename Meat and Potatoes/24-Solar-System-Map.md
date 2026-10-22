@@ -1,7 +1,8 @@
-# 24 · Solar system map (2.2)
+# 24 · Solar system map (2.2, live in 2.3)
 
 [← Meat and Potatoes](README.md) · Code: `Core/Map/SolarSystem.cs` (orbits, bodies, planet packs, universe clock),
-`Core/Ops/UniverseVessels.cs` (vessel orbits), `App/MapPage.cs` (`MapPage`, `MapCanvas`)
+`Core/Ops/UniverseVessels.cs` (vessel orbits), `Core/Map/LiveVessels.cs` (the live merge, 2.3),
+`Core/Live/ServerInfoClient.cs` (website orbits), `App/MapPage.cs` (`MapPage`, `MapCanvas`)
 
 A top-down map of the server's universe: the bodies (stock plus the planet packs in your KSP's GameData) and every
 vessel in `Universe/Vessels`, on its orbit, where it is now. Phase 1 is read-only and 2D.
@@ -43,6 +44,26 @@ Eeloo 16). A vessel's ORBIT `REF` is that index, but packs renumber bodies, so `
 
 Checked on the owner's GameData (OPM, MPE, BetterDres, BetterKerbol...): 47 bodies, 33 from packs, Eeloo round Sarnus.
 
+## Live positions (2.3)
+
+LMP writes `Universe/Vessels` only on backups, minutes apart. While the server runs, its website (`GET /`, the same
+answer the Players page reads every 5 s) lists the server's **in-memory** vessels, whose orbits players' games update
+every 2.5 s (`Server/System/Vessel/VesselPositionDataUpdater.cs`; only from players in the newest subspace).
+
+- `ServerInfoClient.Parse` reads `SemiMajorAxis`, `Eccentricity`, `Inclination`, `LongitudeOfAscendingNode`,
+  `ArgumentOfPeriapsis`, `MeanAnomaly`, `Epoch` (the save's ORBIT values and units), `Lat`, `Lon`, `Alt` and
+  `ReferenceBody`. Non-finite numbers, a negative eccentricity or SMA 0 mean no orbit.
+- `MapPage.Live()` uses `PlayersPage.Last` while the server runs and it's under 30 s old (`LastAt`); no second poll.
+- `LiveVessels.Merge(saved, live)`: the website's list decides **which** vessels exist (new launches appear, removed ones
+  go); the save fills in crew, parts and situation. LMP 0.29 never fills in `Situation`, so a saved landed vessel stays
+  landed unless it's more than 50 m higher or lower than saved, or on another body (then it's "FLYING").
+- The website names the body only by number. Planet packs renumber bodies (OPM's Sarnus is 21, Urlum 27, Neidon 33 on
+  the owner's server), so `LiveVessels.BodyNames` learns each number from the save's ORBIT `REF`/`IDENT` pairs.
+- `map/source` says where positions come from; `map/goLive` turns the website on for this PC only
+  (`PlayersPage.EnableWebsite`).
+- Checked against the real LMP 0.29.2 server (sandbox copy of the owner's universe, ports 8810/8910): 51 vessels, every
+  body found, the 11 landed ones kept on the ground.
+
 ## Universe time
 
 `UniverseClock.Now(server)` = (now UTC − `Universe/StartTime.txt`) + the largest offset in `Universe/Subspace.txt`
@@ -76,5 +97,5 @@ filters). Headless windows don't paint, so the test renders the canvas into a `R
 
 ## Next (phase 2 ideas)
 
-Live positions from the LMP website's vessel list while the server runs; time scrubbing; maneuver/encounter
+Full-rate positions and who's flying what from a LUNA EVO server plugin ([25](25-LMP-Under-The-Hood.md)); time scrubbing; maneuver/encounter
 prediction across SOIs; 3D tilt (Z is already computed); KSP's real body textures from GameData.

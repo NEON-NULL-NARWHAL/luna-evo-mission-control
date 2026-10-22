@@ -43,6 +43,7 @@ asked), it says so and why, and the owner can overrule it. Those calls are marke
 
 | Date | Version | The owner decided | What was done |
 |---|---|---|---|
+| 2026-10-22 | 2.3.0 | "We've already split players in a way": deliver fixes as **patches through our app** instead of a separate LMP. Then start the live map, "your own way", following the research plan | Patch plan written up ([25](Meat%20and%20Potatoes/25-LMP-Under-The-Hood.md#delivering-fixes-as-patches-through-mission-control-owners-idea-2026-10-22)): a Harmony patch mod on the official LMP client plus a server plugin, never changing the protocol. Live map: positions from the running server's website, checked against the real 0.29.2 server |
 | 2026-10-22 | - | Add this page; next, research how sound LMP's client and server really are, plan the map's next phases and a live game connection, choose focus areas, then a longer audit before posting publicly | This page. The research and the scope choices follow, and the open questions are listed at the bottom |
 | 2026-10-21 | 2.2.0 | Build a 2D solar system map from the save and GameData ("phase 1"); Claude may read the game files and a copy of the server, carefully | Map page: vessels on their orbits, stock bodies plus planet packs from GameData. Checked against a read-only copy of the owner's universe; screenshots from a renamed copy |
 | 2026-10-21 | - | Turn on GitHub's security features | Secret scanning with push protection, Dependabot, private vulnerability reporting |
@@ -68,11 +69,10 @@ asked), it says so and why, and the owner can overrule it. Those calls are marke
 ## Open: waiting on the owner
 
 From the LMP research ([Meat and Potatoes 25](Meat%20and%20Potatoes/25-LMP-Under-The-Hood.md)). Claude's
-recommendation is in **bold**; nothing here is decided yet.
+recommendation is in **bold**. Decided on 2026-10-22: fixes go out as patches through Mission Control (was O1), and
+the live map comes first (was O2).
 
 | # | Question | Options |
 |---|---|---|
-| O1 | Fork or contribute? | **Send protocol-safe fixes upstream as pull requests; build protocol changes (a new sync model) in the LUNA EVO fork and offer them back once proven** · fork only · upstream only |
-| O2 | What to focus on for the next stretch | **A: the live map and in-game test rig** (website feed, server plugin, kRPC tests) · B: upstream fixes (time jumps when alone, password guess limit, `-lmp` port and password, save races) · C: the sync rewrite (smoother remote ships) · D: server checks for public servers |
 | O3 | In-game testing on the owner's PC | **A sandbox stock KSP 1.12.5 copy (two for multiplayer tests) with kRPC and the LMP client, run only when the owner says so**; never the modded install |
-| O4 | The longer audit before posting publicly | **After O2's first milestone**, so it covers the plugin; or now, on Mission Control as it is |
+| O4 | The longer audit before posting publicly | **After the next milestone (the LUNA EVO server plugin)**, so it covers the plugin; or now, on Mission Control as it is |

@@ -11,6 +11,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LunaEvo.MissionControl.Core.Join;
+using LunaEvo.MissionControl.Core.Live;
 using LunaEvo.MissionControl.Core.Map;
 using LunaEvo.MissionControl.Core.Ops;
 
@@ -30,8 +31,12 @@ internal sealed class MapPage
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromSeconds(2) };
     private SolarSystem _system = SolarSystem.Stock();
     private string? _systemFrom; // the GameData folder the bodies were read from
-    private IReadOnlyList<UniverseVessel> _vessels = [];
+    private IReadOnlyList<UniverseVessel> _saved = []; // Universe/Vessels as LMP last wrote it
+    private IReadOnlyList<UniverseVessel> _vessels = []; // what's shown: the save, or the save merged with the live server
     private DateTime _vesselsRead;
+    private ServerSnapshot? _liveFrom; // the live snapshot _vessels was merged from, if any
+    private readonly TextBlock _source = Ui.Text("", "sublabel").WithId("map/source");
+    private readonly Button _goLive = Ui.Button("Turn on the website for a live map (this PC only)", "text").WithId("map/goLive");
     private bool _updatingFocus;
 
     public MapPage(MainWindow host)
@@ -64,6 +69,12 @@ internal sealed class MapPage
         };
         var refresh = Ui.Button("Refresh", "text", "IconRestart").WithId("map/refresh");
         refresh.Click += (_, _) => Refresh(force: true);
+        _goLive.Click += (_, _) =>
+        {
+            _host.Players?.EnableWebsite();
+            _source.Text = "Website turned on for this PC only. Save, then restart the server, and the map goes live.";
+            _goLive.IsVisible = false;
+        };
         _tick.Tick += (_, _) => OnTick();
 
         var header = new DockPanel();
@@ -75,8 +86,8 @@ internal sealed class MapPage
             Children =
             {
                 Ui.Text("Solar system map", "headline"),
-                Ui.Text("Every vessel on the server, on its orbit, where it is now. Positions come from the server's save, which LMP " +
-                        "writes every few minutes, so a moving ship can be a little behind. Scroll to zoom, drag to move, click a vessel " +
+                Ui.Text("Every vessel on the server, on its orbit, where it is now. While the server runs with its website on, positions " +
+                        "come live from it (a few seconds behind); otherwise from the save, which LMP writes every few minutes. Scroll to zoom, drag to move, click a vessel " +
                         "or a moon.", "sublabel"),
             },
         });
@@ -94,7 +105,7 @@ internal sealed class MapPage
             Content = new StackPanel
             {
                 Margin = new Thickness(28, 20, 28, 28), Spacing = 12,
-                Children = { header, controls, new StackPanel { Spacing = 2, Children = { _time, _packs } }, frame, details, list },
+                Children = { header, controls, new StackPanel { Spacing = 2, Children = { _time, _source, _goLive, _packs } }, frame, details, list },
             },
         };
         _canvas.FocusBody = _system.Star.Name;
@@ -183,15 +194,48 @@ internal sealed class MapPage
             ReadVessels();
             FillList();
         }
+        else if (Live() != _liveFrom)
+        {
+            // The Players page read the server again (every 5 s): move the vessels to their new orbits.
+            MergeLive();
+            FillList();
+        }
         UpdateTime();
         _canvas.InvalidateVisual();
     }
 
     private void ReadVessels()
     {
-        _vessels = _host.Session is { } session ? UniverseVessels.List(session.ServerDirectory) : [];
+        _saved = _host.Session is { } session ? UniverseVessels.List(session.ServerDirectory) : [];
         _vesselsRead = DateTime.UtcNow;
+        MergeLive();
+    }
+
+    /// <summary>The running server's latest vessel list (read by the Players page), if it's recent.</summary>
+    private ServerSnapshot? Live() =>
+        _host.Server?.IsRunning == true && _host.Players is { Last: { } last } players && DateTime.UtcNow - players.LastAt < LiveMaxAge ? last : null;
+
+    /// <summary>Older than this, the live list is treated as gone (the website stopped answering).</summary>
+    internal static readonly TimeSpan LiveMaxAge = TimeSpan.FromSeconds(30);
+
+    private void MergeLive()
+    {
+        _liveFrom = Live();
+        _vessels = _liveFrom is { } live ? LiveVessels.Merge(_saved, live.Vessels) : _saved;
         _canvas.Vessels = Shown();
+        UpdateSource();
+    }
+
+    private void UpdateSource()
+    {
+        var websiteOff = _host.Session is { } session && ServerInfoClient.EndpointFor(session) == null;
+        _goLive.IsVisible = websiteOff && _host.Session != null;
+        _source.Text = _liveFrom != null && _host.Players is { } players
+            ? $"Live from the running server, read {Math.Max(0, (int)(DateTime.UtcNow - players.LastAt).TotalSeconds)} s ago."
+            : _host.Session == null ? ""
+            : websiteOff ? "From the save, which LMP writes every few minutes. The map can be live while the server runs:"
+            : _host.Server?.IsRunning == true ? "From the save for now; live positions appear once the server's website answers."
+            : "From the save (the server is stopped).";
     }
 
     private IReadOnlyList<UniverseVessel> Shown() =>
@@ -215,6 +259,7 @@ internal sealed class MapPage
         now ??= _vessels.Select(v => v.Orbit?.Epoch ?? 0).DefaultIfEmpty(0).Max();
         _canvas.Time = now.Value;
         _time.Text = $"Universe time: {UniverseClock.Kerbin(now.Value)} · {_vessels.Count} vessel(s) on the server";
+        UpdateSource();
     }
 
     private void FillFocus()
