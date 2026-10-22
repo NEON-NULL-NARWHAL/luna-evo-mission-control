@@ -170,6 +170,11 @@ internal sealed class UiHarness : IDisposable
         ServerPage.ExtraArguments = [];
         JoinPage.StartKsp = (_, _) => throw new InvalidOperationException("A test tried to start KSP without faking it.");
         ServerPage.RestartDelay = Core.Ops.CrashRestartPolicy.Delay;
+        // Each test's server copy and settings go again: left behind, they filled the owner's C: drive (34 GB, 2026-10-22).
+        TempCleanup.Delete(ServerDirectory);
+        TempCleanup.Delete(Path.GetDirectoryName(SettingsPath));
+        TempCleanup.Delete(Core.Setup.CkanTools.Root);
+        TempCleanup.Delete(Core.Setup.CkanTools.ConfigFolder);
     }
 
     /// <summary>LMP's real Server.dll (for the settings schema) and logs, plus the fake server exe to run.</summary>

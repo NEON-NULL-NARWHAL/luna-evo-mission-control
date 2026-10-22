@@ -25,6 +25,7 @@
     <Compile Include="..\LunaEvo.MissionControl.Core.Tests\FakeServer.cs" Link="FakeServer.cs" />
     <Compile Include="..\LunaEvo.MissionControl.Core.Tests\FakeHttp.cs" Link="FakeHttp.cs" />
     <Compile Include="..\LunaEvo.MissionControl.Core.Tests\TestData.cs" Link="TestData.cs" />
+    <Compile Include="..\LunaEvo.MissionControl.Core.Tests\TempCleanup.cs" Link="TempCleanup.cs" />
   </ItemGroup>
 
   <ItemGroup>

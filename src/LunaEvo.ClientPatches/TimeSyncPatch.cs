@@ -1,5 +1,5 @@
 // LUNA EVO · LunaEvo.ClientPatches/TimeSyncPatch.cs
-// [Patch] A player alone in their subspace isn't yanked to the subspace's time; they get a subspace at their own time.
+// [Patch] A player alone on the server isn't yanked to the subspace's time; they get a subspace at their own time.
 // Used by: PatchLoader (Harmony prefix on LmpClient.Systems.TimeSync.TimeSyncSystem.CheckGameTime)
 // Guide:   Meat and Potatoes/27-Client-Patches.md
 
@@ -17,10 +17,12 @@ namespace LunaEvo.ClientPatches
     /// <summary>
     /// LMP keeps every game on its subspace's clock (LmpClient/Systems/TimeSync/TimeSyncSystem.cs): within 3.5 s it
     /// speeds the game up or slows it down, beyond that it sets the game's time, which teleports vessels along their
-    /// orbits and cuts engines mid-burn (upstream issue #469). That keeps players who share a subspace together, but a
-    /// player alone in theirs has nobody to keep up with. For them, this does what LMP does when a time warp ends: ask the
-    /// server for a new subspace at the game's own time (WarpNewSubspaceMsgData, the same messages as always). Players
-    /// sharing a subspace, and the gentle speed-up and slow-down, are left exactly as LMP does them.
+    /// orbits and cuts engines mid-burn (upstream issue #469). A player alone on the server has nobody to keep up with. For
+    /// them, this does what LMP does when a time warp ends: ask the server for a new subspace at the game's own time
+    /// (WarpNewSubspaceMsgData, the same messages as always). With anyone else online it stays out of the way: until
+    /// 2.9 it stepped in whenever nobody else was in the player's subspace, and in the owner's two-player game
+    /// (2026-10-22) every frame-rate dive moved the slower player into a subspace of their own, behind the other, who
+    /// then couldn't be seen until they synced. LMP's jump keeps players together, and that matters more.
     /// </summary>
     internal static class TimeSyncPatch
     {
@@ -50,7 +52,7 @@ namespace LunaEvo.ClientPatches
                 if (__instance == null || !__instance.Enabled || warp == null || warp.CurrentlyWarping || warp.WaitingSubspaceIdFromServer || !CanSyncTime())
                     return true;
                 var errorMs = TimeSyncSystem.CurrentErrorSec * 1000;
-                if (Math.Abs(errorMs) <= JumpThresholdMs || !AloneInSubspace(warp))
+                if (Math.Abs(errorMs) <= JumpThresholdMs || !AloneOnServer(warp))
                     return true;
                 if (DateTime.UtcNow - _lastMove < MoveInterval)
                 {
@@ -59,7 +61,7 @@ namespace LunaEvo.ClientPatches
                 }
 
                 _lastMove = DateTime.UtcNow;
-                LunaLog.LogWarning($"[LUNA EVO] {errorMs / 1000:0.0} s off subspace {warp.CurrentSubspace}'s time and nobody else is in it: " +
+                LunaLog.LogWarning($"[LUNA EVO] {errorMs / 1000:0.0} s off subspace {warp.CurrentSubspace}'s time and nobody else is online: " +
                                    "taking a subspace at this game's own time instead of jumping");
                 warp.CurrentSubspace = -1; // "warping", as at the start of a time warp: tells the server and the others
                 RequestNewSubspace.Invoke(warp, null);
@@ -73,11 +75,11 @@ namespace LunaEvo.ClientPatches
             }
         }
 
-        /// <summary>Nobody else is in my subspace (LMP's own AloneInCurrentSubspace is commented out, and was inverted).</summary>
-        internal static bool AloneInSubspace(WarpSystem warp)
+        /// <summary>Nobody else is on the server: LMP's list of every player's subspace has only me in it.</summary>
+        internal static bool AloneOnServer(WarpSystem warp)
         {
             var me = SettingsSystem.CurrentSettings.PlayerName;
-            return !warp.ClientSubspaceList.Any(p => p.Key != me && p.Value == warp.CurrentSubspace);
+            return !warp.ClientSubspaceList.Keys.Any(player => player != me);
         }
 
         // LMP's CanSyncTime: only in the scenes where it corrects time.
