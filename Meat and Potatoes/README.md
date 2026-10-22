@@ -40,6 +40,7 @@ Every source file starts with a short header pointing back here, like this:
 | 22 | [CKAN and the LMP client](22-CKAN-and-LMP-Client.md) | change how CKAN is downloaded or read, or how the LMP client is installed |
 | 23 | [Server browser, simple mode, quick access](23-Server-Browser.md) | change the server browser, simple mode, Essentials, the clickable cards, the versions list or the error log |
 | 24 | [Solar system map](24-Solar-System-Map.md) | change the Map page, the orbit math, how planet packs are read, or the universe clock |
+| 25 | [LMP under the hood](25-LMP-Under-The-Hood.md) | start fork work: how LMP really syncs, what's weak (with file pointers), rewrite or fix, live telemetry, in-game testing |
 
 ## 🔣 Legend
 
@@ -68,6 +69,7 @@ Symbols used in the map below and throughout these chapters:
 | | `README.md` | The front page. |
 | | `CHANGELOG.md` | What changed in each version. |
 | | `QUICKSTART.md` | The short version of the README for users: host, play, mods, troubleshooting, linking back to the full sections. Keep its `README.md#...` links in step when README headings change. |
+| | `DECISIONS.md` | The owner's decisions and what was done about each, newest first, plus open questions. Add a row whenever the owner decides something. |
 | | `SECURITY.md` | What the app touches, every audit (newest first), how to report a problem. |
 | | `LICENSE` | GPL-3.0. |
 | ⚠️ | `.gitattributes` | Keeps `tests/Fixtures` byte-for-byte (CRLF, no BOM); the round-trip tests depend on it. |

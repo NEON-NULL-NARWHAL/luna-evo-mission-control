@@ -60,6 +60,10 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 
 ## LMP fork (game code, needs KSP to test)
 
+Read [25 · LMP under the hood](25-LMP-Under-The-Hood.md) first: the research behind this list, and the open
+questions in [`DECISIONS.md`](../DECISIONS.md#open-waiting-on-the-owner).
+
+
 - **Rate-limit admin passwords:** `Server/Message/AdminMsgReader.cs:22` compares with no limit. Count failures per client,
   back off / kick after N. Constant-time compare.
 - **Direct connect with a port and a password:** `LmpClient/MainSystem.cs` ~527 slices `lmp://host:port` with the

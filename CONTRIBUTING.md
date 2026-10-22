@@ -19,6 +19,7 @@ Thanks for helping. LUNA EVO is a small hobby project by two friends; issues and
   chapter, and every control gets an AutomationId with `.WithId(...)`.
 - **Security first** for anything that downloads, parses outside data, starts a process or stores a secret: see
   [14 · Security](Meat%20and%20Potatoes/14-Security.md). Report vulnerabilities privately ([`SECURITY.md`](SECURITY.md)).
+  Big direction calls are the owner's; they're recorded in [`DECISIONS.md`](DECISIONS.md).
 
 ## Build, test, release
 

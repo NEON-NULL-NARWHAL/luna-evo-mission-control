@@ -26,7 +26,8 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 > **Security:** every download is checked against GitHub's SHA-256. All ten security audits, their fixes, and what each
 > release was tested against are in [`SECURITY.md`](SECURITY.md).
 > **Written with AI:** the code, tests and docs were written by Claude (Anthropic's AI model), directed and reviewed by
-> the project owner. [Who did what, and how it was checked.](#how-this-app-was-made-ai-disclosure)
+> the project owner. [Who did what, and how it was checked.](#how-this-app-was-made-ai-disclosure) Every decision the owner
+> made, and what was done about it, is in [`DECISIONS.md`](DECISIONS.md).
 
 ## At a glance
 
@@ -427,8 +428,8 @@ luna-evo-mission-control/
 │   │                                    setup & updates, live data, GameData scanning, automation, joining, CKAN
 │   └── LunaEvo.MissionControl/        🖥️ the Avalonia desktop app
 ├── tests/
-│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (204)
-│   ├── LunaEvo.MissionControl.Tests/        🧪 UI tests: the real window, driven headlessly (99)
+│   ├── LunaEvo.MissionControl.Core.Tests/   🧪 logic tests (214)
+│   ├── LunaEvo.MissionControl.Tests/        🧪 UI tests: the real window, driven headlessly (101)
 │   ├── FakeLmpServer/                      🧪 a pretend Server.exe so server control can be tested safely
 │   └── Fixtures/                           🧪 sanitized real configs, LMP 0.29.2's Server.dll, sample logs and website JSON
 ├── docs/screenshots/
@@ -436,6 +437,7 @@ luna-evo-mission-control/
 ├── release.ps1               📦 ships a version: tests, exe, GitHub release (the in-app updater picks it up)
 ├── QUICKSTART.md             ⚡ the short version: host, play, mods, troubleshooting
 ├── SECURITY.md               🔒 what LUNA EVO touches, every audit, how to report a problem
+├── DECISIONS.md              🧭 what the owner decided and what was done about it; open questions
 └── CHANGELOG.md
 ```
 
