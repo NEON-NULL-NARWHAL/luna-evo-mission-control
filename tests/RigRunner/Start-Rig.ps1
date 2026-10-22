@@ -7,11 +7,12 @@
 #   -Port 8801  KSP joins through that port (tests/NetJitter relays it to the server with random delays)
 #   -Uncapped  no frame cap (the far-vessel test measures frames per second)
 #   -Universe <folder>  start from a copy of that Universe folder instead of the current one
+#   -OpenWindow  the in-game LUNA EVO window opens by itself (kRPC can't click KSP's toolbar)
 #   -Viewer   also a second KSP (TestRig/KSP2, player RigViewer, kRPC 50002) for RigRunner --viewer. It joins through
 #             tests/NetJitter on 8802 (its LMP server list has that port), delayed by -ViewerJitter "min,max,loss"
 # KSP takes the screen while it opens: run only when the owner says so.
 param([switch]$Fresh, [switch]$Slow, [switch]$NoPatch, [string]$PatchesOff = "", [int]$Port = 8800, [switch]$Uncapped,
-      [string]$Universe = "", [switch]$Viewer, [string]$ViewerJitter = "0,0,0", [string]$Rig = (Join-Path $PSScriptRoot "..\..\..\TestRig"))
+      [string]$Universe = "", [switch]$Viewer, [string]$ViewerJitter = "0,0,0", [switch]$OpenWindow, [string]$Rig = (Join-Path $PSScriptRoot "..\..\..\TestRig"))
 $ErrorActionPreference = "Stop"
 $Rig = (Resolve-Path $Rig).Path
 $running = Get-CimInstance Win32_Process | Where-Object { $_.Name -in 'Server.exe', 'KSP_x64.exe' }
@@ -20,6 +21,7 @@ if ($running) { throw "Already running: $($running.ExecutablePath -join ', '). T
 if ($Fresh -or $Universe) { Remove-Item "$Rig\Server\Universe" -Recurse -Force -ErrorAction SilentlyContinue }
 if ($Universe) { Copy-Item $Universe "$Rig\Server\Universe" -Recurse }
 $env:LUNAEVO_PATCHES_OFF = $PatchesOff
+$env:LUNAEVO_OPEN_WINDOW = $(if ($OpenWindow) { "1" } else { "" })
 
 # Slow or normal KSP.
 foreach ($settings in @("$Rig\KSP\settings.cfg", "$Rig\KSP2\settings.cfg") | Where-Object { Test-Path $_ }) {

@@ -201,3 +201,39 @@ vessel; kRPC: `ActiveVessel = rocket` on the viewer, then `Camera.Pitch`/`Distan
 and the window was captured without taking focus (`PrintWindow` with `PW_RENDERFULLCONTENT`). The pilot cut the throttle
 and put it back: on the viewer's screen the flame went out and came back, and the engines read the same in both games at
 every step (throttle 0.00 → 1.00, thrust equal). Stock plumes work across players. Next: the same check with Waterfall.
+
+## 2.8: the in-game LUNA EVO window
+
+A button on KSP's toolbar (a green planet with an orbit, drawn in code: the patch stays one DLL) opens a window, in the
+Space Center, flight, map and tracking station. Owner's picks (2026-10-22):
+
+- **Connection:** server (an IPv4-mapped address shown as plain IPv4), ping, subspace and how far behind the latest
+  player, and every other player with their vessel and status. LMP sends stock vessel names as KSP translation keys
+  (`#autoLOC_501232`); the window runs them through `KSP.Localization.Localizer.Format` ("Kerbal X"). LMP's own list
+  doesn't.
+- **Quick actions:** "Sync my clock to the latest player" (`WarpSystem.SyncToSubspace`, what LMP's status window's sync
+  button calls; only when not warping and someone is ahead by more than a second). "Watch <player>: <vessel>" for each
+  loaded vessel another player holds the control lock of (`LockSystem.LockQuery.GetControlLockOwner`), via
+  `FlightGlobals.SetActiveVessel`, which LMP turns into spectating; "Back to my vessel" afterwards.
+- **LMP settings:** player name (LMP changes it only while disconnected), "New random color" (exactly what LMP's
+  options window does on Set: save, `SendPlayerColorToServer`, `StatusWindow.ColorEventHandled = false`), "Ignore LMP's
+  sync checks", and buttons that open LMP's chat, players and options windows.
+
+Nothing new goes over the network: every action is a call LMP's own windows make.
+
+**Building it without KSP:** the window needs more of KSP and Unity than the patches did, so the stand-ins grew
+(`Stubs/AssemblyCSharp`: toolbar, `GameEvents`, `FlightGlobals`, `Localizer`; `Stubs/UnityCoreModule`: `Color`,
+`Rect`, `Vector2`, `Texture2D`, `Screen`; new `Stubs/UnityIMGUIModule`: `GUI`, `GUILayout`). Each member is copied from
+the real assembly's metadata, and `ClientPatchTests.Every_stand_in_member_is_in_ksp_with_the_same_shape` loads every
+built stand-in and the rig's real KSP and fails on any difference in name, static-ness, struct/class, types or enum
+values (checked to fail: a `long` instead of an `int` was caught). It needs the rig, so it runs locally.
+
+**What the game taught us** (each found in the rig; KSP and LMP kept running, the button was just missing):
+
+- At `KSPAddon.Startup.Instantly`, `GameEvents`' events don't exist yet: the loader adds the window from `Update` once
+  they do.
+- `EventVoid.Add` throws on a static method (KSP's wrapper reads the delegate's target): the loader registers instance
+  methods that forward to `EvoWindow`.
+
+Rig: `Start-Rig.ps1 -OpenWindow` sets `LUNAEVO_OPEN_WINDOW=1`, which opens the window through its own button (kRPC
+can't click KSP's toolbar); players never set it, and it can only open the window.

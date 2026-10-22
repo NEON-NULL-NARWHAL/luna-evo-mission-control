@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\UnityCoreModule\UnityCoreModule.csproj" />
+    <ProjectReference Include="..\UnityIMGUIModule\UnityIMGUIModule.csproj" />
   </ItemGroup>
 
 </Project>

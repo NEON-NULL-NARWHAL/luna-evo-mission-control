@@ -8,7 +8,7 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <LangVersion>7.3</LangVersion>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <AssemblyName>LunaEvo.ClientPatches</AssemblyName>
     <RootNamespace>LunaEvo.ClientPatches</RootNamespace>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="Stubs\AssemblyCSharp\AssemblyCSharp.csproj" Private="false" />
     <ProjectReference Include="Stubs\UnityCoreModule\UnityCoreModule.csproj" Private="false" />
+    <ProjectReference Include="Stubs\UnityIMGUIModule\UnityIMGUIModule.csproj" Private="false" />
     <Reference Include="LmpClient"><HintPath>..\..\tests\Fixtures\LmpClient\LmpClient.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Lidgren.Network"><HintPath>..\..\tests\Fixtures\LmpClient\Lidgren.Network.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>

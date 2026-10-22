@@ -6,6 +6,7 @@
     <Project Path="src/LunaEvo.ClientPatches/LunaEvo.ClientPatches.csproj" />
     <Project Path="src/LunaEvo.ClientPatches/Stubs/AssemblyCSharp/AssemblyCSharp.csproj" />
     <Project Path="src/LunaEvo.ClientPatches/Stubs/UnityCoreModule/UnityCoreModule.csproj" />
+    <Project Path="src/LunaEvo.ClientPatches/Stubs/UnityIMGUIModule/UnityIMGUIModule.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FakeLmpClient/FakeLmpClient.csproj" />

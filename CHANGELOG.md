@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.8.0 (2026-10-22)
+
+### Added
+- **A LUNA EVO button in KSP** (with the LUNA EVO patches, Join → Install or Update): a window in the Space Center and
+  in flight with your server, ping and time, who's online and what they're flying (with real vessel names, where LMP's
+  own list shows codes like `#autoLOC_501232`), a button to sync your clock to the latest player, buttons to watch a
+  nearby player's vessel and get back to yours, and LMP's settings in one place: a new random color, sync checks, and
+  LMP's chat, players and options windows.
+
 ## 2.7.1 (2026-10-22)
 
 ### Fixed

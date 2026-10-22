@@ -79,4 +79,65 @@ public class ClientPatchTests
             Assert.Equal(value, Convert.ToInt32(field.GetRawConstantValue()));
         }
     }
+
+    [Fact]
+    public void Every_stand_in_member_is_in_ksp_with_the_same_shape()
+    {
+        // The compiled patches call KSP and Unity by name and signature; a stand-in that differs from the real member would
+        // only fail inside the game (MissingMethodException). So every public member of each built stand-in must exist in
+        // the test rig's KSP with the same name, static-ness, types and enum values. Needs the rig (local), like above.
+        var managed = Path.Combine(TestPaths.RepoRoot, "..", "TestRig", "KSP", "KSP_x64_Data", "Managed");
+        var stubs = new[] { ("AssemblyCSharp", "Assembly-CSharp"), ("UnityCoreModule", "UnityEngine.CoreModule"), ("UnityIMGUIModule", "UnityEngine.IMGUIModule") }
+            .Select(s => (Name: s.Item2, Path: Directory.GetFiles(Path.Combine(TestPaths.RepoRoot, "src", "LunaEvo.ClientPatches", "Stubs", s.Item1, "bin"),
+                    s.Item2 + ".dll", SearchOption.AllDirectories).OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault()))
+            .ToList();
+        if (!File.Exists(Path.Combine(managed, "Assembly-CSharp.dll")) || stubs.Any(s => s.Path == null))
+            return;
+
+        var kspFiles = Directory.GetFiles(managed, "*.dll");
+        using var real = new System.Reflection.MetadataLoadContext(new System.Reflection.PathAssemblyResolver(kspFiles), "mscorlib");
+        var stubNames = stubs.Select(s => s.Name + ".dll").ToHashSet(StringComparer.OrdinalIgnoreCase);
+        using var mine = new System.Reflection.MetadataLoadContext(new System.Reflection.PathAssemblyResolver(
+            kspFiles.Where(f => !stubNames.Contains(Path.GetFileName(f))).Concat(stubs.Select(s => s.Path!))), "mscorlib");
+
+        static string Name(Type t) => System.Text.RegularExpressions.Regex.Replace(t.FullName ?? t.Name, @", Version=[^\]]*", "");
+        const System.Reflection.BindingFlags Declared = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance |
+                                                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly;
+        var problems = new List<string>();
+        foreach (var (assemblyName, path) in stubs)
+        {
+            var realAssembly = real.LoadFromAssemblyPath(Path.Combine(managed, assemblyName + ".dll"));
+            foreach (var type in mine.LoadFromAssemblyPath(path!).GetTypes().Where(t => t.IsPublic || t.IsNestedPublic))
+            {
+                var match = realAssembly.GetType(type.FullName!);
+                if (match == null)
+                {
+                    problems.Add($"{type.FullName}: not in KSP's {assemblyName}");
+                    continue;
+                }
+                if (match.IsValueType != type.IsValueType || match.IsEnum != type.IsEnum)
+                    problems.Add($"{type.FullName}: a {(match.IsValueType ? "struct" : "class")} in KSP");
+                foreach (var member in type.GetMembers(Declared))
+                {
+                    var found = member switch
+                    {
+                        System.Reflection.FieldInfo f when type.IsEnum => !f.IsLiteral || match.GetField(f.Name, Declared) is { } r &&
+                            Convert.ToInt64(r.GetRawConstantValue()) == Convert.ToInt64(f.GetRawConstantValue()),
+                        System.Reflection.FieldInfo f => match.GetField(f.Name, Declared) is { } r && r.IsStatic == f.IsStatic && Name(r.FieldType) == Name(f.FieldType),
+                        System.Reflection.MethodInfo m => match.GetMethods(Declared).Any(r => r.Name == m.Name && r.IsStatic == m.IsStatic &&
+                            Name(r.ReturnType) == Name(m.ReturnType) &&
+                            r.GetParameters().Select(p => Name(p.ParameterType)).SequenceEqual(m.GetParameters().Select(p => Name(p.ParameterType)))),
+                        // A parameterless constructor is the compiler's default in a stand-in; the patches never call one.
+                        System.Reflection.ConstructorInfo c when c.GetParameters().Length == 0 => true,
+                        System.Reflection.ConstructorInfo c => match.GetConstructors(Declared).Any(r =>
+                            r.GetParameters().Select(p => Name(p.ParameterType)).SequenceEqual(c.GetParameters().Select(p => Name(p.ParameterType)))),
+                        _ => true, // properties and events: their get_/set_/add_ methods are checked above
+                    };
+                    if (!found)
+                        problems.Add($"{type.FullName}.{member.Name}: not in KSP like this");
+                }
+            }
+        }
+        Assert.Empty(problems);
+    }
 }

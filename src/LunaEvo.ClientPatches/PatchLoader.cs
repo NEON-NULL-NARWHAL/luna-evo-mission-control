@@ -61,7 +61,40 @@ namespace LunaEvo.ClientPatches
                 applied.Add("P3 1 ms timers");
             Debug.Log($"[LUNA EVO] Client patches {typeof(PatchLoader).Assembly.GetName().Version} on LMP {lmp}: " +
                       (applied.Count == 0 ? "none applied" : string.Join("; ", applied.ToArray())));
+            _windowPending = true;
         }
+
+        /// <summary>Set once the patches are on; the window is added in <see cref="Update"/> when KSP's events exist.</summary>
+        private static bool _windowPending;
+
+        /// <summary>
+        /// The LUNA EVO button on KSP's toolbar, and its window (EvoWindow). Optional: never stops the patches. KSP creates
+        /// GameEvents' events after this addon starts (Startup.Instantly): until then, try again next frame. KSP's events
+        /// only take methods of an object (a static method's delegate has no target, and EventVoid.Add throws on it).
+        /// </summary>
+        private void AddWindow()
+        {
+            if (GameEvents.onGUIApplicationLauncherReady == null || GameEvents.onGUIApplicationLauncherDestroyed == null)
+                return;
+            _windowPending = false;
+            try
+            {
+                GameEvents.onGUIApplicationLauncherReady.Add(OnToolbarReady);
+                GameEvents.onGUIApplicationLauncherDestroyed.Add(OnToolbarDestroyed);
+                if (KSP.UI.Screens.ApplicationLauncher.Ready)
+                    EvoWindow.AddButton();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[LUNA EVO] No toolbar button: {e}");
+            }
+        }
+
+        private void OnToolbarReady() => EvoWindow.AddButton();
+
+        private void OnToolbarDestroyed() => EvoWindow.RemoveButton();
+
+        public void OnGUI() => EvoWindow.OnGUI();
 
         private static void Apply(Harmony harmony, List<string> applied, string what, System.Reflection.MethodBase target, Type patch, string method,
             bool postfix = false, string off = null)
@@ -92,6 +125,8 @@ namespace LunaEvo.ClientPatches
 
         public void Update()
         {
+            if (_windowPending)
+                AddWindow();
             if (CommandLinePatch.PasswordPending && HighLogic.LoadedScene == GameScenes.MAINMENU)
             {
                 try

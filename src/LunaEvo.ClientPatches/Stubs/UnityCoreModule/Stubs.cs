@@ -3,8 +3,8 @@
 // Used by: LunaEvo.ClientPatches (compile time only; in the game, Unity's real UnityEngine.CoreModule is used)
 // Guide:   Meat and Potatoes/27-Client-Patches.md
 
-// Written by LUNA EVO, no Unity code: the class chain MonoBehaviour derives from and the static methods the patches
-// call, with Unity's own signatures, so the compiled calls bind to the real ones in the game. Bodies never run.
+// Written by LUNA EVO, no Unity code: the class chain MonoBehaviour derives from, the methods and value types the patches
+// use (Color and Vector2 with Unity's own fields, as they're copied by value), with Unity's own signatures, so the compiled calls bind to the real ones in the game. Bodies never run.
 
 namespace UnityEngine
 {
@@ -32,6 +32,53 @@ namespace UnityEngine
         public static float fixedDeltaTime => throw new System.NotSupportedException();
 
         public static float timeScale { get => throw new System.NotSupportedException(); set => throw new System.NotSupportedException(); }
+    }
+
+    public struct Color
+    {
+        public float r;
+        public float g;
+        public float b;
+        public float a;
+
+        public Color(float r, float g, float b, float a)
+        {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+            this.a = a;
+        }
+    }
+
+    public struct Vector2
+    {
+        public float x;
+        public float y;
+    }
+
+    public struct Rect
+    {
+        public Rect(float x, float y, float width, float height) => throw new System.NotSupportedException();
+    }
+
+    public class Texture : Object
+    {
+    }
+
+    public class Texture2D : Texture
+    {
+        public Texture2D(int width, int height) => throw new System.NotSupportedException();
+
+        public void SetPixel(int x, int y, Color color) => throw new System.NotSupportedException();
+
+        public void Apply() => throw new System.NotSupportedException();
+    }
+
+    public class Screen
+    {
+        public static int width => throw new System.NotSupportedException();
+
+        public static int height => throw new System.NotSupportedException();
     }
 
     public static class Debug

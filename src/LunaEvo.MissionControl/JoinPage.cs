@@ -449,6 +449,8 @@ internal sealed class JoinPage : IDisposable
                         "a jump that teleports your vessel and cuts its engines;\n" +
                         "- each position LMP sends carries the right time (it was one physics tick early);\n" +
                         "- far fewer lost vessel updates on a jittery connection, and less lag.\n" +
+                        "It also adds a LUNA EVO button to KSP's toolbar: your connection, who's online, a clock sync, watching " +
+                        "a nearby player's vessel, and LMP's settings in one window.\n" +
                         "No new kind of message is sent, so you play with unpatched players as before. On any other LMP version it turns " +
                         "itself off. Remove takes it out.", "Install"))
                     return;

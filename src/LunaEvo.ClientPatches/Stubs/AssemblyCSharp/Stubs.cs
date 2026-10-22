@@ -41,10 +41,91 @@ public class KSPAddon : System.Attribute
 public class HighLogic : UnityEngine.MonoBehaviour
 {
     public static GameScenes LoadedScene;
+
+    public static UnityEngine.GUISkin Skin => throw new System.NotSupportedException();
 }
 
 public class Vessel : UnityEngine.MonoBehaviour
 {
     /// <summary>True while the vessel is "on rails" (no physics, moved along its orbit).</summary>
     public bool packed;
+
+    public System.Guid id;
+
+    public string vesselName;
+
+    public string GetDisplayName() => throw new System.NotSupportedException();
+}
+
+public class FlightGlobals : UnityEngine.MonoBehaviour
+{
+    public static bool ready;
+
+    public static Vessel ActiveVessel => throw new System.NotSupportedException();
+
+    public static System.Collections.Generic.List<Vessel> VesselsLoaded => throw new System.NotSupportedException();
+
+    public static bool SetActiveVessel(Vessel v) => throw new System.NotSupportedException();
+}
+
+public delegate void Callback();
+
+public class EventVoid
+{
+    public delegate void OnEvent();
+
+    public void Add(OnEvent evt) => throw new System.NotSupportedException();
+
+    public void Remove(OnEvent evt) => throw new System.NotSupportedException();
+}
+
+public class GameEvents
+{
+    public static EventVoid onGUIApplicationLauncherReady;
+
+    public static EventVoid onGUIApplicationLauncherDestroyed;
+}
+
+namespace KSP.Localization
+{
+    public class Localizer
+    {
+        public static string Format(string template) => throw new System.NotSupportedException();
+    }
+}
+
+namespace KSP.UI.Screens
+{
+    public class ApplicationLauncher : UnityEngine.MonoBehaviour
+    {
+        public enum AppScenes
+        {
+            NEVER = 0,
+            ALWAYS = -1,
+            SPACECENTER = 1,
+            FLIGHT = 2,
+            MAPVIEW = 4,
+            VAB = 8,
+            SPH = 16,
+            TRACKSTATION = 32,
+            MAINMENU = 64,
+        }
+
+        public static bool Ready;
+
+        public static ApplicationLauncher Instance => throw new System.NotSupportedException();
+
+        public ApplicationLauncherButton AddModApplication(Callback onTrue, Callback onFalse, Callback onHover, Callback onHoverOut,
+            Callback onEnable, Callback onDisable, AppScenes visibleInScenes, UnityEngine.Texture texture) =>
+            throw new System.NotSupportedException();
+
+        public void RemoveModApplication(ApplicationLauncherButton button) => throw new System.NotSupportedException();
+    }
+
+    public class ApplicationLauncherButton : UnityEngine.MonoBehaviour
+    {
+        public void SetTrue(bool makeCall) => throw new System.NotSupportedException();
+
+        public void SetFalse(bool makeCall) => throw new System.NotSupportedException();
+    }
 }
