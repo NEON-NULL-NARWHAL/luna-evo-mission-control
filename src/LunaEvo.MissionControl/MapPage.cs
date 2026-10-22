@@ -21,7 +21,7 @@ internal sealed class MapPage
 {
     private readonly MainWindow _host;
     private readonly MapCanvas _canvas = new();
-    private readonly ComboBox _focus = new ComboBox { MinWidth = 220 }.WithId("map/focus");
+    private readonly ComboBox _focus = new ComboBox { MinWidth = 220, IsTextSearchEnabled = true }.WithId("map/focus");
     private readonly CheckBox _rocks = new CheckBox { Content = "Asteroids & comets", IsChecked = true }.WithId("map/rocks");
     private readonly CheckBox _debris = new CheckBox { Content = "Debris", IsChecked = true }.WithId("map/debris");
     private readonly TextBlock _time = Ui.Text("", "sublabel").WithId("map/time");
@@ -355,7 +355,10 @@ internal sealed class MapPage
         var items = new List<ComboBoxItem>();
         void Add(CelestialBody body, int depth)
         {
-            items.Add(new ComboBoxItem { Content = new string(' ', depth * 3) + body.Name, Tag = body.Name });
+            var item = new ComboBoxItem { Content = new string(' ', depth * 3) + body.Name, Tag = body.Name };
+            // Typing a name jumps to it ("du" → Duna): match the name, not the indented text shown.
+            Avalonia.Controls.Primitives.TextSearch.SetText(item, body.Name);
+            items.Add(item);
             foreach (var child in _system.ChildrenOf(body.Name).OrderBy(c => Math.Abs(c.Orbit?.Sma ?? 0)))
                 Add(child, depth + 1);
         }

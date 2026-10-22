@@ -5,6 +5,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media.Imaging;
 using LunaEvo.MissionControl.Core.Server;
@@ -67,6 +68,19 @@ public class MapPageTests
         ui.Pump();
         Assert.DoesNotContain(map.Canvas.Vessels, v => v.Id == "s1");
         Assert.Null(ui.TryFind<Control>("map/vessel/s1"));
+    }
+
+    [AvaloniaFact]
+    public void Typing_a_bodys_name_in_the_focus_list_picks_it()
+    {
+        using var ui = new UiHarness();
+        ui.Window.UpdateSettings(s => s with { KspFolder = TestData.FakeKsp(withSettings: false) });
+        ui.OpenTab(MainWindow.MapKey);
+        var focus = ui.Find<ComboBox>("map/focus");
+        focus.Focus();
+        ui.Window.KeyTextInput("du"); // the entries are indented ("      Duna"): it matches the name
+        ui.Pump();
+        Assert.Equal("Duna", (focus.SelectedItem as ComboBoxItem)?.Tag);
     }
 
     [AvaloniaFact]
