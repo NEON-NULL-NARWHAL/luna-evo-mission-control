@@ -119,7 +119,9 @@ patched and unpatched players still play together.
 | P6 | Flight state is sent every position interval whether or not the controls changed | Constant small traffic | Send on change plus a slow heartbeat. Yes |
 | P7 | Remote vessels: 0.25-2.5 s replay, straight-line blend, no prediction (W1) | Rubber-banding (the rig: exactly 0.25 s behind on one PC) | Predict from the orbit and velocity already sent. Yes; needs a second rig KSP to measure |
 
-Already fixed by LUNA EVO patches: the one-tick position stamp, clock jumps when alone (W2), `-lmp` with a port.
+Already fixed by LUNA EVO patches: the one-tick position stamp, clock jumps when alone (W2), `-lmp` with a port; in 2.7
+**P3** (29 → 22 ms) and **P1** (63% → 18% of updates lost with jitter). **P4 was measured and not shipped** (no
+difference in frames per second with 135 vessels). See [27](27-Client-Patches.md).
 
 ## Ideas from the owner, checked against the code
 

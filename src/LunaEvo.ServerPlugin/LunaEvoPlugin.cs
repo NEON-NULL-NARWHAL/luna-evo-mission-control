@@ -3,7 +3,10 @@
 // Used by: LMP's server (Plugins folder, ILmpPlugin)
 // Guide:   Meat and Potatoes/26-Server-Plugin.md
 
+using HarmonyLib;
 using LmpCommon.Locks;
+using LmpCommon.Message.Server;
+using LunaEvo.ClientPatches;
 using LmpCommon.Message.Data.Vessel;
 using LmpCommon.Message.Interface;
 using Server.Client;
@@ -14,8 +17,10 @@ using Server.System;
 namespace LunaEvo.ServerPlugin;
 
 /// <summary>
-/// Read-only: it never changes, blocks or sends a message, and it opens no network port. Everything it learns goes into
-/// one file next to the server, &lt;server&gt;/LunaEvo/live.json, rewritten at most twice a second.
+/// It never blocks or sends a message and opens no network port. What it learns goes into one file next to the server,
+/// &lt;server&gt;/LunaEvo/live.json, rewritten at most twice a second. Since 1.1 it also makes two server-side fixes from
+/// audit 11 that change nothing in any message: 1 ms timers on Windows (P3) and a Lidgren channel per vessel for the
+/// fast updates it relays (P1). Each can be switched off for the test rig (LUNAEVO_PATCHES_OFF).
 /// </summary>
 public sealed class LunaEvoPlugin : ILmpPlugin
 {
@@ -42,7 +47,13 @@ public sealed class LunaEvoPlugin : ILmpPlugin
             var folder = Directory.CreateDirectory(Path.Combine(server, "LunaEvo")).FullName;
             _file = Path.Combine(folder, "live.json");
             State.Clear();
-            Server.Log.LunaLog.Normal($"LUNA EVO server plugin {Version}: writing live positions to LunaEvo/live.json");
+            var fixes = new List<string>();
+            if (!PatchSwitches.IsOff("P3") && TimerResolution.Raise())
+                fixes.Add("1 ms timers");
+            if (!PatchSwitches.IsOff("P1") && ApplyChannelFix())
+                fixes.Add("a channel per vessel");
+            Server.Log.LunaLog.Normal($"LUNA EVO server plugin {Version}: writing live positions to LunaEvo/live.json" +
+                                      (fixes.Count > 0 ? "; " + string.Join(", ", fixes) : ""));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -50,8 +61,37 @@ public sealed class LunaEvoPlugin : ILmpPlugin
         }
     }
 
+    private Harmony? _harmony;
+
+    // P1: VesselSrvMsg puts every relayed position, flight state, update and resource message on channel 0.
+    private bool ApplyChannelFix()
+    {
+        try
+        {
+            var target = AccessTools.PropertyGetter(typeof(VesselSrvMsg), "DefaultChannel");
+            if (target == null)
+                return false;
+            _harmony = new Harmony("LunaEvo.ServerPlugin");
+            _harmony.Patch(target, postfix: new HarmonyMethod(typeof(ServerChannelPatch), nameof(ServerChannelPatch.Postfix)));
+            return true;
+        }
+        catch (Exception)
+        {
+            return false; // LMP's own channels: never worse than without the plugin
+        }
+    }
+
     public void OnServerStop()
     {
+        TimerResolution.Lower();
+        try
+        {
+            _harmony?.UnpatchAll("LunaEvo.ServerPlugin");
+        }
+        catch (Exception)
+        {
+        }
+
         // No file means "not running" to Mission Control, so a stopped server never looks live.
         try
         {
@@ -161,5 +201,15 @@ public sealed class LunaEvoPlugin : ILmpPlugin
         var subspaces = WarpContext.Subspaces.Values.Select(s => new SubspaceState(s.Id, s.Time)).ToList();
         var lmp = typeof(ServerContext).Assembly.GetName().Version?.ToString(3) ?? "?";
         return () => State.ToJson(Version, lmp, nowUtc, players, subspaces, controllers);
+    }
+}
+
+/// <summary>The server leg of P1: the relayed copy of a fast vessel update goes on that vessel's own channel too.</summary>
+internal static class ServerChannelPatch
+{
+    internal static void Postfix(VesselSrvMsg __instance, ref int __result)
+    {
+        if (__result == 0 && __instance?.Data is VesselBaseMsgData data)
+            __result = LmpChannels.ForVessel(data.VesselId, data.SubType);
     }
 }

@@ -19,6 +19,8 @@ var ksp = Path.Combine(rig, "KSP");
 var seconds = int.Parse(options.GetValueOrDefault("seconds", "25"), CultureInfo.InvariantCulture);
 // --mode slow: the rig's KSP set to run slower than real time (Meat and Potatoes 27); counts LMP's clock jumps.
 var slow = options.GetValueOrDefault("mode", "") == "slow";
+// --mode fleet: stay on the pad while tests/FakeLmpClient --fleet moves a universe of other vessels; reads frames per second.
+var fleetMode = options.GetValueOrDefault("mode", "") == "fleet";
 var observerExe = options.GetValueOrDefault("observer",
     Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\FakeLmpClient\bin\Debug\net10.0\FakeLmpClient.exe"));
 var results = Directory.CreateDirectory(Path.Combine(rig, "Results", DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"))).FullName;
@@ -68,16 +70,38 @@ while (krpc.GameScene != GameScene.Flight)
 Thread.Sleep(3000); // let the vessel settle on the pad
 // A second player who only watches: the fake LMP client in observe mode, recording what LMP relays to it.
 var observedCsv = Path.Combine(results, "observer.csv");
-using var observer = slow ? null : Process.Start(new ProcessStartInfo(Path.GetFullPath(observerExe),
-    ["--port", "8800", "--password", options.GetValueOrDefault("password", ""), "--name", "RigObserver", "--observe", observedCsv,
+using var observer = slow || fleetMode ? null : Process.Start(new ProcessStartInfo(Path.GetFullPath(observerExe),
+    ["--port", options.GetValueOrDefault("observer-port", "8800"), "--password", options.GetValueOrDefault("password", ""), "--name", "RigObserver", "--observe", observedCsv,
      "--seconds", (seconds + 25).ToString(CultureInfo.InvariantCulture)])
 {
     UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true,
 })!;
 Thread.Sleep(3000);
-Log("observer joined as RigObserver");
+if (observer != null)
+    Log("observer joined as RigObserver");
 
 var vessel = space.ActiveVessel;
+if (fleetMode)
+{
+    // Frames per second from LMP's own heartbeat line in KSP.log, about once a second: "frame=18220".
+    var since = DateTime.Now;
+    Thread.Sleep(seconds * 1000);
+    var beats = new List<(DateTime At, long Frame)>();
+    using (var stream = new FileStream(Path.Combine(ksp, "KSP.log"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+    using (var reader = new StreamReader(stream))
+        foreach (var line in reader.ReadToEnd().Split('\n'))
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(line, @"^\[LOG (\d\d:\d\d:\d\d\.\d+)\] \[LMP\]\[HEARTBEAT\].* scene=FLIGHT .*frame=(\d+)");
+            if (m.Success && DateTime.Today.Add(TimeSpan.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)) is var at && at >= since)
+                beats.Add((at, long.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture)));
+        }
+    if (beats.Count < 5)
+        return Fail("not enough heartbeat lines in KSP.log");
+    var fps = (beats[^1].Frame - beats[0].Frame) / (beats[^1].At - beats[0].At).TotalSeconds;
+    Log($"RESULT fleet: {fps:0.0} frames per second on the pad over {(beats[^1].At - beats[0].At).TotalSeconds:0} s ({beats.Count} heartbeats)");
+    connection.Dispose();
+    return 0;
+}
 vessel.Control.Throttle = 1;
 vessel.AutoPilot.TargetPitchAndHeading(90, 90);
 vessel.AutoPilot.Engaged = true;

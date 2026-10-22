@@ -31,7 +31,7 @@ if (-not $SkipTests) {
 .\publish.ps1 | Out-Null
 # The exe must carry both pieces that run inside LMP: the server plugin and the client patches.
 $built = "src\LunaEvo.MissionControl\obj\Release\net10.0\win-x64\LunaEvo.MissionControl.dll"
-foreach ($piece in "LunaEvo.ServerPlugin.dll", "LunaEvo.ClientPatches.dll") {
+foreach ($piece in "LunaEvo.ServerPlugin.dll", "LunaEvo.ServerPlugin.0Harmony.dll", "LunaEvo.ClientPatches.dll") {
     if (-not (Select-String -Path $built -SimpleMatch $piece -Quiet)) { throw "The exe doesn't carry $piece; check the build." }
 }
 $exe = "dist\LunaEvo-MissionControl-$version-win-x64\LunaEvo.MissionControl.exe"

@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\src\LunaEvo.ClientPatches\TimerResolution.cs" Link="Shared\TimerResolution.cs" />
+    <Compile Include="..\..\src\LunaEvo.ClientPatches\LmpChannels.cs" Link="Shared\LmpChannels.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Server">
       <HintPath>..\Fixtures\LMPServer\Server.dll</HintPath>
     </Reference>

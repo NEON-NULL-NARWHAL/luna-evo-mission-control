@@ -52,13 +52,25 @@ namespace LunaEvo.ClientPatches
             Apply(harmony, applied, "position time stamps one physics tick right",
                 AccessTools.Method(typeof(LmpClient.Systems.VesselPositionSys.VesselPositionMessageSender), "CreateMessageFromVessel"),
                 typeof(StampPatch), nameof(StampPatch.Postfix), postfix: true);
+            Apply(harmony, applied, "P1 a channel per vessel for fast updates",
+                AccessTools.PropertyGetter(typeof(LmpCommon.Message.Client.VesselCliMsg), "DefaultChannel"),
+                typeof(ChannelPatch), nameof(ChannelPatch.Postfix), postfix: true, off: "P1");
+            if (PatchSwitches.IsOff("P3"))
+                Debug.Log("[LUNA EVO] Not applied (P3 1 ms timers): switched off for a test (LUNAEVO_PATCHES_OFF)");
+            else if (TimerResolution.Raise())
+                applied.Add("P3 1 ms timers");
             Debug.Log($"[LUNA EVO] Client patches {typeof(PatchLoader).Assembly.GetName().Version} on LMP {lmp}: " +
                       (applied.Count == 0 ? "none applied" : string.Join("; ", applied.ToArray())));
         }
 
         private static void Apply(Harmony harmony, List<string> applied, string what, System.Reflection.MethodBase target, Type patch, string method,
-            bool postfix = false)
+            bool postfix = false, string off = null)
         {
+            if (off != null && PatchSwitches.IsOff(off))
+            {
+                Debug.Log($"[LUNA EVO] Not applied ({what}): switched off for a test (LUNAEVO_PATCHES_OFF)");
+                return;
+            }
             try
             {
                 if (target == null)

@@ -3,19 +3,26 @@
 #   -Fresh    a new game world (deletes the rig server's Universe; LMP makes a fresh one)
 #   -Slow     KSP capped below real time (10 fps, 0.03 s of game per frame): a struggling PC, for the time patch
 #   -NoPatch  without the LUNA EVO client patches (then without a server password: unpatched LMP can't take one)
+#   -PatchesOff "P1,P3"  single patches off in KSP and the server plugin (LUNAEVO_PATCHES_OFF), for before/after runs
+#   -Port 8801  KSP joins through that port (tests/NetJitter relays it to the server with random delays)
+#   -Uncapped  no frame cap (the far-vessel test measures frames per second)
+#   -Universe <folder>  start from a copy of that Universe folder instead of the current one
 # KSP takes the screen while it opens: run only when the owner says so.
-param([switch]$Fresh, [switch]$Slow, [switch]$NoPatch, [string]$Rig = (Join-Path $PSScriptRoot "..\..\..\TestRig"))
+param([switch]$Fresh, [switch]$Slow, [switch]$NoPatch, [string]$PatchesOff = "", [int]$Port = 8800, [switch]$Uncapped,
+      [string]$Universe = "", [string]$Rig = (Join-Path $PSScriptRoot "..\..\..\TestRig"))
 $ErrorActionPreference = "Stop"
 $Rig = (Resolve-Path $Rig).Path
 $running = Get-CimInstance Win32_Process | Where-Object { $_.Name -in 'Server.exe', 'KSP_x64.exe' }
 if ($running) { throw "Already running: $($running.ExecutablePath -join ', '). The owner's real server uses the same port: stop it first." }
 
-if ($Fresh) { Remove-Item "$Rig\Server\Universe" -Recurse -Force -ErrorAction SilentlyContinue }
+if ($Fresh -or $Universe) { Remove-Item "$Rig\Server\Universe" -Recurse -Force -ErrorAction SilentlyContinue }
+if ($Universe) { Copy-Item $Universe "$Rig\Server\Universe" -Recurse }
+$env:LUNAEVO_PATCHES_OFF = $PatchesOff
 
 # Slow or normal KSP.
 $settings = "$Rig\KSP\settings.cfg"
 $text = Get-Content $settings -Raw
-$text = $text -replace "(?m)^FRAMERATE_LIMIT = .*$", ("FRAMERATE_LIMIT = " + $(if ($Slow) { "10" } else { "30" }))
+$text = $text -replace "(?m)^FRAMERATE_LIMIT = .*$", ("FRAMERATE_LIMIT = " + $(if ($Slow) { "10" } elseif ($Uncapped) { "500" } else { "30" }))
 $text = $text -replace "(?m)^PHYSICS_FRAME_DT_LIMIT = .*$", ("PHYSICS_FRAME_DT_LIMIT = " + $(if ($Slow) { "0.03" } else { "0.04" }))
 [IO.File]::WriteAllText($settings, $text)
 
@@ -31,6 +38,6 @@ $xml = $xml -replace "<Password>[^<]*</Password>", $(if ($NoPatch) { "<Password>
 
 $server = Start-Process "$Rig\Server\Server.exe" -WorkingDirectory "$Rig\Server" -WindowStyle Hidden -PassThru
 Start-Sleep 6
-$address = if ($NoPatch) { "lmp://127.0.0.1" } else { "lmp://127.0.0.1:8800" }
+$address = if ($NoPatch) { "lmp://127.0.0.1" } else { "lmp://127.0.0.1:$Port" }
 $ksp = Start-Process "$Rig\KSP\KSP_x64.exe" -ArgumentList "-lmp", $address -WorkingDirectory "$Rig\KSP" -PassThru
-"Rig started: server $($server.Id), KSP $($ksp.Id) (fresh=$Fresh slow=$Slow patched=$(-not $NoPatch))"
+"Rig started: server $($server.Id), KSP $($ksp.Id) (fresh=$Fresh slow=$Slow patched=$(-not $NoPatch) off='$PatchesOff' port=$Port uncapped=$Uncapped)"

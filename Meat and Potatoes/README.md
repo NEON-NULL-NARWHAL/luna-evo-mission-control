@@ -187,6 +187,8 @@ Symbols used in the map below and throughout these chapters:
 | 🔌 | `LmpAddress.cs` | Parses `lmp://host:port`; no KSP types, so Core.Tests compiles and fuzzes it too. |
 | ⚠️🔌 | `TimeSyncPatch.cs` | Alone in your subspace and far off its time: a subspace at your own time instead of LMP's clock jump. |
 | 🔌 | `StampPatch.cs` | Adds the one physics tick LMP's position time stamps are short by. |
+| 🔌 | `ChannelPatch.cs`, `LmpChannels.cs` | P1: a Lidgren channel per vessel for fast updates (`LmpChannels` shared with the server plugin). |
+| ⚠️ | `TimerResolution.cs` | P3: 1 ms Windows timers; also `PatchSwitches` (`LUNAEVO_PATCHES_OFF`). Shared with the plugin and test tools. |
 | ⚠️ | `Stubs/` | LUNA EVO's stand-ins for the KSP and Unity names the patches use (compile time only; enum values must be KSP's). |
 
 ### `tests/` 🧪
@@ -197,6 +199,7 @@ Symbols used in the map below and throughout these chapters:
 | 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (105 tests). |
 | ⭐🧪 | `LunaEvo.MissionControl.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpClient/` | A pretend LMP player with no KSP: logs in to a real (sandbox) LMP server and flies a vessel, or (`--observe`) records what LMP relays to it. See [26](26-Server-Plugin.md). |
+| 🧪🔌 | `NetJitter/` | A UDP relay that delays every packet 20-120 ms at random: a bad network for the rig (P1). See [27](27-Client-Patches.md). |
 | 🧪🔌 | `RigRunner/` | Drives the test rig's KSP through kRPC and measures sync (`SyncAnalysis.cs`, `--selftest`, `--mode slow`); `Start-Rig.ps1` starts the rig. See [26](26-Server-Plugin.md). |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |

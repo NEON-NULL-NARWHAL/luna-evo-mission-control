@@ -10,6 +10,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/FakeLmpClient/FakeLmpClient.csproj" />
     <Project Path="tests/FakeLmpServer/FakeLmpServer.csproj" />
+    <Project Path="tests/NetJitter/NetJitter.csproj" />
     <Project Path="tests/RigRunner/RigRunner.csproj" />
     <Project Path="tests/LunaEvo.MissionControl.Core.Tests/LunaEvo.MissionControl.Core.Tests.csproj" />
     <Project Path="tests/LunaEvo.MissionControl.Tests/LunaEvo.MissionControl.Tests.csproj" />

@@ -243,9 +243,14 @@ internal sealed class MapPage
     }
 
     /// <summary>The plugin's DLL, carried inside this exe (see the csproj).</summary>
-    internal static byte[]? PluginBytes()
+    internal static byte[]? PluginBytes() => Resource(ServerPluginInstaller.FileName);
+
+    /// <summary>The Harmony the plugin uses since 2.7 (its P1 fix), carried inside this exe too.</summary>
+    internal static byte[]? HarmonyBytes() => Resource("LunaEvo.ServerPlugin.0Harmony.dll");
+
+    private static byte[]? Resource(string name)
     {
-        using var stream = typeof(MapPage).Assembly.GetManifestResourceStream(ServerPluginInstaller.FileName);
+        using var stream = typeof(MapPage).Assembly.GetManifestResourceStream(name);
         if (stream == null)
             return null;
         using var copy = new MemoryStream();
@@ -260,7 +265,7 @@ internal sealed class MapPage
 
     internal async Task TogglePluginAsync()
     {
-        if (_host.Session is not { } session || PluginBytes() is not { } bytes || PluginState() is not { } state)
+        if (_host.Session is not { } session || PluginBytes() is not { } bytes || HarmonyBytes() is not { } harmony || PluginState() is not { } state)
             return;
         if (_host.Server?.IsRunning == true)
         {
@@ -280,12 +285,14 @@ internal sealed class MapPage
             else
             {
                 if (!await Dialogs.ConfirmAsync(_host, state == PluginStatus.Different ? "Replace the server plugin?" : "Install the LUNA EVO server plugin?",
-                        $"Copies {ServerPluginInstaller.FileName} into this server's Plugins folder. LMP loads it on its next start. It watches " +
-                        "the server's messages and writes every vessel's latest position, and who flies what, to LunaEvo\\live.json, " +
-                        "next to the server, for this map. It only reads: it never changes or blocks a message, opens no network port " +
-                        "and stores no addresses. Players don't need anything.", state == PluginStatus.Different ? "Replace" : "Install"))
+                        $"Copies {ServerPluginInstaller.FileName} and the Harmony library it uses into this server's Plugins\\LunaEvo folder. " +
+                        "LMP loads them on its next start. The plugin watches the server's messages and writes every vessel's latest " +
+                        "position, and who flies what, to LunaEvo\\live.json, next to the server, for this map. It never blocks a " +
+                        "message, opens no network port and stores no addresses. It also makes two speed fixes that change nothing " +
+                        "players need: 1 ms timers on Windows, and its own network channel for each vessel's updates. Players don't need " +
+                        "anything.", state == PluginStatus.Different ? "Replace" : "Install"))
                     return;
-                ServerPluginInstaller.Install(session.ServerDirectory, bytes);
+                ServerPluginInstaller.Install(session.ServerDirectory, bytes, harmony);
             }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)

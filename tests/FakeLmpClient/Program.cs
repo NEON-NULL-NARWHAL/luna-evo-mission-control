@@ -17,6 +17,7 @@ using LmpCommon.Message.Interface;
 using LmpCommon.Message.Server;
 
 var options = Args(args);
+LunaEvo.ClientPatches.TimerResolution.Raise(); // as an observer it must not add Windows' 15.6 ms waits of its own
 var host = options.GetValueOrDefault("host", "127.0.0.1");
 var port = int.Parse(options.GetValueOrDefault("port", "8800"));
 var name = options.GetValueOrDefault("name", "FakeKerman");
@@ -117,6 +118,59 @@ if (options.TryGetValue("observe", out var csvPath))
     return 0;
 }
 
+// --fleet <Universe/Vessels folder>: "fly" every vessel saved there at once, each on its saved orbit, every 150 ms (LMP's
+// rate for vessels far from other players): a busy universe for the far-vessel test (audit 11, P4).
+if (options.TryGetValue("fleet", out var fleetFolder))
+{
+    var fleet = new List<(Guid Id, double[] Orbit, string Body)>();
+    foreach (var file in Directory.GetFiles(fleetFolder, "*.txt"))
+    {
+        var text = File.ReadAllText(file);
+        double V(string key) => double.Parse(System.Text.RegularExpressions.Regex.Match(text, @"(?m)^\s*" + key + @"\s*=\s*(\S+)").Groups[1].Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+        try
+        {
+            // INC, ECC, SMA, LAN, LPE, MNA, EPH, REF: LMP's order.
+            fleet.Add((Guid.Parse(Path.GetFileNameWithoutExtension(file)), [V("INC"), V("ECC"), V("SMA"), V("LAN"), V("LPE"), V("MNA"), V("EPH"), V("REF")],
+                System.Text.RegularExpressions.Regex.Match(text, @"(?m)^\s*IDENT\s*=\s*(?:Squad/)?(\S+)").Groups[1].Value));
+        }
+        catch (FormatException)
+        {
+            // landed vessels without an orbit: skip
+        }
+    }
+    if (options.TryGetValue("count", out var count))
+        fleet = fleet.Take(int.Parse(count)).ToList();
+    var interval = int.Parse(options.GetValueOrDefault("interval", "150"));
+    Console.WriteLine($"Flying a fleet of {fleet.Count} vessels every {interval} ms for {seconds} s" +
+                      (options.ContainsKey("channels") ? ", one channel per vessel (LUNA EVO's P1)" : ", all on channel 0 (as LMP)"));
+    var flown = 0;
+    while (DateTime.UtcNow - start < TimeSpan.FromSeconds(15 + seconds) && connection.Status == NetConnectionStatus.Connected)
+    {
+        var now = (DateTime.UtcNow.Ticks - serverStart) / 1e7 + subspaceTime;
+        foreach (var (id, orbit, bodyName) in fleet)
+        {
+            var p = clientFactory.CreateNewMessageData<VesselPositionMsgData>();
+            p.VesselId = id;
+            p.GameTime = now;
+            p.BodyIndex = (int)orbit[7];
+            p.BodyName = bodyName;
+            p.SubspaceId = subspace;
+            p.Orbit = (double[])orbit.Clone();
+            p.LatLonAlt = [0, 0, orbit[2]];
+            p.VelocityVector = [0, 0, 0];
+            Send(clientFactory.CreateNew<VesselCliMsg>(p), options.ContainsKey("channels") ? LunaEvo.ClientPatches.LmpChannels.ForVessel(id, p.SubType) : null);
+            flown++;
+        }
+        Pump(_ => { });
+        Thread.Sleep(interval);
+    }
+    Console.WriteLine($"Sent {flown} fleet position messages ({flown / Math.Max(1, fleet.Count)} per vessel).");
+    client.Disconnect("bye");
+    Thread.Sleep(300);
+    return 0;
+}
+
 var acquire = clientFactory.CreateNewMessageData<LockAcquireMsgData>();
 acquire.Lock = new LockDefinition(LockType.Control, name, vessel);
 Send(clientFactory.CreateNew<LockCliMsg>(acquire));
@@ -150,11 +204,11 @@ client.Disconnect("bye");
 Thread.Sleep(300);
 return 0;
 
-void Send(IMessageBase message)
+void Send(IMessageBase message, int? channel = null)
 {
     var outgoing = client.CreateMessage(message.GetMessageSize());
     message.Serialize(outgoing);
-    client.SendMessage(outgoing, message.NetDeliveryMethod, message.Channel);
+    client.SendMessage(outgoing, message.NetDeliveryMethod, channel ?? message.Channel);
     client.FlushSendQueue();
 }
 

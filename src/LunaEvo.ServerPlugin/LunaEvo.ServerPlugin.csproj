@@ -7,11 +7,12 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <AssemblyName>LunaEvo.ServerPlugin</AssemblyName>
     <RootNamespace>LunaEvo.ServerPlugin</RootNamespace>
     <!-- .NET 6 is out of support, but it's what LMP 0.29 runs on; the plugin only uses what the server already has. -->
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,15 @@
       <HintPath>..\..\tests\Fixtures\LMPServer\Lidgren.Core.dll</HintPath>
       <Private>false</Private>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Harmony (MIT) changes LMP's server code for P1 (a channel per vessel). It ships next to the plugin in
+         Plugins/LunaEvo/, so the output folder gets a copy. -->
+    <PackageReference Include="Lib.Harmony" Version="2.3.5" />
+    <!-- Shared with the client patches: no LMP or KSP types in these. -->
+    <Compile Include="..\LunaEvo.ClientPatches\TimerResolution.cs" Link="Shared\TimerResolution.cs" />
+    <Compile Include="..\LunaEvo.ClientPatches\LmpChannels.cs" Link="Shared\LmpChannels.cs" />
   </ItemGroup>
 
   <ItemGroup>

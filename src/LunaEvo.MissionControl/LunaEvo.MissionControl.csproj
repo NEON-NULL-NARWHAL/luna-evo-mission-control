@@ -9,7 +9,7 @@
     <Product>LUNA EVO Mission Control</Product>
     <!-- FileDescription: Windows shows it as the app name on notifications. -->
     <AssemblyTitle>LUNA EVO Mission Control</AssemblyTitle>
-    <Version>2.6.1</Version>
+    <Version>2.7.0</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- The client patches are a .NET Framework 4.7.2 KSP mod, only carried inside the exe (never loaded by it). -->
@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\LunaEvo.ServerPlugin\bin\$(Configuration)\net6.0\LunaEvo.ServerPlugin.dll" LogicalName="LunaEvo.ServerPlugin.dll" />
+    <EmbeddedResource Include="..\LunaEvo.ServerPlugin\bin\$(Configuration)\net6.0\0Harmony.dll" LogicalName="LunaEvo.ServerPlugin.0Harmony.dll" />
   </ItemGroup>
 
   <!-- LUNA EVO's patches for the LMP client (net472, a KSP mod): built first, then carried inside the exe like the

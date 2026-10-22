@@ -133,9 +133,20 @@ public class ServerPluginTests
         Assert.False(ServerPluginInstaller.Supports(new Version(0, 30, 0)));
         Assert.False(ServerPluginInstaller.Supports(null));
 
+        var harmony = Encoding.ASCII.GetBytes("MZ harmony");
         Assert.Equal(PluginStatus.NotInstalled, ServerPluginInstaller.Status(server, plugin));
-        ServerPluginInstaller.Install(server, plugin);
+
+        // A 2.4-2.6 install (the plugin alone in Plugins/) shows as "Update", and installing moves it.
+        Directory.CreateDirectory(Path.Combine(server, "Plugins"));
+        File.WriteAllBytes(ServerPluginInstaller.LegacyPathFor(server), plugin);
+        Assert.Equal(PluginStatus.Different, ServerPluginInstaller.Status(server, plugin));
+        ServerPluginInstaller.Install(server, plugin, harmony);
+        Assert.False(File.Exists(ServerPluginInstaller.LegacyPathFor(server))); // two copies would both load
+        Assert.Equal(harmony, File.ReadAllBytes(ServerPluginInstaller.HarmonyPathFor(server)));
         Assert.Equal(PluginStatus.Installed, ServerPluginInstaller.Status(server, plugin));
+        File.Delete(ServerPluginInstaller.HarmonyPathFor(server));
+        Assert.Equal(PluginStatus.Different, ServerPluginInstaller.Status(server, plugin)); // Harmony missing: needs a repair
+        ServerPluginInstaller.Install(server, plugin, harmony);
         Assert.Equal(PluginStatus.Different, ServerPluginInstaller.Status(server, Encoding.ASCII.GetBytes("MZ plugin v2")));
         Assert.False(File.Exists(ServerPluginInstaller.PathFor(server) + ".tmp"));
 
@@ -143,6 +154,7 @@ public class ServerPluginTests
         File.WriteAllText(LiveFeed.PathFor(server), "{}");
         ServerPluginInstaller.Remove(server);
         Assert.Equal(PluginStatus.NotInstalled, ServerPluginInstaller.Status(server, plugin));
+        Assert.False(Directory.Exists(Path.Combine(server, "Plugins", "LunaEvo")));
         Assert.False(File.Exists(LiveFeed.PathFor(server)));
     }
 }

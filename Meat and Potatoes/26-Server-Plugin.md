@@ -41,6 +41,15 @@ It targets **net6.0** (LMP 0.29's runtime) and compiles against `tests/Fixtures/
 LmpCommon is built into it). `ServerPluginInstaller.Supports` offers it only for LMP 0.29.x; 0.30 (.NET 10, changed
 code) needs its own build later.
 
+## 1.1 (Mission Control 2.7): two server-side fixes
+
+The plugin also applies audit 11's P3 (1 ms timers on Windows) and the server leg of P1 (a Harmony postfix on
+`VesselSrvMsg.DefaultChannel`: relayed fast updates on a channel per vessel), measured in
+[27](27-Client-Patches.md#27-network-speed-audit-11s-p3-and-p1-measured). It now brings Harmony (`Lib.Harmony` 2.3.5,
+.NET 6 build), so both DLLs go in `Plugins/LunaEvo/` (LMP loads Plugins/ recursively; its resolver finds Harmony among
+the loaded plugins). Mission Control embeds both and moves a 2.4-2.6 install (`Plugins/LunaEvo.ServerPlugin.dll`). Off
+switches: `LUNAEVO_PATCHES_OFF`. Undone at server stop.
+
 ## Mission Control's side
 
 - The app embeds the built DLL (`LunaEvo.MissionControl.csproj`: a `ProjectReference` with

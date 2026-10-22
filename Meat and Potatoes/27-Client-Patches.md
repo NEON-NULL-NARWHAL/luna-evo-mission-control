@@ -1,4 +1,4 @@
-# 27 · LUNA EVO patches for the LMP client (2.5, three patches in 2.6)
+# 27 · LUNA EVO patches for the LMP client (2.5; 2.6: three; 2.7: five, plus two in the server plugin)
 
 [← Meat and Potatoes](README.md) · Code: `src/LunaEvo.ClientPatches/` (`PatchLoader`, `CommandLinePatch`, `LmpAddress`, `TimeSyncPatch`, `StampPatch`, `Stubs/`),
 `Core/Join/ClientPatches.cs`, `Core/Join/KspLauncher.cs`, `App/JoinPage.cs`
@@ -106,6 +106,44 @@ vessel is **one physics tick after** the time stamped on it (+20 ms, 0.01 m rms)
 Same message, same size, a better value, so unpatched players benefit too. It also applies to LMP's one-off sends
 (decouple, undock, vessel switch), which the rig hasn't measured: at most one tick on single messages (audit 11, K2). Rig check: the best-fit offset went from
 +20 ms to **0 ms**, and a second player now sees the vessel exactly LMP's intended 0.25 s behind.
+
+## 2.7: network speed (audit 11's P3 and P1), measured
+
+Both sides of each fix: the client patches in KSP, and the LUNA EVO server plugin (1.1, which now brings Harmony and
+lives in `Plugins/LunaEvo/`). Each can be switched off for a test with `LUNAEVO_PATCHES_OFF="P1,P3"`
+(`Start-Rig.ps1 -PatchesOff`); players never set it.
+
+**P3, 1 ms timers** (`TimerResolution.cs`, shared): `timeBeginPeriod(1)`, plus `SetProcessInformation` asking Windows 11
+not to ignore it for a hidden or background process. On anything but Windows it does nothing. Rig, one KSP flying and a
+second player watching, every other patch on:
+
+| | P3 off | P3 on |
+|---|---|---|
+| Time from one game to the other (median) | 29 ms | **22 ms** |
+| Worst | 82 ms | **46 ms** |
+
+What's left is mostly the frame: LMP sends at the end of a frame, so at the rig's 30 fps cap a position waits up to
+33 ms before it's sent.
+
+**P1, a channel per vessel** (`LmpChannels.cs`, shared; `ChannelPatch` in KSP, `ServerChannelPatch` in the plugin):
+a postfix on `VesselCliMsg`/`VesselSrvMsg.DefaultChannel` puts each vessel's fast updates (position, flight state,
+update, resource) on channel 1-31 by vessel and kind instead of all on 0. Measured without KSP: the fake client flies
+20 vessels at 20 updates a second each and counts what it sent; `tests/NetJitter` (a UDP relay) delays every packet
+20-120 ms so they overtake each other like online (Lidgren's own simulation is compiled out of release builds, so LMP's
+`-debug` can't do this); the fake observer counts what arrives:
+
+| Updates lost | LMP | With P1 |
+|---|---|---|
+| Player → server (client patch) | **62.5%** | **18.2%** |
+| Server → player (server plugin) | **62.7%** | **18.6%** |
+
+The 18% left is sequencing doing its job: an update dropped because a newer one of the **same** vessel arrived first.
+In KSP: a run with every patch on had the second player receive the rocket's positions on the new channels as before.
+
+**P4, far vessels less often: measured, not shipped.** A prefix that moved unloaded remote vessels one tick in ten,
+with 135 vessels moved by the fake fleet (`FakeLmpClient --fleet`) and the frame cap off: 106 fps without, 101 fps with,
+within noise. Updating far vessels every tick is cheap here; upstream #547 has another cause. A patch with no measured
+benefit is only risk, so it was removed.
 
 ## Next patches
 

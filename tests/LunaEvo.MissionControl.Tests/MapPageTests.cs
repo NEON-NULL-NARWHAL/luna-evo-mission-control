@@ -115,8 +115,9 @@ public class MapPageTests
 
         ui.Await(ui.Window.Map.TogglePluginAsync());
         Assert.Contains("Install the LUNA EVO server plugin?", ui.DialogsShown);
-        var dll = Path.Combine(ui.ServerDirectory, "Plugins", "LunaEvo.ServerPlugin.dll");
+        var dll = Core.Ops.ServerPluginInstaller.PathFor(ui.ServerDirectory);
         Assert.Equal(MapPage.PluginBytes(), File.ReadAllBytes(dll));
+        Assert.Equal(MapPage.HarmonyBytes(), File.ReadAllBytes(Core.Ops.ServerPluginInstaller.HarmonyPathFor(ui.ServerDirectory)));
         Assert.Equal("Remove the LUNA EVO server plugin", button.Content as string);
 
         // What the plugin writes while the server runs: Jebediah is flying the station, higher than saved.

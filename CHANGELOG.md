@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.7.0 (2026-10-22)
+
+### Added
+- **Faster, steadier multiplayer**, in the LUNA EVO patches for LMP (Join → Update) and the LUNA EVO server plugin
+  (Map → Update), each measured in the test rig before and after:
+  - **Less lag:** LMP's network loops wait in steps Windows rounds up to 15.6 ms; asking Windows for 1 ms timers cut
+    the time from one game to another from 29 to 22 ms (worst case 82 to 46 ms).
+  - **Far fewer lost updates on a jittery connection:** LMP sent every vessel's fast updates on one network channel,
+    where an update arriving after another vessel's is thrown away. One channel per vessel: with 20-120 ms of jitter,
+    lost updates went from 63% to 18% (the rest are only ones a newer update of the same vessel had already replaced).
+    Works with unpatched players and servers.
+- The server plugin now brings the Harmony library and lives in `Plugins\LunaEvo`; Update moves an older install.
+
+### Tested, not shipped
+- Moving far-away vessels less often: no measurable difference in frames per second with 135 vessels, so it isn't
+  included.
+
 ## 2.6.1 (2026-10-22)
 
 Eleventh audit; details in `SECURITY.md`.
