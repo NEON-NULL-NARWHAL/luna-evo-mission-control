@@ -195,3 +195,9 @@ thrust within 2% (the viewer's copy is 0.28 s behind, at a slightly different ai
 they need on the other player's screen. Still to check: throttle changes and shutdowns (timing), and Waterfall (used in
 the owner's modpack; reads the engine values differently). Waterfall only goes into the rig's KSP copies, after checking
 its license.
+
+**Plumes, seen (stock KSP, 2026-10-22):** the viewer spectated the rocket (LMP lets a player switch to another player's
+vessel; kRPC: `ActiveVessel = rocket` on the viewer, then `Camera.Pitch`/`Distance` to see the engines past the navball)
+and the window was captured without taking focus (`PrintWindow` with `PW_RENDERFULLCONTENT`). The pilot cut the throttle
+and put it back: on the viewer's screen the flame went out and came back, and the engines read the same in both games at
+every step (throttle 0.00 → 1.00, thrust equal). Stock plumes work across players. Next: the same check with Waterfall.
