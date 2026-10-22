@@ -67,6 +67,21 @@ Only against a sandbox server (never someone else's). It's the first part of the
 [25](25-LMP-Under-The-Hood.md): server-side behavior can now be tested for real without a game. Next it can grow
 two players, warps and docking messages.
 
+## The in-game test rig (set up 2026-10-22, not launched yet)
+
+Lives next to the repo, in `TestRig/` (never in git: it holds Squad's game files). Its own README lists everything:
+
+- **KSP:** a stock 1.12.5 copy (game, Squad, SquadExpansion), never the owner's modded install, with the LMP 0.29.2
+  client and kRPC 0.7.0 (+ ModuleManager, which kRPC ships). All downloads checked against GitHub's SHA-256 and unzipped
+  with a path check. Light settings: 1280x720 windowed, low graphics, 30 fps, muted, runs in the background.
+- **kRPC** starts by itself and listens on **127.0.0.1 only** (ports 50000/50001): a C# client (`KRPC.Client` on NuGet)
+  can then fly the game.
+- **Server:** LMP 0.29.2 from the release zip, the sandbox config (8810/8910, no master server, no UPnP, website on
+  127.0.0.1), and this plugin. First start checked: fresh universe, plugin writing.
+- **Players:** one KSP (`RigPilot`) plus `FakeLmpClient` as the second player keeps it to one game window and ~4 GB
+  of RAM. A second KSP copy can be added later with hard links on the same drive.
+- KSP is launched only when the owner says so: it takes the screen while it opens.
+
 ## Checked for real (2026-10-22)
 
 The real LMP 0.29.2 server, in a sandbox copy of the owner's universe (ports 8810/8910, no master server, no UPnP,

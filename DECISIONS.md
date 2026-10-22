@@ -43,6 +43,7 @@ asked), it says so and why, and the owner can overrule it. Those calls are marke
 
 | Date | Version | The owner decided | What was done |
 |---|---|---|---|
+| 2026-10-22 | - | "Always D: from now on" (C: was full): the project moved to `D:\LUNA EVOLVED`; then "you can do the prep setup for the test rig" | Project copied, verified file by file and tested on D:. The rig prepared in `D:\LUNA EVOLVED\TestRig` (stock KSP copy, LMP client, kRPC, sandbox server with the plugin), nothing launched ([26](Meat%20and%20Potatoes/26-Server-Plugin.md#the-in-game-test-rig-set-up-2026-10-22-not-launched-yet)) |
 | 2026-10-22 | 2.4.0 | (Same go-ahead: "you had a plan I liked, go for it") | Next step of that plan: the LUNA EVO server plugin, the first code that runs inside the official LMP server, plus a pretend LMP player for testing without KSP. Read-only for now ([26](Meat%20and%20Potatoes/26-Server-Plugin.md)) |
 | 2026-10-22 | 2.3.0 | "We've already split players in a way": deliver fixes as **patches through our app** instead of a separate LMP. Then start the live map, "your own way", following the research plan | Patch plan written up ([25](Meat%20and%20Potatoes/25-LMP-Under-The-Hood.md#delivering-fixes-as-patches-through-mission-control-owners-idea-2026-10-22)): a Harmony patch mod on the official LMP client plus a server plugin, never changing the protocol. Live map: positions from the running server's website, checked against the real 0.29.2 server |
 | 2026-10-22 | - | Add this page; next, research how sound LMP's client and server really are, plan the map's next phases and a live game connection, choose focus areas, then a longer audit before posting publicly | This page. The research and the scope choices follow, and the open questions are listed at the bottom |
@@ -75,5 +76,5 @@ the live map comes first (was O2).
 
 | # | Question | Options |
 |---|---|---|
-| O3 | In-game testing on the owner's PC | **A sandbox stock KSP 1.12.5 copy (two for multiplayer tests) with kRPC and the LMP client, run only when the owner says so**; never the modded install |
+| O3 | When may the rig's KSP run? | Set up (2026-10-22). **Only when the owner says so**, since it takes the screen while it opens; or on a separate PC later |
 | O4 | The longer audit before posting publicly | **After the next milestone (the LUNA EVO server plugin)**, so it covers the plugin; or now, on Mission Control as it is |
