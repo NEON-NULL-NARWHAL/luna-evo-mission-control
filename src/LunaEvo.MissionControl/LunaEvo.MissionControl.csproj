@@ -30,7 +30,7 @@
     <!-- The LUNA EVO server plugin (net6.0, for LMP 0.29's server): built first, then carried inside the exe so
          installing it into a server is a copy, not a download. -->
     <ProjectReference Include="..\LunaEvo.ServerPlugin\LunaEvo.ServerPlugin.csproj" ReferenceOutputAssembly="false"
-                      SetTargetFramework="TargetFramework=net6.0" GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishSingleFile" />
+                      GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishSingleFile" />
   </ItemGroup>
 
   <ItemGroup>
