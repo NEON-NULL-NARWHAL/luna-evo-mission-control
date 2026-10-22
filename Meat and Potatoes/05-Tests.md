@@ -141,3 +141,9 @@ public void My_feature_works()
   `TestData.FakeKsp()` makes a KSP folder with LMP's client `settings.xml`.
 - `TestData.ReleasesJson(zip)` gives each asset the zip's real size and SHA-256 `digest`; serve the zip at
   `TestData.ServerZipUrl` with `.Bytes(...)`.
+
+## The PC's real KSP (2.9)
+
+`GameDataScanner.SteamSearch` finds KSP in the Steam libraries of the PC running the tests, which on the owner's PC
+is their real, modded KSP. A CKAN test once picked it up as its target (CKAN itself is faked, so nothing ran). UiHarness
+now sets `SteamSearch = () => null`: tests only ever see the fake KSPs they make.

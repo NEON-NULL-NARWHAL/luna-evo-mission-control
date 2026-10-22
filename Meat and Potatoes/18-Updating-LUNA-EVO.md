@@ -59,3 +59,15 @@ Checked on real Windows: a running 0.5.0 exe was renamed to `.old`, 0.6.0 starte
 exe, dev builds) and `NavigationAndUpdateTests` (UI: the rail note, Update and restart, the dev-build message).
 `UiHarness` sets `MainWindow.CurrentExe = null` and makes `StartNewVersion` throw, so no test can replace or restart
 the test host.
+
+## What's new and the launch notification (2.9)
+
+- **What's new** is the first tab of App settings (`SettingsPage.RefreshWhatsNew`). It reads `CHANGELOG.md`, which the
+  csproj embeds in the exe as `LunaEvo.CHANGELOG.md` (so it works offline and always matches the version running),
+  through `Core/Setup/WhatsNew.cs` (newest six `## ` sections, markdown's `**`, backticks and links stripped, wrapped
+  bullets joined). When an update is available, its GitHub release notes come first, with "Update…" (to the Updates tab)
+  and "Release notes on GitHub". The rail's "LUNA EVO x is available" note opens this tab.
+- **At launch only**, a found update also gets a Windows notification (`CheckForAppUpdateAsync(atLaunch: true)`), if
+  desktop notifications are on. Not Discord: a server's channel isn't told about its host's app updates. A check from
+  the Settings page never notifies.
+- The repo has the same in short: `WHATS-NEW.md`. Add a line there with each release.

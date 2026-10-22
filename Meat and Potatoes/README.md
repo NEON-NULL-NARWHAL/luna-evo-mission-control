@@ -111,6 +111,7 @@ Symbols used in the map below and throughout these chapters:
 | 🧠 | `Setup/CkanOutput.cs` | Reads ckan.exe's output: a dry run's plan, and its errors in plain words. See [22](22-CKAN-and-LMP-Client.md). |
 | 🧠 | `ErrorLog.cs` | Unexpected errors to `logs/errors.log`. See [23](23-Server-Browser.md). |
 | ⭐🧠⚠️ | `Setup/AppUpdater.cs` | LUNA EVO updating itself: check its releases, verified download, swap the running exe. See [18](18-Updating-LUNA-EVO.md). |
+| 🧠 | `Setup/WhatsNew.cs` | Reads the CHANGELOG carried in the exe (newest versions, plain text) for the What's new tab. See [18](18-Updating-LUNA-EVO.md). |
 | **Live/** | | *What's happening on the server* ([11](11-Live-Players.md)) |
 | 🧠🔌 | `Live/ServerInfoClient.cs` | Reads LMP's website JSON: players, vessels, subspaces; join/leave diff. |
 | ⭐🧠🔌⚠️ | `Live/PlayerTracker.cs` | Player history and alerts from LMP's log lines and the live player list. See [16](16-Players-History-And-Alerts.md). |

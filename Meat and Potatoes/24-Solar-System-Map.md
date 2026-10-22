@@ -99,3 +99,18 @@ filters). Headless windows don't paint, so the test renders the canvas into a `R
 
 Full-rate positions and who's flying what from a LUNA EVO server plugin ([25](25-LMP-Under-The-Hood.md)); time scrubbing; maneuver/encounter
 prediction across SOIs; 3D tilt (Z is already computed); KSP's real body textures from GameData.
+
+## The map for players (2.9)
+
+With no server open, the rail's Play section has Map too, and it shows the server checked on Join
+(`MapPage.JoinedLive`: Join's last live info, if under 30 s old; Join refreshes it every 10 s). The host has to share its
+LMP website ("Share with players" on Connect), as for Join's live info. The universe time comes from the website too
+(`UniverseClock.Now(ServerSnapshot)`: start time plus the furthest subspace, the same sum as from the server's files).
+
+Without a save there's no REF/IDENT table, so bodies are found by number (`SolarSystem.ForVessel`): stock numbers are
+KSP's, and pack bodies take `Properties { flightGlobalsIndex }` from their Kopernicus config (OPM sets them). A body
+built from a `Template` no longer inherits the template's number (Sarnus was getting Jool's 8). A pack body without a
+number can't be placed for a player; its vessels aren't drawn.
+
+The focus list searches as you type (`IsTextSearchEnabled`, `TextSearch.Text` = the body's name, since the shown text
+is indented).

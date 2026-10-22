@@ -72,3 +72,13 @@ brackets) and add `-lmppassword`. Then `PlanFor` can always return `AutoConnect`
   missing KSP or LMP, the host's Share flow, and `Ui.CanOpen`.
 - `JoinPage.StartKsp` is the one seam that starts KSP. `UiHarness` makes it **throw** unless a test replaces it, so no
   test can ever start a real game.
+
+## Pasting an invite (fixed in 2.9)
+
+Avalonia keeps only the first line of a paste in a one-line `TextBox`, and an invite's address is on its second line,
+so pasting a whole invite used to leave "Join my KSP server ..." in the box. `JoinPage` now handles
+`PastingFromClipboard` itself (it must set `Handled` before awaiting): `PasteAsync` reads the clipboard
+(`ReadClipboard`, faked in tests; Avalonia 12's `TryGetTextAsync` from `Avalonia.Input.Platform`), and for an invite
+(`ServerAddress.InviteAddress`) puts its address in the box, keeps its LMP version and checks at once. Other text is
+pasted as one line. Tests set `Text` directly, which is why this wasn't caught: the UI test now goes through
+`PasteAsync`.

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.9.0 (2026-10-22)
+
+### Added
+- **What's new** (App settings → What's new): what the last versions brought, and when a newer LUNA EVO is out, its
+  release notes with Update and a link to the release page. The note in the rail opens it.
+- **A Windows notification** when LUNA EVO finds a newer version at launch.
+- **A map for players:** with no server of your own open, Map shows the server you checked on Join, live, with the
+  planets from your own KSP (its host needs "Share with players" on Connect, as for Join's live info). Planet-pack
+  bodies are matched by the number the pack gives them.
+- **Map:** type a body's name in the focus list to jump to it ("du" → Duna).
+
+### Fixed
+- **Pasting an invite into Join** filled in only its first line ("Join my KSP server..."), so it never found the
+  server. Now the whole invite is read: its address goes in the box, its LMP version is kept, and the server is checked
+  straight away.
+- **Copy invite** (and the other Copy buttons on Connect) now say "Copied!".
+
 ## 2.8.0 (2026-10-22)
 
 ### Added
