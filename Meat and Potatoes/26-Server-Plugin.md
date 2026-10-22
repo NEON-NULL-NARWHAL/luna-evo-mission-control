@@ -67,7 +67,7 @@ Only against a sandbox server (never someone else's). It's the first part of the
 [25](25-LMP-Under-The-Hood.md): server-side behavior can now be tested for real without a game. Next it can grow
 two players, warps and docking messages.
 
-## The in-game test rig (set up 2026-10-22, not launched yet)
+## The in-game test rig (set up and first run 2026-10-22)
 
 Lives next to the repo, in `TestRig/` (never in git: it holds Squad's game files). Its own README lists everything:
 
@@ -81,7 +81,34 @@ Lives next to the repo, in `TestRig/` (never in git: it holds Squad's game files
 - **Players:** one KSP (`RigPilot`) plus `FakeLmpClient` as the second player keeps it to one game window and ~4 GB
   of RAM. A second KSP copy can be added later with hard links on the same drive.
 - KSP is launched only when the owner says so: it takes the screen while it opens.
+- **Joining without clicks:** LMP's `-lmp` command line only works on port 8800 without a password (its port parsing
+  cuts the address at a position measured on the wrong string, and there's no password option). So the rig server
+  listens on **127.0.0.1:8800** (this PC only) with no password; don't run it while the owner's real server (also
+  8800) runs. LMP also hides its windows until its disclaimer is accepted, so the rig's client settings accept it.
+- **kRPC only answers in a game scene** (it has no main-menu scene), so the runner waits until LMP has joined and
+  loaded the Space Center. kRPC's C# client is built for .NET Framework 4.7.2 and works on .NET 10.
 
+### `tests/RigRunner` and the first run
+
+`dotnet run --project tests/RigRunner -- --seconds 25` with the rig server and the rig KSP (`KSP_x64.exe -lmp
+lmp://127.0.0.1`) running: it waits for kRPC, checks the server sees the pilot, launches stock Kerbal X straight up,
+and every second compares the game's altitude with the last position the server plugin received for the vessel
+flown by `RigPilot`.
+
+First run (2026-10-22): KSP loaded in about 2 minutes, LMP connected and synced in about a second, kRPC answered in
+the Space Center, the launch worked.
+
+| What | Result |
+|---|---|
+| Server behind the game | 38 m on average, 94 m at most, rising with speed (6 m at 15 m/s, 94 m at 239 m/s) |
+| Age of the last message the server had | 374 ms on average |
+
+Read it as **about 0.4 s behind**, which is LMP's send interval for a player alone (`SecondaryVesselUpdatesMsInterval`,
+150 ms, since nobody else is near) plus the plugin writing `live.json` every 500 ms. That's what the **server** knows.
+Another player sees it later still: LMP replays remote vessels 0.25-2.5 s behind on purpose (W1 in
+[25](25-LMP-Under-The-Hood.md)). Measuring that needs a second player that records what LMP sends it: the next rig step.
+
+## Checked for real (2026-10-22)
 ## Checked for real (2026-10-22)
 
 The real LMP 0.29.2 server, in a sandbox copy of the owner's universe (ports 8810/8910, no master server, no UPnP,
