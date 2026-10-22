@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.6.0 (2026-10-22)
+
+### Added
+- **Two more fixes in the LUNA EVO patches for LMP** (Join → Install, or Update if you have 2.5's):
+  - **No time jumps when you're alone in your subspace.** When your game falls behind, LMP jumps its clock by 3.5 s or
+    more: the clock moves, your vessel doesn't, and engines cut out (upstream issue #469). Alone, you now get a
+    subspace at your own time instead. In the test rig, on a game slowed to a third of real time: 11 jumps in a minute
+    unpatched, 0 patched.
+  - **Positions carry the right time.** Each position LMP sent was stamped one physics tick early; now exact (measured:
+    20 ms off before, 0 after).
+
+### Changed
+- **The patches build anywhere**, GitHub's test machine included, with no KSP installed: LMP's own client files (MIT)
+  are in the repo, and the few KSP and Unity names the patches use come from LUNA EVO's own stand-ins (no Squad code).
+  Releases no longer depend on one PC.
+
+### Fixed
+- The test rig's "positions 0.09 s ahead of their time" was mostly a measurement mix-up: LMP reports the vessel's
+  top part, the rig measured its centre of mass. The one physics tick that was real is fixed above.
+
 ## 2.5.0 (2026-10-22)
 
 ### Added

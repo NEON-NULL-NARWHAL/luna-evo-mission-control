@@ -88,6 +88,14 @@ Lives next to the repo, in `TestRig/` (never in git: it holds Squad's game files
 - **kRPC only answers in a game scene** (it has no main-menu scene), so the runner waits until LMP has joined and
   loaded the Space Center. kRPC's C# client is built for .NET Framework 4.7.2 and works on .NET 10.
 
+### Running the rig
+
+`tests/RigRunner/Start-Rig.ps1 [-Fresh] [-Slow] [-NoPatch]` starts the rig server (hidden) and the rig KSP, after
+checking no `Server.exe` or KSP runs (the owner's real server shares port 8800). `-Fresh` deletes the rig's universe
+(an old rocket on the pad blocks a launch), `-Slow` caps KSP below real time, `-NoPatch` parks the client patches
+(and drops the server password, which unpatched LMP can't use). Then `RigRunner` (below), and close KSP and the
+server when done. Results go to `TestRig/Results/<time>/` (`game.csv`, `observer.csv`, `run.log`).
+
 ### `tests/RigRunner` and the first run
 
 `dotnet run --project tests/RigRunner -- --seconds 25` with the rig server and the rig KSP (`KSP_x64.exe -lmp
@@ -127,10 +135,13 @@ come from the same physics tick), flies 30 s, and `SyncAnalysis` works out:
 
 Two findings:
 
-- **A message's position is about 0.09 s ahead of its own time stamp** (median, measured in both runs, with one-tick
-  sampling in run 3), which is why the view is 0.17 s behind rather than LMP's 0.25 s replay delay. The stamp is
-  `TimeSyncSystem.UniversalTime` and the position `vessel.altitude`, both read in LateUpdate
-  (`VesselPositionMessageSender.CreateMessageFromVessel`); the cause isn't found yet. Open.
+- **"A message's position is about 0.09 s ahead of its stamp" (solved, 2.6).** Fitting a time shift **and** a constant
+  height to the same data gave +20 ms and +10.3 m with 0.12 m rms: LMP sends the altitude of the vessel's **root part**
+  (the pod, about 10 m above the centre of mass that kRPC's `MeanAltitude` gives), which at 129 m/s looks like 70 ms.
+  The runner now samples the root part too (`Parts.Root.Position` → `AltitudeAtPosition`) and reports a stamp check;
+  with that, run A: **+20 ms, 0.01 m rms**, exactly one physics tick, which is real: patch 3 in
+  [27](27-Client-Patches.md) fixes it (run A2: 0 ms). With the old rockets cleared (`Start-Rig.ps1 -Fresh`) LMP sends
+  every 160 ms (nothing else loaded nearby) instead of 60 ms.
 - **The game clock ran 3.7% fast** during the flight: LMP's time sync speeding the game up to catch the server's clock
   (W2 in [25](25-LMP-Under-The-Hood.md)), seen live.
 

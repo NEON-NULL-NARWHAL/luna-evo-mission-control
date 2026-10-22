@@ -47,4 +47,36 @@ public class ClientPatchTests
 
     [Fact]
     public void Refuses_absurdly_long_input() => Assert.False(LmpAddress.TryParse("lmp://" + new string('a', 400), out _, out _));
+
+    // The patches build against LUNA EVO's stand-ins for KSP's types (src/LunaEvo.ClientPatches/Stubs). Enum values are
+    // compiled in as numbers, so the stand-ins' must be KSP's own.
+    private static readonly Dictionary<string, int> KspValues = new()
+    {
+        ["GameScenes.LOADING"] = 0, ["GameScenes.MAINMENU"] = 2, ["GameScenes.SPACECENTER"] = 5, ["GameScenes.EDITOR"] = 6,
+        ["GameScenes.FLIGHT"] = 7, ["GameScenes.TRACKSTATION"] = 8, ["GameScenes.MISSIONBUILDER"] = 21,
+        ["KSPAddon+Startup.Instantly"] = -2, ["KSPAddon+Startup.MainMenu"] = 2, ["KSPAddon+Startup.SpaceCentre"] = 5, ["KSPAddon+Startup.Flight"] = 7,
+    };
+
+    [Fact]
+    public void The_stand_ins_have_ksps_own_enum_values()
+    {
+        // The stand-in source, as written (an accidental edit fails here, on CI too).
+        var stubs = File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "src", "LunaEvo.ClientPatches", "Stubs", "AssemblyCSharp", "Stubs.cs"));
+        foreach (var (name, value) in KspValues)
+            Assert.Matches($@"\b{System.Text.RegularExpressions.Regex.Escape(name.Split('.')[1])} = {value},", stubs);
+
+        // And where the test rig's KSP is next to the repo, against KSP itself (metadata only, nothing runs or is copied).
+        var managed = Path.Combine(TestPaths.RepoRoot, "..", "TestRig", "KSP", "KSP_x64_Data", "Managed");
+        if (!File.Exists(Path.Combine(managed, "Assembly-CSharp.dll")))
+            return;
+        var resolver = new System.Reflection.PathAssemblyResolver(Directory.GetFiles(managed, "*.dll")); // KSP's own mscorlib and all
+        using var context = new System.Reflection.MetadataLoadContext(resolver, "mscorlib");
+        var ksp = context.LoadFromAssemblyPath(Path.Combine(managed, "Assembly-CSharp.dll"));
+        foreach (var (name, value) in KspValues)
+        {
+            var dot = name.LastIndexOf('.');
+            var field = ksp.GetType(name[..dot])!.GetField(name[(dot + 1)..])!;
+            Assert.Equal(value, Convert.ToInt32(field.GetRawConstantValue()));
+        }
+    }
 }

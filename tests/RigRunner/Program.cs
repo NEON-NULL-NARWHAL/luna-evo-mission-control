@@ -17,6 +17,8 @@ if (options.ContainsKey("selftest"))
 var rig = options.GetValueOrDefault("rig", @"D:\LUNA EVOLVED\TestRig");
 var ksp = Path.Combine(rig, "KSP");
 var seconds = int.Parse(options.GetValueOrDefault("seconds", "25"), CultureInfo.InvariantCulture);
+// --mode slow: the rig's KSP set to run slower than real time (Meat and Potatoes 27); counts LMP's clock jumps.
+var slow = options.GetValueOrDefault("mode", "") == "slow";
 var observerExe = options.GetValueOrDefault("observer",
     Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\FakeLmpClient\bin\Debug\net10.0\FakeLmpClient.exe"));
 var results = Directory.CreateDirectory(Path.Combine(rig, "Results", DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"))).FullName;
@@ -50,18 +52,8 @@ Log($"kRPC {krpc.GetStatus().Version} answered, scene {krpc.GameScene}");
 if (krpc.GameScene == GameScene.Flight)
     return Fail("already in flight: start from the Space Center");
 
-// 2. A second player who only watches: the fake LMP client in observe mode, recording what LMP relays to it.
-var observedCsv = Path.Combine(results, "observer.csv");
-using var observer = Process.Start(new ProcessStartInfo(Path.GetFullPath(observerExe),
-    ["--port", "8800", "--password", options.GetValueOrDefault("password", ""), "--name", "RigObserver", "--observe", observedCsv,
-     "--seconds", (seconds + 25).ToString(CultureInfo.InvariantCulture)])
-{
-    UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true,
-})!;
-Thread.Sleep(4000);
-Log("observer joined as RigObserver");
-
-// 3. Launch Kerbal X straight up. LMP's save may not have the stock craft yet, so copy it into every save first.
+// 2. Launch Kerbal X straight up, from a fresh rig universe (an old rocket on the pad blocks the launch: Start-Rig.ps1
+//    -Fresh). LMP's save may not have the stock craft yet, so copy it into every save first.
 foreach (var save in Directory.GetDirectories(Path.Combine(ksp, "saves")))
 {
     var vab = Directory.CreateDirectory(Path.Combine(save, "Ships", "VAB")).FullName;
@@ -74,6 +66,17 @@ space.LaunchVessel("VAB", "Kerbal X", "LaunchPad", null, true, "");
 while (krpc.GameScene != GameScene.Flight)
     Thread.Sleep(500);
 Thread.Sleep(3000); // let the vessel settle on the pad
+// A second player who only watches: the fake LMP client in observe mode, recording what LMP relays to it.
+var observedCsv = Path.Combine(results, "observer.csv");
+using var observer = slow ? null : Process.Start(new ProcessStartInfo(Path.GetFullPath(observerExe),
+    ["--port", "8800", "--password", options.GetValueOrDefault("password", ""), "--name", "RigObserver", "--observe", observedCsv,
+     "--seconds", (seconds + 25).ToString(CultureInfo.InvariantCulture)])
+{
+    UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true,
+})!;
+Thread.Sleep(3000);
+Log("observer joined as RigObserver");
+
 var vessel = space.ActiveVessel;
 vessel.Control.Throttle = 1;
 vessel.AutoPilot.TargetPitchAndHeading(90, 90);
@@ -82,7 +85,10 @@ vessel.Control.ActivateNextStage();
 Log("lift-off");
 
 // 4. The truth, 10 times a second: the game's own clock and altitude, stamped with the PC's clock.
-var flight = vessel.Flight(vessel.Orbit.Body.ReferenceFrame);
+var body = vessel.Orbit.Body;
+var bodyFrame = body.ReferenceFrame;
+var flight = vessel.Flight(bodyFrame);
+var root = vessel.Parts.Root;
 var truth = new List<SyncAnalysis.Sample>();
 var end = DateTime.UtcNow.AddSeconds(seconds);
 while (DateTime.UtcNow < end)
@@ -92,15 +98,33 @@ while (DateTime.UtcNow < end)
     var ut = space.UT;
     var alt = flight.MeanAltitude;
     var speed = flight.Speed;
+    var rootAlt = body.AltitudeAtPosition(root.Position(bodyFrame), bodyFrame);
     krpc.ReleaseTick();
-    truth.Add(new SyncAnalysis.Sample(DateTime.UtcNow.Ticks, ut, alt, speed));
+    truth.Add(new SyncAnalysis.Sample(DateTime.UtcNow.Ticks, ut, alt, speed, rootAlt));
     Thread.Sleep(100);
 }
 vessel.Control.Throttle = 0;
 vessel.AutoPilot.Engaged = false;
 File.WriteAllLines(Path.Combine(results, "game.csv"),
-    ["wall_utc_ticks,ut,alt,speed", .. truth.Select(s => string.Join(",", s.WallTicks, R(s.Ut), R(s.Alt), R(s.Speed)))]);
-observer.WaitForExit(60_000);
+    ["wall_utc_ticks,ut,alt,speed,root_alt", .. truth.Select(s => string.Join(",", s.WallTicks, R(s.Ut), R(s.Alt), R(s.Speed), R(s.RootAlt)))]);
+if (slow)
+{
+    // How fast the game ran, and how often its clock jumped (more than a second of game time in one 0.1 s sample).
+    var steps = truth.Zip(truth.Skip(1), (a, b) => (Game: b.Ut - a.Ut, Wall: (b.WallTicks - a.WallTicks) / 1e7)).ToList();
+    var jumps = steps.Count(s => s.Game - s.Wall > 1);
+    var calm = steps.Where(s => s.Game - s.Wall <= 1).ToList();
+    string log;
+    using (var stream = new FileStream(Path.Combine(ksp, "KSP.log"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+    using (var reader = new StreamReader(stream))
+        log = reader.ReadToEnd();
+    var lmpJumps = log.Split('\n').Count(l => l.Contains("[LMP] Adjusted time from"));
+    var ownSubspace = log.Split('\n').Count(l => l.Contains("[LUNA EVO]") && l.Contains("taking a subspace"));
+    Log($"RESULT slow game: ran at {calm.Sum(s => s.Game) / calm.Sum(s => s.Wall):0.00}x real time; {jumps} clock jump(s) seen by the game; " +
+        $"KSP.log: {lmpJumps} LMP time jump(s), {ownSubspace} LUNA EVO subspace move(s)");
+    connection.Dispose();
+    return 0;
+}
+observer!.WaitForExit(60_000);
 Log("observer: " + observer.StandardOutput.ReadToEnd().Trim().Replace(Environment.NewLine, " | "));
 connection.Dispose();
 

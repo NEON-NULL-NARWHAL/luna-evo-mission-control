@@ -9,8 +9,11 @@ namespace LunaEvo.RigRunner;
 
 internal static class SyncAnalysis
 {
-    /// <summary>The flying player's own game: PC clock (UTC ticks), game clock (UT, s), altitude (m), speed (m/s).</summary>
-    public sealed record Sample(long WallTicks, double Ut, double Alt, double Speed);
+    /// <summary>
+    /// The flying player's own game: PC clock (UTC ticks), game clock (UT, s), altitude of the centre of mass and of the
+    /// root part (m), speed (m/s). LMP sends the vessel's altitude, which is the root part's, so that's what's compared.
+    /// </summary>
+    public sealed record Sample(long WallTicks, double Ut, double Alt, double Speed, double RootAlt);
 
     /// <summary>A position message as the second player received it.</summary>
     public sealed record Received(long ArrivalTicks, string Vessel, double GameTime, double Alt);
@@ -58,16 +61,20 @@ internal static class SyncAnalysis
             var shown = Shown(arrived, s.Ut - replayDelay);
             if (shown is not { } alt)
                 continue;
-            errors.Add((s.Alt - alt, s.Speed));
+            errors.Add((s.RootAlt - alt, s.Speed));
             if (s.Speed > 50 && UtAtAltitude(truth, alt) is { } then)
                 behind.Add(s.Ut - then);
         }
+
+        // Is each message's position where the game was at the message's own time stamp? Fit a time shift.
+        var (shift, residual) = StampCheck(truth, inFlight);
         if (errors.Count == 0)
             return "FAILED: nothing to compare";
         return string.Join('\n',
             $"RESULT vessel {target.Key}: {inFlight.Count} positions received during {last - first:0} s of flight",
             $"  sent every {Median(gaps) * 1000:0} ms (median), longest gap {gaps.DefaultIfEmpty(0).Max() * 1000:0} ms",
             $"  network: {Median(latencies) * 1000:0} ms median from the flying game to the second player, {latencies.Max() * 1000:0} ms at most",
+            $"  time stamps: a message's position is where the game was {shift * 1000:+0;-0;0} ms from its stamp (best fit, {residual:0.00} m rms left over)",
             $"  second player's view (LMP's replay, {replayDelay:0.00} s behind): {errors.Average(e => e.Metres):0} m behind on average, " +
             $"{errors.Max(e => Math.Abs(e.Metres)):0} m at most" +
             (behind.Count > 0 ? $"; in time, the second player sees the vessel where it was {Median(behind):0.00} s ago (median), {behind.Max():0.00} s at most" : ""));
@@ -85,13 +92,38 @@ internal static class SyncAnalysis
         return double.NaN;
     }
 
-    /// <summary>When the (climbing) vessel was at this altitude, by its own clock; null if never in the samples.</summary>
+    /// <summary>When the (climbing) vessel's root part was at this altitude, by its own clock; null if never in the samples.</summary>
     private static double? UtAtAltitude(IReadOnlyList<Sample> truth, double alt)
     {
         for (var i = 0; i + 1 < truth.Count; i++)
-            if (truth[i].Alt <= alt && alt <= truth[i + 1].Alt && truth[i + 1].Alt > truth[i].Alt)
-                return truth[i].Ut + (alt - truth[i].Alt) / (truth[i + 1].Alt - truth[i].Alt) * (truth[i + 1].Ut - truth[i].Ut);
+            if (truth[i].RootAlt <= alt && alt <= truth[i + 1].RootAlt && truth[i + 1].RootAlt > truth[i].RootAlt)
+                return truth[i].Ut + (alt - truth[i].RootAlt) / (truth[i + 1].RootAlt - truth[i].RootAlt) * (truth[i + 1].Ut - truth[i].Ut);
         return null;
+    }
+
+    private static double? RootAltAt(IReadOnlyList<Sample> truth, double ut)
+    {
+        for (var i = 0; i + 1 < truth.Count; i++)
+            if (truth[i].Ut <= ut && ut <= truth[i + 1].Ut && truth[i + 1].Ut > truth[i].Ut)
+                return truth[i].RootAlt + (ut - truth[i].Ut) / (truth[i + 1].Ut - truth[i].Ut) * (truth[i + 1].RootAlt - truth[i].RootAlt);
+        return null;
+    }
+
+    /// <summary>The time shift (s, -0.2 to +0.2) that best lines messages up with the game's root part, and the rms left.</summary>
+    private static (double Shift, double Rms) StampCheck(IReadOnlyList<Sample> truth, List<Received> messages)
+    {
+        var best = (Shift: 0.0, Rms: double.MaxValue);
+        for (var ms = -200; ms <= 200; ms += 5)
+        {
+            var d = messages.Select(m => RootAltAt(truth, m.GameTime + ms / 1000.0) is { } a ? m.Alt - a : (double?)null)
+                .Where(x => x.HasValue).Select(x => x!.Value).ToList();
+            if (d.Count < 20)
+                continue;
+            var rms = Math.Sqrt(d.Average(x => x * x));
+            if (rms < best.Rms)
+                best = (ms / 1000.0, rms);
+        }
+        return best.Rms == double.MaxValue ? (0, double.NaN) : best;
     }
 
     private static double? Shown(List<Received> arrived, double playback)
@@ -125,12 +157,13 @@ internal static class SyncAnalysis
     {
         const long Tick = 10_000_000;
         var start = DateTime.UtcNow.Ticks;
-        var truth = Enumerable.Range(0, 200).Select(i => new Sample(start + i * Tick / 10, 1000 + i * 0.1, 100 + i * 0.1 * 100, 100)).ToList();
+        var truth = Enumerable.Range(0, 200).Select(i => new Sample(start + i * Tick / 10, 1000 + i * 0.1, 100 + i * 0.1 * 100, 100, 100 + i * 0.1 * 100)).ToList();
         var received = Enumerable.Range(0, 130).Select(i => 1000 + i * 0.15)
             .Select(ut => new Received(start + (long)((ut - 1000 + 0.05) * Tick), "v", ut, 100 + (ut - 1000) * 100)).ToList();
         var report = Analyze(truth, received);
         Console.WriteLine(report);
         var ok = report.Contains("sent every 150 ms") && report.Contains("network: 50 ms") && report.Contains(": 25 m behind on average")
+                 && report.Contains("game was 0 ms from its stamp")
                  && report.Contains("where it was 0.25 s ago");
         Console.WriteLine(ok ? "SELFTEST OK" : "SELFTEST FAILED");
         return ok ? 0 : 1;

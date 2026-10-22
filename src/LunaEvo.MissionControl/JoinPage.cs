@@ -413,8 +413,9 @@ internal sealed class JoinPage : IDisposable
         }, "text").WithId("join/patches");
         button.Click += async (_, _) => await TogglePatchesAsync();
         var text = Ui.Text(status == PluginStatus.NotInstalled
-            ? "LMP can't join a server by itself when it has a port other than 8800 or a password. LUNA EVO's patch for the " +
-              "LMP client fixes that, without changing anything other players see."
+            ? "LUNA EVO's patches for the LMP client: join any server by itself (LMP alone can't with a port other than 8800 " +
+              "or a password), no time jumps when you're alone in your subspace, and accurate position times. Nothing other " +
+              "players need changes."
             : "LUNA EVO patches are in this KSP: Launch KSP and join connects by itself to any server.", "sublabel").WithId("join/patchesStatus");
         text.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
         _patches.Children.Add(text);
@@ -432,7 +433,8 @@ internal sealed class JoinPage : IDisposable
             if (installed)
             {
                 if (!await Dialogs.ConfirmAsync(_host, "Remove the LUNA EVO patches?",
-                        "LMP goes back to joining by itself only on port 8800 without a password.", "Remove"))
+                        "LMP goes back to how it was: joining by itself only on port 8800 without a password, and jumping your game's clock " +
+                        "when it falls behind.", "Remove"))
                     return;
                 ClientPatches.Remove(ksp);
                 _launchResult.Text = "LUNA EVO patches removed from this KSP.";
@@ -440,10 +442,14 @@ internal sealed class JoinPage : IDisposable
             else
             {
                 if (!await Dialogs.ConfirmAsync(_host, "Install the LUNA EVO patches for LMP?",
-                        $"Copies one file into GameData\\{ClientPatches.FolderName} of this KSP. When KSP starts, it fixes LMP 0.29 " +
-                        "reading the server address it's given (a port other than 8800 makes LMP stop starting up), and lets LMP use " +
-                        "the password saved in its own server list. It changes nothing that's sent to the server or other players, " +
-                        "and turns itself off on any other LMP version. Remove takes it out.", "Install"))
+                        $"Copies one file into GameData\\{ClientPatches.FolderName} of this KSP. When KSP starts, it fixes three things in LMP 0.29:\n" +
+                        "- the server address KSP is started with (a port other than 8800 makes LMP stop starting up), and it uses the " +
+                        "password saved in LMP's own server list;\n" +
+                        "- when you're alone in your subspace and your game falls behind, you get a subspace at your own time instead of " +
+                        "a jump that teleports your vessel and cuts its engines;\n" +
+                        "- each position LMP sends carries the right time (it was one physics tick early).\n" +
+                        "No new kind of message is sent, so you play with unpatched players as before. On any other LMP version it turns " +
+                        "itself off. Remove takes it out.", "Install"))
                     return;
                 ClientPatches.Install(ksp, bytes);
                 _launchResult.Text = "LUNA EVO patches installed. Launch KSP and join now connects by itself.";

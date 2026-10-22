@@ -9,7 +9,7 @@
     <Product>LUNA EVO Mission Control</Product>
     <!-- FileDescription: Windows shows it as the app name on notifications. -->
     <AssemblyTitle>LUNA EVO Mission Control</AssemblyTitle>
-    <Version>2.5.0</Version>
+    <Version>2.6.0</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
@@ -37,14 +37,9 @@
     <EmbeddedResource Include="..\LunaEvo.ServerPlugin\bin\$(Configuration)\net6.0\LunaEvo.ServerPlugin.dll" LogicalName="LunaEvo.ServerPlugin.dll" />
   </ItemGroup>
 
-  <!-- LUNA EVO's patches for the LMP client compile against KSP's own DLLs, which can't be in a public repo. They're
-       built and carried inside the exe only where a KSP to build against exists (the test rig by default); CI builds
-       without them, and release.ps1 refuses to ship an exe that lacks them. -->
-  <PropertyGroup>
-    <KspDir Condition="'$(KspDir)' == ''">$(MSBuildThisFileDirectory)..\..\..\TestRig\KSP</KspDir>
-    <HasKsp Condition="Exists('$(KspDir)\KSP_x64_Data\Managed\Assembly-CSharp.dll')">true</HasKsp>
-  </PropertyGroup>
-  <ItemGroup Condition="'$(HasKsp)' == 'true'">
+  <!-- LUNA EVO's patches for the LMP client (net472, a KSP mod): built first, then carried inside the exe like the
+       server plugin. They build without KSP (stand-ins in LunaEvo.ClientPatches/Stubs), so every build has them. -->
+  <ItemGroup>
     <ProjectReference Include="..\LunaEvo.ClientPatches\LunaEvo.ClientPatches.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true"
                       GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishSingleFile" />
     <EmbeddedResource Include="..\LunaEvo.ClientPatches\bin\$(Configuration)\net472\LunaEvo.ClientPatches.dll" LogicalName="LunaEvo.ClientPatches.dll" />

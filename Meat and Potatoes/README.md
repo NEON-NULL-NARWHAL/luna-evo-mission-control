@@ -182,19 +182,22 @@ Symbols used in the map below and throughout these chapters:
 
 | | File | What it is |
 |:---:|---|---|
-| ⚠️🔌 | `PatchLoader.cs` | `KSPAddon` that applies the patches with LMP's Harmony, only on LMP 0.29. Builds only where KSP's DLLs exist (not CI). See [27](27-Client-Patches.md). |
+| ⚠️🔌 | `PatchLoader.cs` | `KSPAddon` that applies each patch with LMP's Harmony, only on LMP 0.29. Builds anywhere (stand-ins). See [27](27-Client-Patches.md). |
 | ⚠️🔌 | `CommandLinePatch.cs` | Replaces LMP's `-lmp` reading (which breaks LMP's startup with a port); the password comes from LMP's server list. |
 | 🔌 | `LmpAddress.cs` | Parses `lmp://host:port`; no KSP types, so Core.Tests compiles and fuzzes it too. |
+| ⚠️🔌 | `TimeSyncPatch.cs` | Alone in your subspace and far off its time: a subspace at your own time instead of LMP's clock jump. |
+| 🔌 | `StampPatch.cs` | Adds the one physics tick LMP's position time stamps are short by. |
+| ⚠️ | `Stubs/` | LUNA EVO's stand-ins for the KSP and Unity names the patches use (compile time only; enum values must be KSP's). |
 
 ### `tests/` 🧪
 
 | | Path | What it is |
 |:---:|---|---|
-| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (250 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
+| 🧪 | `LunaEvo.MissionControl.Core.Tests/` | xUnit tests for everything in Core (251 tests), plus shared `FakeHttp`, `FakeServer`, `TestData`. |
 | 🧪🖥️ | `LunaEvo.MissionControl.Tests/` | Headless UI tests: the real window, clicked through like a user (105 tests). |
 | ⭐🧪 | `LunaEvo.MissionControl.Tests/UiHarness.cs` | How UI tests open the window, find controls and wait. |
 | 🧪🔌 | `FakeLmpClient/` | A pretend LMP player with no KSP: logs in to a real (sandbox) LMP server and flies a vessel, or (`--observe`) records what LMP relays to it. See [26](26-Server-Plugin.md). |
-| 🧪🔌 | `RigRunner/` | Drives the test rig's KSP through kRPC and measures sync (`SyncAnalysis.cs`, `--selftest`). See [26](26-Server-Plugin.md). |
+| 🧪🔌 | `RigRunner/` | Drives the test rig's KSP through kRPC and measures sync (`SyncAnalysis.cs`, `--selftest`, `--mode slow`); `Start-Rig.ps1` starts the rig. See [26](26-Server-Plugin.md). |
 | 🧪🔌 | `FakeLmpServer/` | A pretend `Server.exe` with LMP's log format, commands and Ctrl+C. Also plays the Ctrl+C helper in tests. |
 | 🧪⚠️ | `Fixtures/Config/` | Our real server's 13 XML files, **passwords blanked**. Don't edit by hand; tests compare bytes. |
 | 🧪🔌 | `Fixtures/LMPServer/` | LMP 0.29.2's `Server.dll` and dependencies (MIT), plus synthetic sample logs. |

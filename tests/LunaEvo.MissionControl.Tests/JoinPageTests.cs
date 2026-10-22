@@ -140,7 +140,7 @@ public class JoinPageTests
             ui.Pump();
             ui.Window.Join.KspBox.Text = ksp;
             ui.Pump();
-            Assert.StartsWith("LMP can't join a server by itself", ui.Find<TextBlock>("join/patchesStatus").Text);
+            Assert.StartsWith("LUNA EVO's patches for the LMP client: join any server by itself", ui.Find<TextBlock>("join/patchesStatus").Text);
 
             ui.Await(ui.Window.Join.TogglePatchesAsync());
             Assert.Contains("Install the LUNA EVO patches for LMP?", ui.DialogsShown);
