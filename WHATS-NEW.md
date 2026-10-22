@@ -4,6 +4,10 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.9.3: tidier
+
+- A shorter README with the details on pages of their own; planet names on the map no longer pile up.
+
 ## 2.9.2: a warning before the disk is full
 
 - The Server console tells you when the server's drive is nearly full, before LMP can lose save files.

@@ -67,7 +67,7 @@ About two minutes, no files to edit.
 - **Generate a strong password** sits under the password settings. LMP doesn't limit password guesses, so use it.
 - Players need the **LMP client mod in the same version** as your server; **App settings → Downloads** installs it.
 
-Full guide: [Set up a new server, step by step](README.md#set-up-a-new-server-step-by-step) (every question explained, with screenshots)
+Full guide: [Set up a new server, step by step](docs/HOSTING.md#set-up-a-new-server-step-by-step) (every question explained, with screenshots)
 
 ## Already have an LMP server
 
@@ -87,7 +87,7 @@ Full guide: [Set up a new server, step by step](README.md#set-up-a-new-server-st
 - Click the warning count under the server status: every problem is listed, and each one opens the setting to fix.
 - **Search all settings** (top of Server settings) finds a setting by name or description, e.g. "heartbeat".
 
-Full guide: [Configure it](README.md#configure-it) · [Host a server features](README.md#host-a-server)
+Full guide: [Configure it](docs/FEATURES.md#configure-it) · [Host a server features](docs/FEATURES.md#host-a-server)
 
 ## Play on a server
 
@@ -121,7 +121,7 @@ You don't need to host anything.
 - **Save to my servers** remembers the address (never the password).
 - **Check my mods** (Join page) tells you what LMP would refuse before you connect.
 
-Full guide: [Find a public server](README.md#find-a-public-server-server-browser) · [Join a friend's server](README.md#join-a-friends-server)
+Full guide: [Find a public server](docs/PLAYING.md#find-a-public-server-server-browser) · [Join a friend's server](docs/PLAYING.md#join-a-friends-server)
 
 ## Mods with CKAN
 
@@ -150,7 +150,7 @@ Full guide: [Find a public server](README.md#find-a-public-server-server-browser
   without your Windows user name (which CKAN's own file contains). **Exact versions** gives everyone the same versions.
 - **Use as mod list** copies one install's mods into the box, to set up a second KSP install the same way.
 
-Full guide: [Using the CKAN page](README.md#using-the-ckan-page) · [Find, mod and join](README.md#find-mod-and-join-for-players)
+Full guide: [Using the CKAN page](docs/PLAYING.md#using-the-ckan-page) · [Find, mod and join](docs/FEATURES.md#find-mod-and-join-for-players)
 
 ## Play over the internet safely
 
@@ -166,7 +166,7 @@ Use a mesh VPN and never open a port on your router.
 
 💡 **Tip:** mesh addresses are private to your group, but they're still yours: don't post them publicly.
 
-Full guide: [Play together without opening any ports](README.md#play-together-without-opening-any-ports-tailscale-twingate) (Tailscale and Twingate)
+Full guide: [Play together without opening any ports](docs/PLAYING.md#play-together-without-opening-any-ports-tailscale-twingate) (Tailscale and Twingate)
 
 ## Leave it running
 
@@ -190,7 +190,7 @@ Full guide: [Play together without opening any ports](README.md#play-together-wi
 
 💡 **Tip:** these only run while LUNA EVO is open; home server mode makes sure it is.
 
-Full guide: [Keep it running](README.md#keep-it-running)
+Full guide: [Keep it running](docs/FEATURES.md#keep-it-running)
 
 ## If something's wrong
 
@@ -212,4 +212,4 @@ problems, see [SECURITY.md](SECURITY.md) instead.
 
 ---
 
-**Everything else:** [Features](README.md#what-it-does) · [Screenshots](README.md#screenshots) · [Tested with](README.md#tested-with) · [What it connects to](README.md#what-it-connects-to) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+**Everything else:** [Features](README.md#what-it-does) · [Screenshots](docs/SCREENSHOTS.md#screenshots) · [Tested with](docs/FEATURES.md#tested-with) · [What it connects to](docs/FEATURES.md#what-it-connects-to) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.3 (2026-10-22)
+
+### Changed
+- **A shorter README.** The details moved to pages of their own: [features](docs/FEATURES.md),
+  [hosting](docs/HOSTING.md), [playing](docs/PLAYING.md), [screenshots](docs/SCREENSHOTS.md),
+  [for developers](docs/DEVELOPERS.md) and [how it was made](docs/AI-DISCLOSURE.md). QUICKSTART links to them.
+- Map: planet names don't pile up on each other any more (the busiest and biggest bodies keep theirs; zoom in for the rest).
+- What's new is padded like the rest of the app; the rail says "No unsaved changes" instead of repeating the LMP version.
+
 ## 2.9.2 (2026-10-22)
 
 ### Added

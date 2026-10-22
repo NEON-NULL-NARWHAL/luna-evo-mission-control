@@ -512,7 +512,9 @@ internal sealed class MapCanvas : Control
         context.DrawEllipse(Brushes(focus.Color, 1), null, center, focusRadius, focusRadius);
         Label(context, focus.Name, center + new Vector(focusRadius + 4, -focusRadius - 14), text);
 
-        // Moons/planets around it: orbit, position, name (and how many vessels are around them).
+        // Moons/planets around it: orbit, position, name (and how many vessels are around them). Names go on after all
+        // the bodies, the busiest and biggest first, and a name that would cover another is left out (zoom in for it).
+        var names = new List<(string Text, Point At, int Vessels, double Mu)>();
         foreach (var child in System.ChildrenOf(FocusBody))
         {
             var path = Path("body:" + child.Name, () => child.Orbit!.Path());
@@ -524,8 +526,10 @@ internal sealed class MapCanvas : Control
             context.DrawEllipse(Brushes(child.Color, 1), null, p, r, r);
             _bodyMarks.Add((p, Math.Max(r, 8), child.Name));
             var count = Vessels.Count(v => string.Equals(System.ForVessel(v.BodyName, v.Body)?.Name, child.Name, StringComparison.OrdinalIgnoreCase));
-            Label(context, count > 0 ? $"{child.Name} ({count})" : child.Name, p + new Vector(r + 3, -r - 12), muted);
+            names.Add((count > 0 ? $"{child.Name} ({count})" : child.Name, p + new Vector(r + 3, -r - 12), count, child.Mu));
         }
+        foreach (var name in names.OrderByDescending(n => n.Vessels).ThenByDescending(n => n.Mu))
+            Label(context, name.Text, name.At, muted, skipIfCrowded: true);
 
         // Vessels around the focus: orbit (escapes only out to the sphere of influence) and where they are now.
         foreach (var vessel in AroundFocus())

@@ -491,7 +491,7 @@ public sealed class MainWindow : Window
         }
         UpdateSettings(s => s with { LastServerDirectory = session.ServerDirectory });
 
-        _saveText.Text = $"LMP {session.Schema.ServerVersion}";
+        _saveText.Text = "No unsaved changes"; // the LMP version is in the line above
         ToolTip.SetTip(_saveText, $"Server: {session.ServerDirectory}\nConfig: {session.ConfigDirectory}");
         BuildPages(session);
         if (keepServerPage && current != null)
@@ -1135,6 +1135,8 @@ public sealed class MainWindow : Window
 
         if (_session.IsDirty)
             _saveText.Text = $"{_session.DirtyFiles.Count} file(s) changed";
+        else if (_saveText.Text?.EndsWith("changed", StringComparison.Ordinal) == true)
+            _saveText.Text = "No unsaved changes"; // the edits were undone
         OnServerStatusChanged();
     }
 

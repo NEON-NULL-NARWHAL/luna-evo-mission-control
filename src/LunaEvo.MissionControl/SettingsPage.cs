@@ -467,7 +467,9 @@ internal sealed class SettingsPage
         page.Children.Clear();
         if (_host.AvailableAppUpdate is { } update)
         {
-            var (view, body, _) = Ui.Group($"LUNA EVO {update.Version} is available");
+            var (view, group, _) = Ui.Group($"LUNA EVO {update.Version} is available");
+            var body = new StackPanel { Spacing = 3, Margin = new Thickness(16, 12) };
+            group.Children.Add(body);
             body.Children.Add(Ui.Text($"You have {AppVersion}.", "sublabel"));
             foreach (var entry in WhatsNew.Parse("## " + update.Release.Tag + "\n" + update.Release.Notes, 1))
                 foreach (var line in entry.Lines)
@@ -484,8 +486,10 @@ internal sealed class SettingsPage
         foreach (var entry in WhatsNew.Parse(changelog))
         {
             var (view, body, _) = Ui.Group(entry.Heading);
+            var lines = new StackPanel { Spacing = 3, Margin = new Thickness(16, 12) }; // padded like the rows of other groups
             foreach (var line in entry.Lines)
-                body.Children.Add(Wrapped(line, line.Length > 0 && line == line.ToUpperInvariant() ? "label" : "sublabel"));
+                lines.Children.Add(Wrapped(line, line.Length > 0 && line == line.ToUpperInvariant() ? "label" : "sublabel"));
+            body.Children.Add(lines);
             page.Children.Add(view);
         }
         page.Children.Add(Ui.Row("Every version", AppUpdater.ReleasesPage, LinkButton("Open", AppUpdater.ReleasesPage)).WithId("settings/whatsNewAll"));

@@ -31,7 +31,7 @@ so a restore can be undone. Scheduled every *N* hours (`UniverseBackupHours`), p
 config (`Config/Backups/...`) and copies the profile over, then the app reloads (keeping a running server running;
 restart it to use the new config). Profiles are the files **on disk**, so unsaved changes are saved first.
 
-Discord notifications were removed in 0.4.0; see [14](14-Security.md#discord-removed-in-040) for why and what a
+Discord notifications were removed in 0.4.0; see [14](14-Security.md#discord-removed-in-040-back-in-05) for why and what a
 return would need.
 
 ## Connect page
