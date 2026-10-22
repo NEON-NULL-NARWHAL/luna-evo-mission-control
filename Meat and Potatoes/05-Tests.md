@@ -37,6 +37,12 @@ after 2.1.1: all 303 passed locally, but on GitHub's runner every UI test that s
 tests use then reaches the other test run's fake servers. Before trying again, find that cause (e.g. run the two
 projects one after the other on CI).
 
+2.5.0-2.6.0 added `ClientPatchTests` (the patch's `-lmp` address parser, compiled from `src/LunaEvo.ClientPatches/LmpAddress.cs`
+and fuzzed; the KSP stand-ins' enum values against the recorded ones, and against KSP itself where `../TestRig/KSP`
+exists), `ClientPatches` install/remove and patched launch plans in `JoinTests`, and a Join page test with fake patch
+bytes (`JoinPage.PatchBytes`). In-game checks run by hand on the test rig: `tests/RigRunner/Start-Rig.ps1`, then
+`RigRunner` (`--selftest` checks its own maths; `--mode slow` for the time patch), see [26](26-Server-Plugin.md).
+
 2.4.0 added `ServerPluginTests` (the server plugin with LMP 0.29.2's real message classes; Core.Tests references
 `Server.dll` from the fixtures for this) and `tests/FakeLmpClient`, a no-KSP LMP player for sandbox checks against a
 real server (not run by `dotnet test`). 2.3.0 added live-map tests to `MapTests`/`MapPageTests`.

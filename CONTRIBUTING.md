@@ -20,6 +20,9 @@ Thanks for helping. LUNA EVO is a small hobby project by two friends; issues and
 - **Security first** for anything that downloads, parses outside data, starts a process or stores a secret: see
   [14 · Security](Meat%20and%20Potatoes/14-Security.md). Report vulnerabilities privately ([`SECURITY.md`](SECURITY.md)).
   Big direction calls are the owner's; they're recorded in [`DECISIONS.md`](DECISIONS.md).
+- Code that runs inside LMP (the server plugin, the client patches) never changes what goes over the network, and is
+  checked in the in-game test rig before and after ([Meat and Potatoes 26-27](Meat%20and%20Potatoes/26-Server-Plugin.md)).
+  The rig's KSP takes the screen: run it only when the owner says so.
 
 ## Build, test, release
 

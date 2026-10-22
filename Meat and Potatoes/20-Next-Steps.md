@@ -63,6 +63,18 @@ A ready-to-pick-up list for whoever works on LUNA EVO next (a person, a local mo
 Read [25 · LMP under the hood](25-LMP-Under-The-Hood.md) first: the research behind this list, and the open
 questions in [`DECISIONS.md`](../DECISIONS.md#open-waiting-on-the-owner).
 
+**Where things stand (2.6.0, 2026-10-22):** fixes ship as patches on the official LMP, never changing the protocol
+([27](27-Client-Patches.md)): `-lmp` with port and password, no time jumps when alone in a subspace, exact position
+stamps. The LUNA EVO server plugin feeds the live map ([26](26-Server-Plugin.md)). Next, in order:
+
+1. **Security audit 11** (the owner asked to be asked first): the plugin, the three client patches, LMP's DLLs now in
+   the repo, the KSP stand-ins, the rig scripts.
+2. **Smoother remote vessels (W1):** needs a second rig KSP (hard-linked copy, kRPC on 50002) to measure what another
+   player's screen really shows, before and after. Ask the owner first (RAM, both windows take the screen).
+3. **Server checks (W3) as plugin code:** a plugin can set `message.Handled = true` to refuse moves of vessels the
+   sender doesn't control; the fake client can test it without KSP.
+4. Offer the protocol-safe fixes upstream as pull requests (LMP accepts PRs into `master`).
+
 
 - **Rate-limit admin passwords:** `Server/Message/AdminMsgReader.cs:22` compares with no limit. Count failures per client,
   back off / kick after N. Constant-time compare.
