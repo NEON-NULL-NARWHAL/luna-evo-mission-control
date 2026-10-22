@@ -27,6 +27,26 @@ public class JoinPageTests
     }
 
     [AvaloniaFact]
+    public void Pasting_a_whole_invite_fills_in_its_address_and_checks_the_server()
+    {
+        // The address box is one line, and Avalonia keeps only a paste's first line there ("Join my KSP server..."):
+        // the page reads the whole clipboard text itself.
+        using var ui = Player();
+        ui.Click(ui.Find<Button>("welcome/join"));
+        var invite = $"Join my KSP server \"Test\"!\nAddress: {Host}\nLMP version: 0.29.2 (you need the same LMP client mod)\n" +
+                     "Password: none\nWith LUNA EVO: Join a server, paste this whole message into the address box.";
+        ui.Await(ui.Window.Join.PasteAsync(invite));
+        Assert.Equal(Host, ui.Find<TextBox>("join/address").Text);
+        ui.WaitFor(() => ui.Window.Join.Live != null, "server checked");
+
+        // Anything else pasted goes in as one line.
+        var box = ui.Find<TextBox>("join/address");
+        box.Text = "";
+        ui.Await(ui.Window.Join.PasteAsync("kerbin.example.com\r\n:8800\n"));
+        Assert.Equal("kerbin.example.com :8800", box.Text);
+    }
+
+    [AvaloniaFact]
     public void Checks_a_server_without_hosting_anything()
     {
         using var ui = Player();

@@ -151,6 +151,13 @@ public class NavigationAndUpdateTests
         Assert.Contains("LMP version: 0.29.2", invite);
         Assert.Contains("Password: yes, ask me", invite);
         Assert.DoesNotContain("secret-password-123", invite);
+
+        // Copy invite puts exactly that on the clipboard, and says so.
+        var button = ui.Find<Button>("connect/invite");
+        ui.Click(button);
+        ui.Pump();
+        Assert.Equal([invite], ui.Copied);
+        Assert.Equal("Copied!", button.Content);
     }
 
     [AvaloniaFact]

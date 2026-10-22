@@ -46,6 +46,7 @@ internal sealed class UiHarness : IDisposable
         HomeServer.ApplyStartWithWindows = (_, _) => throw new InvalidOperationException("A test touched the Windows startup list without faking it.");
         CkanPage.StartCkan = _ => throw new InvalidOperationException("A test tried to start CKAN without faking it.");
         CkanPage.CopyText = (_, text) => { Copied.Add(text); return Task.CompletedTask; };
+        JoinPage.ReadClipboard = _ => Task.FromResult<string?>(null); // never the real clipboard
         BrowserPage.Ping = _ => Task.FromResult<long?>(42); // never ping real addresses from tests
         JoinPage.PingServer = _ => Task.FromResult(new Core.Join.PingResult(4, 4, 12, 10));
         CkanPage.RunCkan = (_, _, _, _, _) => throw new InvalidOperationException("A test tried to run CKAN without faking it.");

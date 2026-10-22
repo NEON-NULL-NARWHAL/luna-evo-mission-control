@@ -5,6 +5,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -49,6 +50,10 @@ internal sealed class JoinPage : IDisposable
     /// <summary>Tests replace this so a check never pings a real address: (address) → result.</summary>
     internal static Func<string, Task<PingResult>> PingServer { get; set; } = address => ServerProbe.PingAsync(address);
 
+    /// <summary>Tests replace this: the clipboard's text (pasting into the address box), or null.</summary>
+    internal static Func<MainWindow, Task<string?>> ReadClipboard { get; set; } = async host =>
+        host.Clipboard is { } clipboard ? await clipboard.TryGetTextAsync() : null;
+
     private Version? _serverVersion;  // the LMP version the server runs, when known (server browser, or a pasted invite)
     private Version? _pendingVersion; // set by the server browser for the next check
     private readonly DispatcherTimer _refresh = new() { Interval = TimeSpan.FromSeconds(10) };
@@ -91,6 +96,13 @@ internal sealed class JoinPage : IDisposable
         _address.KeyDown += async (_, e) =>
         {
             if (e.Key == Avalonia.Input.Key.Enter) await CheckAsync();
+        };
+        _address.PastingFromClipboard += async (_, e) =>
+        {
+            // Avalonia keeps only the first line of a paste in a one-line box, and an invite's address is further down:
+            // this paste is ours.
+            e.Handled = true;
+            await PasteAsync(await ReadClipboard(_host));
         };
         var save = Ui.Button("Save to my servers", "text", "IconSave").WithId("join/save");
         save.Click += (_, _) => SaveCurrent();
@@ -529,6 +541,25 @@ internal sealed class JoinPage : IDisposable
         {
             _launchResult.Text = "Couldn't read that file: " + e.Message;
         }
+    }
+
+    /// <summary>
+    /// A paste into the address box. A whole LUNA EVO invite: its address goes in the box, its LMP version is kept, and
+    /// the server is looked up at once. Anything else is pasted as one line (line breaks become spaces).
+    /// </summary>
+    internal async Task PasteAsync(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+        if (ServerAddress.InviteAddress(text) is { } address)
+        {
+            _pendingVersion = ServerAddress.InviteVersion(text);
+            _address.Text = address;
+            _address.CaretIndex = address.Length;
+            await CheckAsync();
+            return;
+        }
+        _address.SelectedText = string.Join(" ", text.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0));
     }
 
     /// <summary>Looks the server up: addresses, ping, and live info if the host shares it.</summary>

@@ -169,6 +169,7 @@ public class FuzzTests
         {
             ServerAddress.Parse(text);
             ServerAddress.InviteVersion(text);
+            ServerAddress.InviteAddress(text);
             ServerBrowser.Endpoint(text);
             CommentRules.Parse(text);
             LmpVersion.Parse(text);

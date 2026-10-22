@@ -30,15 +30,20 @@ public sealed record ServerAddress(string Host, int Port = ServerAddress.Default
             ? version
             : null;
 
+    /// <summary>The address on the "Address:" line of a pasted LUNA EVO invite, or null if it isn't one.</summary>
+    public static string? InviteAddress(string? text) =>
+        text?.Contains("Address:", StringComparison.OrdinalIgnoreCase) == true &&
+        System.Text.RegularExpressions.Regex.Match(text, @"Address:\s*(\S+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase) is { Success: true } invite
+            ? invite.Groups[1].Value
+            : null;
+
     /// <summary>
     /// Reads "host", "host:port", "[ipv6]:port", "1.2.3.4" or "lmp://host:port". Null if it isn't a usable address.
     /// </summary>
     public static ServerAddress? Parse(string? text, int websitePort = DefaultWebsitePort)
     {
         // A whole LUNA EVO invite pasted in: use its "Address:" line.
-        if (text?.Contains("Address:", StringComparison.OrdinalIgnoreCase) == true &&
-            System.Text.RegularExpressions.Regex.Match(text, @"Address:\s*(\S+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase) is { Success: true } invite)
-            text = invite.Groups[1].Value;
+        text = InviteAddress(text) ?? text;
         text = text?.Trim();
         if (string.IsNullOrEmpty(text))
             return null;

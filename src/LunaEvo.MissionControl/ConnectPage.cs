@@ -28,8 +28,10 @@ internal sealed class ConnectPage
         invite.Margin = new Thickness(0, 0, 8, 0);
         invite.Click += async (_, _) =>
         {
-            if (Invite() is { } text && TopLevel.GetTopLevel(View)?.Clipboard is { } clipboard)
-                await clipboard.SetTextAsync(text);
+            if (Invite() is { } text)
+                await Copy(invite, text, "Copy invite");
+            else
+                invite.Content = "Open your server first";
         };
         var header = new DockPanel();
         var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top, Children = { invite, refresh } };
@@ -217,6 +219,15 @@ internal sealed class ConnectPage
     /// network), the LMP version they need, and whether there's a password (never the password itself). The Join page
     /// accepts it pasted in whole.
     /// </summary>
+    /// <summary>Copies, and says so on the button for two seconds (a copy is otherwise invisible).</summary>
+    private async Task Copy(Button button, string text, string label)
+    {
+        await CkanPage.CopyText(_host, text);
+        button.Content = "Copied!";
+        await Task.Delay(2000);
+        button.Content = label;
+    }
+
     internal string? Invite()
     {
         if (_host.Session is not { } session)
@@ -237,11 +248,7 @@ internal sealed class ConnectPage
     private Button CopyButton(string text)
     {
         var copy = Ui.Button("Copy", "text");
-        copy.Click += async (_, _) =>
-        {
-            if (TopLevel.GetTopLevel(View)?.Clipboard is { } clipboard)
-                await clipboard.SetTextAsync(text);
-        };
+        copy.Click += async (_, _) => await Copy(copy, text, "Copy");
         return copy;
     }
 }
