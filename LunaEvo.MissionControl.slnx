@@ -3,6 +3,9 @@
     <Project Path="src/LunaEvo.MissionControl.Core/LunaEvo.MissionControl.Core.csproj" />
     <Project Path="src/LunaEvo.MissionControl/LunaEvo.MissionControl.csproj" />
     <Project Path="src/LunaEvo.ServerPlugin/LunaEvo.ServerPlugin.csproj" />
+    <Project Path="src/LunaEvo.ClientPatches/LunaEvo.ClientPatches.csproj" />
+    <Project Path="src/LunaEvo.ClientPatches/Stubs/AssemblyCSharp/AssemblyCSharp.csproj" />
+    <Project Path="src/LunaEvo.ClientPatches/Stubs/UnityCoreModule/UnityCoreModule.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FakeLmpClient/FakeLmpClient.csproj" />

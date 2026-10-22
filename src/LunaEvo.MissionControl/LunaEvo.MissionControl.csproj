@@ -12,6 +12,8 @@
     <Version>2.6.0</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- The client patches are a .NET Framework 4.7.2 KSP mod, only carried inside the exe (never loaded by it). -->
+    <NoWarn>$(NoWarn);NU1702</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,7 +42,7 @@
   <!-- LUNA EVO's patches for the LMP client (net472, a KSP mod): built first, then carried inside the exe like the
        server plugin. They build without KSP (stand-ins in LunaEvo.ClientPatches/Stubs), so every build has them. -->
   <ItemGroup>
-    <ProjectReference Include="..\LunaEvo.ClientPatches\LunaEvo.ClientPatches.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true"
+    <ProjectReference Include="..\LunaEvo.ClientPatches\LunaEvo.ClientPatches.csproj" ReferenceOutputAssembly="false"
                       GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishSingleFile" />
     <EmbeddedResource Include="..\LunaEvo.ClientPatches\bin\$(Configuration)\net472\LunaEvo.ClientPatches.dll" LogicalName="LunaEvo.ClientPatches.dll" />
   </ItemGroup>
