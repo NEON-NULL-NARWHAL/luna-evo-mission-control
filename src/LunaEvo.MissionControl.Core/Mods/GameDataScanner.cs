@@ -129,7 +129,15 @@ public static partial class GameDataScanner
     }
 
     /// <summary>Looks for KSP's GameData in the Steam libraries on this PC. Null if not found.</summary>
-    public static string? FindKspGameData()
+    public static string? FindKspGameData() => SteamSearch();
+
+    /// <summary>
+    /// The Steam search behind <see cref="FindKspGameData"/>. UI tests replace it so they never find (or read) the real
+    /// KSP of the PC they run on.
+    /// </summary>
+    public static Func<string?> SteamSearch { get; set; } = SearchSteam;
+
+    private static string? SearchSteam()
     {
         var steam = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam");
         var libraries = new List<string> { steam };

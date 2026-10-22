@@ -214,11 +214,6 @@ internal sealed class ConnectPage
             .WithId("connect/listening"));
     }
 
-    /// <summary>
-    /// A ready-to-send message for friends: server name, the best address to use (VPN/mesh first, then local
-    /// network), the LMP version they need, and whether there's a password (never the password itself). The Join page
-    /// accepts it pasted in whole.
-    /// </summary>
     /// <summary>Copies, and says so on the button for two seconds (a copy is otherwise invisible).</summary>
     private async Task Copy(Button button, string text, string label)
     {
@@ -228,6 +223,11 @@ internal sealed class ConnectPage
         button.Content = label;
     }
 
+    /// <summary>
+    /// A ready-to-send message for friends: server name, the best address to use (VPN/mesh first, then local
+    /// network), the LMP version they need, and whether there's a password (never the password itself). The Join page
+    /// accepts it pasted in whole.
+    /// </summary>
     internal string? Invite()
     {
         if (_host.Session is not { } session)
