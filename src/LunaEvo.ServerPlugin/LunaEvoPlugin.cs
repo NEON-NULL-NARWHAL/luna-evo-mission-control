@@ -73,7 +73,7 @@ public sealed class LunaEvoPlugin : ILmpPlugin
             return; // the last write hasn't finished
         _lastWrite = now;
         _writtenChanges = changes;
-        byte[] json;
+        Func<byte[]> json;
         try
         {
             json = Snapshot(now);
@@ -91,12 +91,13 @@ public sealed class LunaEvoPlugin : ILmpPlugin
             try
             {
                 var temp = file + ".tmp";
-                File.WriteAllBytes(temp, json);
+                File.WriteAllBytes(temp, json());
                 File.Move(temp, file, overwrite: true);
             }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            catch (Exception)
             {
-                // Mission Control may be reading it right now; the next write replaces it.
+                // Mission Control may be reading it right now, or a player name LMP accepted can't be written: the next
+                // write replaces it. Nothing here may escape into LMP.
             }
             finally
             {
@@ -144,7 +145,11 @@ public sealed class LunaEvoPlugin : ILmpPlugin
         }
     }
 
-    private byte[] Snapshot(DateTime nowUtc)
+    /// <summary>
+    /// Gathers LMP's players, locks and subspaces now (cheap, on LMP's main thread) and returns the JSON building, which
+    /// runs on the background write with the vessel list (audit 11: hundreds of vessels took real time on the main thread).
+    /// </summary>
+    private Func<byte[]> Snapshot(DateTime nowUtc)
     {
         var controllers = new Dictionary<Guid, string>();
         foreach (var l in LockSystem.LockQuery.GetAllLocks())
@@ -155,6 +160,6 @@ public sealed class LunaEvoPlugin : ILmpPlugin
             .Select(c => new PlayerState(c.PlayerName, c.Subspace, flying.GetValueOrDefault(c.PlayerName))).ToList();
         var subspaces = WarpContext.Subspaces.Values.Select(s => new SubspaceState(s.Id, s.Time)).ToList();
         var lmp = typeof(ServerContext).Assembly.GetName().Version?.ToString(3) ?? "?";
-        return State.ToJson(Version, lmp, nowUtc, players, subspaces, controllers);
+        return () => State.ToJson(Version, lmp, nowUtc, players, subspaces, controllers);
     }
 }

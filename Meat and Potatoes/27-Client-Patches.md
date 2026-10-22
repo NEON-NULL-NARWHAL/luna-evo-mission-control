@@ -103,7 +103,8 @@ a 60 s climb):
 The rig measured (Meat and Potatoes 26) that for a vessel under physics, the position in an LMP message is where the
 vessel is **one physics tick after** the time stamped on it (+20 ms, 0.01 m rms). `StampPatch` (a Harmony postfix on
 `VesselPositionMessageSender.CreateMessageFromVessel`) adds `Time.fixedDeltaTime` to `GameTime` for unpacked vessels.
-Same message, same size, a better value, so unpatched players benefit too. Rig check: the best-fit offset went from
+Same message, same size, a better value, so unpatched players benefit too. It also applies to LMP's one-off sends
+(decouple, undock, vessel switch), which the rig hasn't measured: at most one tick on single messages (audit 11, K2). Rig check: the best-fit offset went from
 +20 ms to **0 ms**, and a second player now sees the vessel exactly LMP's intended 0.25 s behind.
 
 ## Next patches

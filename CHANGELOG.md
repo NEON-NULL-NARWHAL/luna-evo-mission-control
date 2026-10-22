@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.6.1 (2026-10-22)
+
+Eleventh audit; details in `SECURITY.md`.
+
+### Fixed
+- The LUNA EVO server plugin builds its live file off LMP's main thread, so a big universe can't make the server
+  pause every half second.
+
+### Changed
+- `tests/Fixtures/THIRD-PARTY.md` lists every LMP file kept in the repo with its source and SHA-256 (all checked
+  identical to LMP's official release).
+- GitHub's test workflow uses current versions of its actions.
+
+### Research
+- What in LMP's client and server hurts player-to-player performance, with patch ideas (maintainer chapter 25): shared
+  network channels that drop or hold up updates, polling loops that add 40-60 ms on Windows, every far-away vessel
+  updated every physics tick, and every position sent to every player.
+
 ## 2.6.0 (2026-10-22)
 
 ### Added

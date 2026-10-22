@@ -47,6 +47,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.6.1 | - | **Audit 11** (K1-K6, plus LMP's client-to-client performance P1-P7) | Every committed LMP DLL (23) byte-checked against LMP's official release zips; the plugin change on the real LMP 0.29.2 server with the pretend player; no vulnerable packages in all 12 projects | 356 |
 | 2.6.0 | Two more client patches: the time patch only acts for a player alone in their subspace and falls back to LMP's own behavior on any error; the stamp patch only changes a time value in an existing message. Building without KSP: LMP's MIT client DLLs are in the repo (from the checksum-verified release zip), Harmony from NuGet, and KSP/Unity names from LUNA EVO's own stand-ins, which never ship (the exe carries only the patch DLL) | Audit 11 to follow | The test rig: the stand-in build loaded in KSP; slow game, 11 jumps unpatched vs 0 patched; stamp offset 20 ms → 0 | 356 |
 | 2.5.0 | Client patches: a KSP mod that runs inside the player's game when they install it (carried in the exe, no download). Passwords never on the command line (taken from LMP's own list; never logged); the address parser refuses anything but host and port and is fuzzed; off on any LMP but 0.29; install/remove refused while KSP runs; `release.ps1` refuses an exe without it | Audit 11 to follow | The test rig: LMP's bug reproduced, then the patched client joining a password server from the command line | 355 |
 | 2.4.0 | LUNA EVO server plugin: runs **inside LMP's server** when the host installs it (carried in the exe, no download). Read-only, no network port, ignores unauthenticated senders (LMP calls plugins before its login check, found while building it), writes one file; Mission Control reads that file defensively (fuzzed). A pretend LMP client for testing | Notes below | The real LMP 0.29.2 server with the plugin and the pretend client in a sandbox | 326 |
@@ -75,6 +76,30 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 11 (2.6.1, October 2026)
+
+Scope: everything since audit 10 (the map and its live feed, the server plugin, the client patches and their KSP
+stand-ins, the installers, the rig tools, the release process), plus, at the owner's request, a read of LMP's client
+for what hurts player-to-player performance (in Meat and Potatoes 25, "Client-to-client performance").
+
+Checked and clean: no vulnerable packages (12 projects); nothing personal pushed since 2.2.0; the patched launch passes
+the server address as its own argument (`ProcessStartInfo.ArgumentList`) and hosts must pass `Uri.CheckHostName`
+(no spaces, `/`, `@`), so no argument injection; passwords never reach a command line or a log; the plugin ignores
+unauthenticated senders and changes no message; `live.json` and website data are read with caps and fuzzed; every
+patch falls back to LMP's own behavior on any error, and none applies outside LMP 0.29.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| K1 | Low (performance) | The server plugin built its JSON on LMP's main thread every 0.5 s; with hundreds of vessels that's a real pause on the server's busiest thread | JSON is built on the background write now; only the cheap list of players, locks and subspaces is gathered on the main thread. A failed write can never reach LMP. Checked on the real server with the pretend player |
+| K2 | Low | The stamp patch (+1 physics tick) also runs for LMP's one-off sends on decouple, undock and vessel switch, which the rig hasn't measured | Accepted: at most one tick (20 ms) on single messages; documented in Meat and Potatoes 27 |
+| K3 | Low | Third-party binaries in the repo (LMP's server and client DLLs) had no recorded provenance | `tests/Fixtures/THIRD-PARTY.md` lists each with its source and SHA-256. All 23 DLLs checked byte-identical to LMP 0.29.2's official release zips |
+| K4 | Low | CI used `actions/checkout@v4` and `setup-dotnet@v4`, on GitHub's deprecated Node 20 | Moved to `checkout@v7` and `setup-dotnet@v6` |
+| K5 | Info | `live.json` sits next to the server; anyone who can write there can put made-up vessels on the host's map | Accepted: that person already controls the server's files |
+| K6 | Info | The test rig's made-up sandbox password is in `Start-Rig.ps1`, and the rig observer gets it on its command line | Accepted: a localhost-only test server; never used anywhere else |
+
+Not changed here, by design: what LMP itself does. The performance findings P1-P7 are candidates for client and server
+patches, measured in the rig before and after; the owner picks which ones.
 
 ## Security notes on 2.4.0 (the server plugin)
 

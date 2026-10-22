@@ -43,6 +43,7 @@ asked), it says so and why, and the owner can overrule it. Those calls are marke
 
 | Date | Version | The owner decided | What was done |
 |---|---|---|---|
+| 2026-10-22 | 2.6.1 | Start audit 11, and read more of LMP's client for what hurts player-to-player performance; the owner then picks from options | Audit 11 (SECURITY.md): K1-K6, fixes for K1, K3, K4. LMP performance findings P1-P7 written up with patch ideas ([25](Meat%20and%20Potatoes/25-LMP-Under-The-Hood.md#client-to-client-performance-audit-11-2026-10-22)); options listed below |
 | 2026-10-22 | 2.6.0 | Find a way to build the patches without KSP's files; do the next patches; fix the open timestamp issue | Builds anywhere: LMP's MIT DLLs in the repo plus LUNA EVO's own stand-ins for KSP/Unity names. Timestamp: mostly a measurement mix-up (top part vs centre of mass), the real one-tick error patched. Patch for time jumps when alone (#469). All measured in the rig before and after ([27](Meat%20and%20Potatoes/27-Client-Patches.md)). **Claude's call:** smoother remote vessels left for a second rig KSP, because measuring them needs a second screen |
 | 2026-10-22 | 2.5.0 | "Do 1 then 2": measure what a second player sees, then the first client patch (LMP's broken auto-connect); then a security audit, **asking first**, keeping it in mind meanwhile | Second-player measurement in the rig ([26](Meat%20and%20Potatoes/26-Server-Plugin.md#what-a-second-player-sees-runs-2-and-3-2026-10-22)). First client patch, proven in the rig and installable from Join ([27](Meat%20and%20Potatoes/27-Client-Patches.md)). Audit notes kept; the audit waits for the owner's go |
 | 2026-10-22 | - | "You are good to run your first test" (after closing other programs) | First in-game test: the rig KSP joined the rig server by itself, kRPC launched Kerbal X, and the server plugin was about 0.4 s behind the game (38 m on average at 129 m/s). Rig server moved to 127.0.0.1:8800 with no password, because LMP's auto-connect can't take a port or password ([26](Meat%20and%20Potatoes/26-Server-Plugin.md#testsrigrunner-and-the-first-run)) |
@@ -79,5 +80,6 @@ the live map comes first (was O2).
 
 | # | Question | Options |
 |---|---|---|
+| O5 | Which LMP performance fix next (audit 11, P1-P7) | **P3 timer resolution** (smallest, measurable at once: the 40-60 ms) · **P1 per-vessel channels** (fewer dropped updates over the internet) · **P4 far vessels** (FPS with many vessels) · P7 smoother remote vessels (needs a second rig KSP) · P5 interest management (biggest) |
 | O3 | When may the rig's KSP run? | Set up (2026-10-22). **Only when the owner says so**, since it takes the screen while it opens; or on a separate PC later |
 | O4 | The longer audit before posting publicly | **After the next milestone (the LUNA EVO server plugin)**, so it covers the plugin; or now, on Mission Control as it is |
