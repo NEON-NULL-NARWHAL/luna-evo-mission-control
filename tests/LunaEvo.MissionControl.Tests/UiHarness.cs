@@ -127,7 +127,6 @@ internal sealed class UiHarness : IDisposable
         return task.GetAwaiter().GetResult();
     }
 
-    /// <summary>Clicks a page in the navigation rail.</summary>
     /// <summary>Opens a page or a Server settings tab: clicks its button if it's on screen, else navigates as the rail would.</summary>
     public void OpenTab(string key)
     {

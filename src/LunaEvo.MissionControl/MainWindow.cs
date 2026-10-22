@@ -219,9 +219,9 @@ public sealed class MainWindow : Window
         _appUpdateText.PointerPressed += (_, _) =>
         {
             Navigate(SettingsKey);
-            _settingsPage.ShowTab("updates");
+            _settingsPage.ShowTab("whatsnew");
         };
-        _ = CheckForAppUpdateAsync();
+        _ = CheckForAppUpdateAsync(atLaunch: true);
 
         var serverDirectory = options.ServerDirectory;
         if (serverDirectory == null && Settings.OpenLastServer && Settings.LastServerDirectory is { } last &&
@@ -271,8 +271,12 @@ public sealed class MainWindow : Window
         return System.Diagnostics.Process.Start(info) != null;
     };
 
-    /// <summary>Asks GitHub for a newer LUNA EVO (if enabled, or <paramref name="force"/>), and shows a note in the rail.</summary>
-    internal async Task CheckForAppUpdateAsync(bool force = false)
+    /// <summary>
+    /// Asks GitHub for a newer LUNA EVO (if enabled, or <paramref name="force"/>), and shows a note in the rail that opens
+    /// What's new. At launch, a newer version also gets a Windows notification (only Windows: a server's Discord channel
+    /// isn't told about the host's app updates).
+    /// </summary>
+    internal async Task CheckForAppUpdateAsync(bool force = false, bool atLaunch = false)
     {
         if (!force && !Settings.CheckForAppUpdates)
             return;
@@ -292,6 +296,18 @@ public sealed class MainWindow : Window
         _appUpdateText.Text = AvailableAppUpdate is { } update ? $"LUNA EVO {update.Version} is available" : "";
         _appUpdateText.IsVisible = AvailableAppUpdate != null;
         _settingsPage.Refresh();
+        if (atLaunch && AvailableAppUpdate is { } found && Settings.NotifyDesktop)
+        {
+            try
+            {
+                ShowDesktopNotification($"LUNA EVO {found.Version} is available",
+                    $"You have {SettingsPage.AppVersion}. Click the note in LUNA EVO's rail to see what's new and update.", false);
+            }
+            catch (Exception)
+            {
+                // A notification that can't be shown is never worth an error.
+            }
+        }
     }
 
     /// <summary>

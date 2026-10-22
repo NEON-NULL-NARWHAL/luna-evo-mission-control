@@ -49,6 +49,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The What's new tab reads the CHANGELOG carried inside the exe (it works offline). -->
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="LunaEvo.CHANGELOG.md" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="LunaEvo.MissionControl.Tests" />
   </ItemGroup>
 

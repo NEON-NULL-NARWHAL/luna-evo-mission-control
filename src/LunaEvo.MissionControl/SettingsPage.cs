@@ -41,7 +41,7 @@ internal sealed class SettingsPage
     private readonly TextBlock _announceResult = Ui.Text("", "sublabel").WithId("settings/announceResult");
     private readonly Dictionary<string, StackPanel> _tabPages = new()
     {
-        ["look"] = new(), ["behavior"] = new(), ["automation"] = new(), ["updates"] = new(), ["downloads"] = new(), ["about"] = new(),
+        ["whatsnew"] = new(), ["look"] = new(), ["behavior"] = new(), ["automation"] = new(), ["updates"] = new(), ["downloads"] = new(), ["about"] = new(),
     };
     private readonly TextBlock _dailyResult = Ui.Text("", "sublabel").WithId("settings/dailyResult");
     private readonly TextBox _webhook = new TextBox { Width = 420, PasswordChar = '•' }.WithId("settings/discordWebhook");
@@ -110,6 +110,7 @@ internal sealed class SettingsPage
         stored.Margin = new Thickness(0, 2, 0, 20);
         page.Children.Add(stored);
         page.Children.Add(new Border { Height = 14 });
+        _tabs.Add("whatsnew", "What's new", _tabPages["whatsnew"]);
         _tabs.Add("look", "Appearance", _tabPages["look"]);
         _tabs.Add("behavior", "Behavior", _tabPages["behavior"]);
         _tabs.Add("automation", "Automation & alerts", _tabPages["automation"]);
@@ -453,6 +454,48 @@ internal sealed class SettingsPage
             _appUpdates.Children.Add(Ui.Row("LUNA EVO version", _host.AppUpdateProblem ?? $"You have {AppVersion}.", check).WithId("settings/appUpdateRow"));
         }
         _appUpdates.Children.Add(Ui.Row("Release history", AppUpdater.ReleasesPage, LinkButton("Open", AppUpdater.ReleasesPage)));
+        RefreshWhatsNew();
+    }
+
+    /// <summary>
+    /// The What's new tab: a newer LUNA EVO with its release notes (from GitHub) if there is one, then what the last
+    /// versions brought (the CHANGELOG carried in the exe, so it works offline).
+    /// </summary>
+    private void RefreshWhatsNew()
+    {
+        var page = _tabPages["whatsnew"];
+        page.Children.Clear();
+        if (_host.AvailableAppUpdate is { } update)
+        {
+            var (view, body, _) = Ui.Group($"LUNA EVO {update.Version} is available");
+            body.Children.Add(Ui.Text($"You have {AppVersion}.", "sublabel"));
+            foreach (var entry in WhatsNew.Parse("## " + update.Release.Tag + "\n" + update.Release.Notes, 1))
+                foreach (var line in entry.Lines)
+                    body.Children.Add(Wrapped(line, "sublabel"));
+            var go = Ui.Button("Update…", "fab", "IconRestart").WithId("settings/whatsNewUpdate");
+            go.Click += (_, _) => ShowTab("updates");
+            body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8,
+                Children = { go, LinkButton("Release notes on GitHub", update.Release.PageUrl) } });
+            page.Children.Add(view);
+        }
+        string changelog;
+        using (var stream = typeof(SettingsPage).Assembly.GetManifestResourceStream("LunaEvo.CHANGELOG.md"))
+            changelog = stream == null ? "" : new StreamReader(stream).ReadToEnd();
+        foreach (var entry in WhatsNew.Parse(changelog))
+        {
+            var (view, body, _) = Ui.Group(entry.Heading);
+            foreach (var line in entry.Lines)
+                body.Children.Add(Wrapped(line, line.Length > 0 && line == line.ToUpperInvariant() ? "label" : "sublabel"));
+            page.Children.Add(view);
+        }
+        page.Children.Add(Ui.Row("Every version", AppUpdater.ReleasesPage, LinkButton("Open", AppUpdater.ReleasesPage)).WithId("settings/whatsNewAll"));
+    }
+
+    private static TextBlock Wrapped(string text, string style)
+    {
+        var block = Ui.Text(text, style);
+        block.TextWrapping = TextWrapping.Wrap;
+        return block;
     }
 
     /// <summary>Re-reads settings and the open server (versions, folders).</summary>

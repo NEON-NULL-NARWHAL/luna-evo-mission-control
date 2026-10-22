@@ -451,6 +451,28 @@ public class NavigationAndUpdateTests
     }
 
     [AvaloniaFact]
+    public void A_new_version_at_launch_gets_a_notification_and_whats_new_shows_it()
+    {
+        using var ui = new UiHarness();
+        ui.Web.Text(AppUpdater.ReleasesUrl, TestData.AppReleasesJson(TestData.FakeExe("LUNA EVO 9.9.9")));
+        ui.Await(ui.Window.CheckForAppUpdateAsync(force: true, atLaunch: true));
+        ui.Pump();
+        Assert.Contains(ui.Notifications, n => n.Title == "LUNA EVO 9.9.9 is available");
+
+        ui.OpenTab(MainWindow.SettingsKey);
+        ui.Click(ui.Find<Button>("settings/tab/whatsnew"));
+        Assert.True(ui.Find<Control>("settings/whatsNewUpdate").IsEffectivelyVisible);
+        // This version's own CHANGELOG entry (carried in the exe) is listed.
+        var newest = File.ReadLines(Path.Combine(TestPaths.RepoRoot, "CHANGELOG.md")).First(l => l.StartsWith("## ", StringComparison.Ordinal))[3..];
+        Assert.Contains(ui.Window.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == newest && t.IsEffectivelyVisible);
+
+        // A check from the Settings page (not at launch) doesn't notify again.
+        ui.Notifications.Clear();
+        ui.Await(ui.Window.CheckForAppUpdateAsync(force: true));
+        Assert.Empty(ui.Notifications);
+    }
+
+    [AvaloniaFact]
     public void Updates_luna_evo_and_restarts_into_the_new_version()
     {
         var newExe = TestData.FakeExe("LUNA EVO 9.9.9");
