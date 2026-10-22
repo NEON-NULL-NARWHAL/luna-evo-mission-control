@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.9.1 (2026-10-22)
+
+### Fixed
+- **Players losing sight of each other.** With the LUNA EVO patches, a player whose game stalled (a load, a big
+  vessel) could be moved into a time of their own, behind the others, and couldn't see them until they synced. The time
+  fix now only steps in when nobody else is on the server.
+
+### Added
+- **Stay in step with other players** (in the LUNA EVO window in KSP, on by default): when another player is up to a
+  minute ahead and you aren't warping, your clock syncs to theirs by itself. A bigger gap (someone warped on purpose)
+  still asks.
+
+### For developers
+- The tests delete their throwaway server copies (they had piled up to 34 GB in the temp folder).
+
 ## 2.9.0 (2026-10-22)
 
 ### Added

@@ -64,7 +64,7 @@ Read [25 · LMP under the hood](25-LMP-Under-The-Hood.md) first: the research be
 questions in [`DECISIONS.md`](../DECISIONS.md#open-waiting-on-the-owner).
 
 **Where things stand (2.6.0, 2026-10-22):** fixes ship as patches on the official LMP, never changing the protocol
-([27](27-Client-Patches.md)): `-lmp` with port and password, no time jumps when alone in a subspace, exact position
+([27](27-Client-Patches.md)): `-lmp` with port and password, no time jumps when alone on the server (2.9.1), exact position
 stamps. The LUNA EVO server plugin feeds the live map ([26](26-Server-Plugin.md)). Next, in order:
 
 1. **Security audit 11** (the owner asked to be asked first): the plugin, the three client patches, LMP's DLLs now in

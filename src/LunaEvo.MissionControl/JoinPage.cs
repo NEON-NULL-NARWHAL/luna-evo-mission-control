@@ -430,7 +430,7 @@ internal sealed class JoinPage : IDisposable
         button.Click += async (_, _) => await TogglePatchesAsync();
         var text = Ui.Text(status == PluginStatus.NotInstalled
             ? "LUNA EVO's patches for the LMP client: join any server by itself (LMP alone can't with a port other than 8800 " +
-              "or a password), no time jumps when you're alone in your subspace, and accurate position times. Nothing other " +
+              "or a password), no time jumps when you're alone on the server, staying in step with other players, and accurate position times. Nothing other " +
               "players need changes."
             : "LUNA EVO patches are in this KSP: Launch KSP and join connects by itself to any server.", "sublabel").WithId("join/patchesStatus");
         text.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
@@ -461,7 +461,7 @@ internal sealed class JoinPage : IDisposable
                         $"Copies one file into GameData\\{ClientPatches.FolderName} of this KSP. When KSP starts, it fixes these in LMP 0.29:\n" +
                         "- the server address KSP is started with (a port other than 8800 makes LMP stop starting up), and it uses the " +
                         "password saved in LMP's own server list;\n" +
-                        "- when you're alone in your subspace and your game falls behind, you get a subspace at your own time instead of " +
+                        "- when you're alone on the server and your game falls behind, you get a subspace at your own time instead of " +
                         "a jump that teleports your vessel and cuts its engines;\n" +
                         "- each position LMP sends carries the right time (it was one physics tick early);\n" +
                         "- far fewer lost vessel updates on a jittery connection, and less lag.\n" +

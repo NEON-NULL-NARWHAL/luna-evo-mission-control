@@ -237,3 +237,26 @@ values (checked to fail: a `long` instead of an `int` was caught). It needs the 
 
 Rig: `Start-Rig.ps1 -OpenWindow` sets `LUNAEVO_OPEN_WINDOW=1`, which opens the window through its own button (kRPC
 can't click KSP's toolbar); players never set it, and it can only open the window.
+
+## 2.9.1: what the owner's real two-player game showed
+
+Watched live (read-only: the KSP and server logs, the server's LMP website, window captures that don't take focus), the
+owner and a friend on the owner's server, 2026-10-22:
+
+- **The time fix split them.** Its rule was "nobody else in my subspace". After any short warp, the other player is in
+  another subspace, so the rule held, and every frame-rate dive (loads, vessel spawns: 0-4 fps) moved the slower player
+  into a subspace of their own, behind. Whoever was behind couldn't see the other until they synced. Now the time fix
+  steps in only when **nobody else is on the server** (`TimeSyncPatch.AloneOnServer`); with anyone online, LMP's jump
+  keeps players together.
+- **Stay in step** (`EvoWindow.KeepInStep`, every 2 s from `PatchLoader.Update`, on by default, switch in the window):
+  another player 1-60 s ahead and this game not warping → `WarpSystem.SyncToSubspace`, what LMP's sync button does.
+  More than 60 s is someone's deliberate warp: the window offers the button instead. The owner's idea ("force the
+  update every couple of seconds unless in warp").
+- Rig check (two KSPs): the viewer frozen 6 s with kRPC `HoldTick` got LMP's own correction (-7.2 s, no LUNA EVO
+  subspace); after the pilot physics-warped, the viewer logged "23.6 s behind subspace 1: syncing to stay in step" and
+  synced.
+
+Also seen, not ours: "Malformed packet" warnings from Lidgren (also in logs from before the patches existed); they
+stopped when the friend reconnected. The other player's vessel is hidden inside the 100 m safety bubble, and loaded
+only within ~2.2 km (a marker beyond).
+

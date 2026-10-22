@@ -4,6 +4,11 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.9.1: you stay in sight of each other
+
+- Players no longer drift into separate times and lose sight of each other: the game keeps you in step by itself
+  (switch in the LUNA EVO window in KSP).
+
 ## 2.9: a map for everyone, and invites that paste
 
 - **Not hosting? You still get the map.** Check a server on Join and open Map: its vessels live, on the planets of your

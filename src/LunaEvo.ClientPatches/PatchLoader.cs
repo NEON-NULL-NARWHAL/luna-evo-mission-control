@@ -47,7 +47,7 @@ namespace LunaEvo.ClientPatches
             Apply(harmony, applied, "-lmp with a port and a saved password", AccessTools.Method(typeof(LmpClient.MainSystem), "HandleCommandLineArgs"),
                 typeof(CommandLinePatch), nameof(CommandLinePatch.Prefix));
             if (TimeSyncPatch.RequestNewSubspace != null)
-                Apply(harmony, applied, "no time jumps when alone in a subspace", AccessTools.Method(typeof(TimeSyncSystem), "CheckGameTime"),
+                Apply(harmony, applied, "no time jumps when alone on the server", AccessTools.Method(typeof(TimeSyncSystem), "CheckGameTime"),
                     typeof(TimeSyncPatch), nameof(TimeSyncPatch.Prefix));
             Apply(harmony, applied, "position time stamps one physics tick right",
                 AccessTools.Method(typeof(LmpClient.Systems.VesselPositionSys.VesselPositionMessageSender), "CreateMessageFromVessel"),
