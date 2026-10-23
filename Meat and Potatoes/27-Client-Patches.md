@@ -260,3 +260,10 @@ Also seen, not ours: "Malformed packet" warnings from Lidgren (also in logs from
 stopped when the friend reconnected. The other player's vessel is hidden inside the 100 m safety bubble, and loaded
 only within ~2.2 km (a marker beyond).
 
+## 2.10: the LUNA EVO patches page
+
+`PatchesPage` (rail: LUNA EVO → LUNA EVO patches) lists `Core/Join/PatchCatalog.All`: every fix, where it runs (KSP or
+server), what it does for the player, what the rig measured and since when. Keep the catalog in step with this chapter
+and 26 when a patch changes. Installing reuses the existing steps: `JoinPage.TogglePatchesAsync` for the KSP in Join's
+folder box (it now keeps `LastPatchMessage` for the page) and `MapPage.TogglePluginAsync` for the open server, with the
+same questions and checks (KSP closed, server stopped, LMP 0.29 only).

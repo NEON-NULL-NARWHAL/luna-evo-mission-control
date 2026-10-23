@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.10.0 (2026-10-22)
+
+### Added
+- **LUNA EVO patches** (in the rail, under LUNA EVO): every LUNA EVO fix for LMP on one page, what each does and what it
+  measured, and where it's installed: the patches in your KSP (the folder from Join) and the server plugin in your server,
+  each with Install, Update or Remove. The same steps as before on Join and Map, now easy to find.
+
 ## 2.9.3 (2026-10-22)
 
 ### Changed

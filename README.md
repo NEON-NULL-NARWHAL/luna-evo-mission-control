@@ -12,7 +12,7 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 2.9.3** · [What's new](WHATS-NEW.md) · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 2.10.0** · [What's new](WHATS-NEW.md) · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[⚡ Quickstart](QUICKSTART.md)** · **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](docs/SCREENSHOTS.md#screenshots)** · **[Host a server](docs/HOSTING.md#set-up-a-new-server-step-by-step)** · **[Find and join](docs/PLAYING.md#join-a-friends-server)** · **[Mods with CKAN](docs/PLAYING.md#using-the-ckan-page)** · **[No open ports](docs/PLAYING.md#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](docs/DEVELOPERS.md)**
 
@@ -67,7 +67,7 @@ LMP's list. Mission Control does all of that, for hosts and players alike.
 | 🎮 **[Find, mod and join](docs/FEATURES.md#find-mod-and-join-for-players)** | Server browser, CKAN, mod checks, launch straight into a server, a map of the server's vessels. |
 | ⚙️ **[Configure it](docs/FEATURES.md#configure-it)** | All 13 LMP config files as a GUI, validated, with backups. |
 | 🔁 **[Keep it running](docs/FEATURES.md#keep-it-running)** | Auto-restart, daily restarts, alerts, home server mode. |
-| 🩹 **[Fixes for LMP itself](docs/FEATURES.md#fixes-for-lmp-itself)** | LUNA EVO patches and server plugin: less lag, fewer lost updates, an in-game window. |
+| 🩹 **[Fixes for LMP itself](docs/FEATURES.md#fixes-for-lmp-itself)** | LUNA EVO patches and server plugin, all on one page in the app: less lag, fewer lost updates, staying in step, an in-game window. |
 | 🔒 **[Safe by default](docs/FEATURES.md#safe-by-default)** | Private, no telemetry, verified downloads. |
 
 ## Screenshots

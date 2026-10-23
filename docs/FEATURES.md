@@ -56,7 +56,7 @@ You don't have to host anything: choose **Join a friend's server** on the welcom
 
 ## Fixes for LMP itself
 
-**Join → Install the LUNA EVO patches** (for players) and **Map → Install the LUNA EVO server plugin** (for hosts).
+All on one page: **LUNA EVO patches** in the rail (2.10), with Install, Update or Remove for your KSP (players) and your server (hosts).
 Each fix was measured in a real game before and after. Nothing new goes over the network, so you still play with people
 who don't have them.
 

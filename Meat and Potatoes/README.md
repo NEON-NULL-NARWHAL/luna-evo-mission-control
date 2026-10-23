@@ -188,6 +188,7 @@ Symbols used in the map below and throughout these chapters:
 | ⚠️🔌 | `CommandLinePatch.cs` | Replaces LMP's `-lmp` reading (which breaks LMP's startup with a port); the password comes from LMP's server list. |
 | 🔌 | `LmpAddress.cs` | Parses `lmp://host:port`; no KSP types, so Core.Tests compiles and fuzzes it too. |
 | ⚠️🔌 | `TimeSyncPatch.cs` | Alone in your subspace and far off its time: a subspace at your own time instead of LMP's clock jump. |
+| 🖥️ | `PatchesPage.cs` (app) and `Core/Join/PatchCatalog.cs` | The LUNA EVO patches page: every fix, what it does and measured, install/update/remove for KSP and the server. See [27](27-Client-Patches.md#210-the-luna-evo-patches-page). |
 | 🔌 | `EvoWindow.cs` | The in-game LUNA EVO window (KSP toolbar button): connection, players, clock sync, watching a player, LMP settings. See [27](27-Client-Patches.md#28-the-in-game-luna-evo-window). |
 | 🔌 | `StampPatch.cs` | Adds the one physics tick LMP's position time stamps are short by. |
 | 🔌 | `ChannelPatch.cs`, `LmpChannels.cs` | P1: a Lidgren channel per vessel for fast updates (`LmpChannels` shared with the server plugin). |

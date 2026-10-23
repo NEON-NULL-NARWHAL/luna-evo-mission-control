@@ -266,7 +266,7 @@ internal sealed class MapPage
         return copy.ToArray();
     }
 
-    private PluginStatus? PluginState() =>
+    internal PluginStatus? PluginState() =>
         _host.Session is { } session && PluginBytes() is { } bytes && ServerPluginInstaller.Supports(Core.Setup.LmpVersion.Parse(session.Schema.ServerVersion))
             ? ServerPluginInstaller.Status(session.ServerDirectory, bytes)
             : null;

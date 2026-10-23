@@ -4,6 +4,11 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.10: all the patches on one page
+
+- **LUNA EVO patches** in the rail: every fix for LMP, what it does, what it measured, and Install, Update or Remove for
+  your KSP and your server.
+
 ## 2.9.3: tidier
 
 - A shorter README with the details on pages of their own; planet names on the map no longer pile up.

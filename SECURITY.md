@@ -47,6 +47,7 @@ is under [Tested with](#tested-with).
 
 | Version | What it added (security-relevant) | Audit | Checked for real | Tests |
 |---|---|---|---|---|
+| 2.10.0 | A page that lists the patches and calls the existing install steps (same confirmations and checks); no new access | Within audit 12's scope | UI test: lists every fix, installs and removes in a fake KSP | 372 |
 | 2.9.2 | **Audit 12** (L1-L8): Stay in step follows only occupied subspaces; a low-disk warning for the server's drive; the tests clean up their temp copies | - | Every finding has a test or a rig check; no vulnerable packages in all 13 projects | 370 |
 | 2.9.1 | The client patch now syncs the player's own clock by itself (only forward, only up to 60 s, only what LMP's sync button does; switchable). Owner's live game observed read-only. Tests no longer fill the temp folder | Within audit 11's scope | Rig: both rules checked with two KSPs | 368 |
 | 2.9.0 | Reads the clipboard only when the user pastes into Join's address box; a player's map reads the host's LMP website (same request and parser as Join's live info, nothing new). GitHub release notes are shown as plain text. UI tests can no longer see the PC's real KSP | Within audit 11's scope | Invite paste fixed and tested through the paste path; player map tested from a fake website | 368 |

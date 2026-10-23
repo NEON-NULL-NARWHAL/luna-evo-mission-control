@@ -147,6 +147,39 @@ public class JoinPageTests
     }
 
     [AvaloniaFact]
+    public void The_patches_page_lists_every_fix_and_installs_them()
+    {
+        var patches = System.Text.Encoding.ASCII.GetBytes("MZ fake patches");
+        var original = JoinPage.PatchBytes;
+        JoinPage.PatchBytes = () => patches;
+        try
+        {
+            using var ui = Player();
+            var (ksp, _) = FakeKspWithLmp();
+            ui.Window.Navigate(MainWindow.JoinKey);
+            ui.Window.Join.KspBox.Text = ksp;
+            ui.OpenTab(MainWindow.PatchesKey);
+            var texts = ui.Window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible).Select(t => t.Text).ToList();
+            foreach (var patch in PatchCatalog.All)
+                Assert.Contains(patch.Name, texts);
+            Assert.Contains(texts, t => t?.Contains("not installed") == true);
+            Assert.Contains(texts, t => t?.StartsWith("Open a server", StringComparison.Ordinal) == true); // a player: no server here
+
+            ui.Click(ui.Find<Button>("patches/ksp"));
+            ui.WaitFor(() => File.Exists(ClientPatches.PathFor(ksp)), "the patches installed");
+            ui.WaitFor(() => ui.Find<TextBlock>("patches/result").Text?.StartsWith("LUNA EVO patches installed", StringComparison.Ordinal) == true, "the result shown");
+            Assert.Contains(ui.Window.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("installed, up to date") == true);
+
+            ui.Click(ui.Find<Button>("patches/ksp"));
+            ui.WaitFor(() => !File.Exists(ClientPatches.PathFor(ksp)), "the patches removed");
+        }
+        finally
+        {
+            JoinPage.PatchBytes = original;
+        }
+    }
+
+    [AvaloniaFact]
     public void With_luna_evos_patches_a_port_and_a_password_still_connect_by_themselves()
     {
         var patches = System.Text.Encoding.ASCII.GetBytes("MZ fake patches");

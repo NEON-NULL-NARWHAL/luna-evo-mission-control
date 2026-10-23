@@ -43,6 +43,7 @@ asked), it says so and why, and the owner can overrule it. Those calls are marke
 
 | Date | Version | The owner decided | What was done |
 |---|---|---|---|
+| 2026-10-22 | 2.10.0 | Restore the Kerbal Konstructs file; a patch settings menu to see all patches, what they do, and install them | KerbalKonstructsSettings.txt restored from the 10:36 backup (server stopped). LUNA EVO patches page in the rail. Next: KSP Wingman |
 | 2026-10-22 | 2.9.3 | Organize the README into sections linked to other readmes; clean up the UI | README 509 → 127 lines; docs/ pages (features, hosting, playing, screenshots, developers, AI disclosure); every link checked. UI: pages rendered headlessly and reviewed; What's new padding, map labels, rail status line |
 | 2026-10-22 | 2.9.2 | Audit 12 ("run an audit... re-look through LMP client and server and our patches"); KSP Wingman approved as a new public GPL-3.0 repo, after the open list | Audit 12: L1-L8 in SECURITY.md. Next: README reorganized, UI tidy, then KSP Wingman |
 | 2026-10-22 | 2.9.1 | Watch our live game; then: "the update needs to be forced every couple of seconds unless in warp"; "only use D drive" | Live: the time fix split the two players; fixed (only when alone on the server) and auto-sync added (up to 60 s). The tests had filled C: with 34 GB (and the owner's server crashed mid-save): they clean up now and run with TEMP on D: |

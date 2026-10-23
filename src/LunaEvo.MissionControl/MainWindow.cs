@@ -39,6 +39,7 @@ public sealed class MainWindow : Window
     internal const string BrowserKey = "browser";
     internal const string VesselsKey = "vessels";
     internal const string MapKey = "map";
+    internal const string PatchesKey = "patches";
     internal const string ServerSettingsKey = "serverSettings";
     internal const string ModControlFile = "LMPModControl.xml";
 
@@ -92,6 +93,7 @@ public sealed class MainWindow : Window
     private readonly CkanPage _ckanPage;
     private readonly BrowserPage _browserPage;
     private readonly MapPage _mapPage;
+    private readonly PatchesPage _patchesPage;
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
@@ -209,6 +211,7 @@ public sealed class MainWindow : Window
         _ckanPage = new CkanPage(this);
         _browserPage = new BrowserPage(this);
         _mapPage = new MapPage(this);
+        _patchesPage = new PatchesPage(this);
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
         var exe = CurrentExe; // this window's exe, not whatever CurrentExe is in 15 seconds
@@ -614,6 +617,9 @@ public sealed class MainWindow : Window
             case BrowserKey:
                 _browserPage.Refresh();
                 break;
+            case PatchesKey:
+                _patchesPage.Refresh();
+                break;
             case MapKey:
                 _mapPage.Refresh();
                 break;
@@ -969,6 +975,7 @@ public sealed class MainWindow : Window
     private void AddLunaEvoSection()
     {
         AddHeading("LUNA EVO");
+        AddNav(PatchesKey, new TextBlock { Text = "LUNA EVO patches" }, _patchesPage.View);
         AddNav(SettingsKey, new TextBlock { Text = "App settings" }, _settingsPage.View);
     }
 

@@ -438,8 +438,12 @@ internal sealed class JoinPage : IDisposable
         _patches.Children.Add(button);
     }
 
+    /// <summary>What the last install or remove of the patches said (the LUNA EVO patches page shows it too).</summary>
+    internal string? LastPatchMessage { get; private set; }
+
     internal async Task TogglePatchesAsync()
     {
+        LastPatchMessage = null;
         var ksp = _ksp.Text?.Trim() ?? "";
         if (!KspLauncher.IsKspFolder(ksp) || PatchBytes() is not { } bytes)
             return;
@@ -453,7 +457,7 @@ internal sealed class JoinPage : IDisposable
                         "when it falls behind.", "Remove"))
                     return;
                 ClientPatches.Remove(ksp);
-                _launchResult.Text = "LUNA EVO patches removed from this KSP.";
+                _launchResult.Text = LastPatchMessage = "LUNA EVO patches removed from this KSP.";
             }
             else
             {
@@ -471,12 +475,12 @@ internal sealed class JoinPage : IDisposable
                         "itself off. Remove takes it out.", "Install"))
                     return;
                 ClientPatches.Install(ksp, bytes);
-                _launchResult.Text = "LUNA EVO patches installed. Launch KSP and join now connects by itself.";
+                _launchResult.Text = LastPatchMessage = "LUNA EVO patches installed. Launch KSP and join now connects by itself.";
             }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            _launchResult.Text = e.Message;
+            _launchResult.Text = LastPatchMessage = e.Message;
         }
         ShowPatches();
     }
