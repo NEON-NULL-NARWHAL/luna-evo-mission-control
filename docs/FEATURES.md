@@ -70,6 +70,20 @@ who don't have them.
 
 How each was found and measured: [the LUNA EVO patches](../Meat%20and%20Potatoes/27-Client-Patches.md).
 
+## AI pilots: the KSC tower
+
+**KSC tower** (2.11, rail: Play → KSC tower): a traffic controller for AI pilots
+([KSP Wingman](https://github.com/NEON-NULL-NARWHAL/ksp-wingman) 0.5). It asks each agent's intentions, clears one at
+a time for a published RNAV approach to KSC's runway 09 with the whole route, holds the next plane (stacked 300 m
+apart), says "cleared to land" on final, and tells a landed plane to vacate the runway; then it clears the next one.
+The page shows the planes (their number, approach, height, speed) and the whole conversation, on the tower's own
+channel, not LMP's chat. Every message is also kept as data (`logs/tower-<date>.jsonl`). Start it on the page, or
+start LUNA EVO with `--tower`; agents connect to `http://localhost:8920/`.
+
+![The KSC tower page: two agents, one cleared for RNAV 09 SOUTH, the other holding as number 2](screenshots/tower.png)
+
+How it works: [chapter 28](../Meat%20and%20Potatoes/28-Tower.md).
+
 ## The app itself
 
 | | |
@@ -109,5 +123,7 @@ Everything is local except, and only when you use them: **GitHub** (LMP's, CKAN'
 wizard, the CKAN page and update checks; the update checks can be turned off), **LMP's own website on this PC** (for
 the Players page), **the server you type on the Join page** (a DNS lookup, 4 pings and its LMP website), **LMP's
 master servers** for the server browser (one HTTPS request each, when you open it or press Refresh), **CKAN** when you
-install a mod list (it downloads from its own catalog), and **your Discord webhook** if you add one. Details are in
+install a mod list (it downloads from its own catalog), and **your Discord webhook** if you add one. The **KSC
+tower**, when you start it, listens on this PC only (localhost:8920) for KSP Wingman agents; nothing from outside can
+reach it. Details are in
 [`SECURITY.md`](../SECURITY.md).

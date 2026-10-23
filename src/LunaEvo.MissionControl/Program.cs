@@ -50,9 +50,10 @@ internal static class Program
 /// <param name="ServerDirectory">Folder with Server.dll. Defaults to the app's own folder when it ships next to Server.exe.</param>
 /// <param name="ConfigDirectory">Folder with the XML files. Defaults to ServerDirectory/Config.</param>
 /// <param name="SettingsPath">Where LUNA EVO keeps its own settings. Defaults to %APPDATA%; tests use a temp file.</param>
-internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDirectory, string? SettingsPath = null, bool Minimized = false)
+/// <param name="TowerPort">--tower [port]: start the KSC tower at startup (for agents and rig tests).</param>
+internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDirectory, string? SettingsPath = null, bool Minimized = false, int? TowerPort = null)
 {
-    /// <summary>Reads --server, --config and --settings; falls back to the exe's own folder when it sits next to Server.dll.</summary>
+    /// <summary>Reads --server, --config, --settings and --tower; falls back to the exe's own folder when it sits next to Server.dll.</summary>
     public static StartupOptions Parse(string[] args)
     {
         string? server = null, config = null, settings = null;
@@ -66,7 +67,13 @@ internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDir
         if (server == null && File.Exists(Path.Combine(AppContext.BaseDirectory, "Server.dll")))
             server = AppContext.BaseDirectory;
 
+        // --tower, with or without a port after it.
+        int? tower = null;
+        var t = Array.IndexOf(args, "--tower");
+        if (t >= 0)
+            tower = t + 1 < args.Length && int.TryParse(args[t + 1], out var port) && port is > 0 and < 65536 ? port : Core.Tower.TowerServer.DefaultPort;
+
         // --minimized: started by Windows at login in home server mode; open hidden in the notification area.
-        return new StartupOptions(server, config, settings, args.Contains(HomeServer.MinimizedFlag));
+        return new StartupOptions(server, config, settings, args.Contains(HomeServer.MinimizedFlag), tower);
     }
 }

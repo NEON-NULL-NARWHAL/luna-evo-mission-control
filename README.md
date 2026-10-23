@@ -67,6 +67,7 @@ LMP's list. Mission Control does all of that, for hosts and players alike.
 | 🎮 **[Find, mod and join](docs/FEATURES.md#find-mod-and-join-for-players)** | Server browser, CKAN, mod checks, launch straight into a server, a map of the server's vessels. |
 | ⚙️ **[Configure it](docs/FEATURES.md#configure-it)** | All 13 LMP config files as a GUI, validated, with backups. |
 | 🔁 **[Keep it running](docs/FEATURES.md#keep-it-running)** | Auto-restart, daily restarts, alerts, home server mode. |
+| 🗼 **[AI pilots: the KSC tower](docs/FEATURES.md#ai-pilots-the-ksc-tower)** | A traffic controller for KSP Wingman agents: clearances, holds, vacating the runway, the whole conversation on one page. |
 | 🩹 **[Fixes for LMP itself](docs/FEATURES.md#fixes-for-lmp-itself)** | LUNA EVO patches and server plugin, all on one page in the app: less lag, fewer lost updates, staying in step, an in-game window. |
 | 🔒 **[Safe by default](docs/FEATURES.md#safe-by-default)** | Private, no telemetry, verified downloads. |
 

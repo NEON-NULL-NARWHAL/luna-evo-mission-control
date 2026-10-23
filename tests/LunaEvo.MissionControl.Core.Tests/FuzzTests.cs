@@ -162,6 +162,20 @@ public class FuzzTests
         });
 
     [Fact]
+    public void Tower_channel_requests()
+    {
+        // Whatever an agent sends, the tower answers with a status code, never an exception.
+        using var server = new Tower.TowerServer(0, () => new DateTime(2026, 10, 23, 12, 0, 0, DateTimeKind.Utc));
+        Fuzz(["""{"callSign":"Wingman","latitude":-0.05,"longitude":-74.7,"altitude":900,"heading":90,"speed":120,"situation":"Flying","phase":"x"}""",
+              """{"callSign":"Wingman","kind":"request-approach","text":"land at KSC please"}"""],
+            text =>
+            {
+                server.Answer("POST", "/v1/report", text);
+                server.Answer("POST", "/v1/say", text);
+            });
+    }
+
+    [Fact]
     public void Invites_addresses_versions_and_comments() => Fuzz(
         ["Join my KSP server \"X\"!\nAddress: 192.168.1.20:8810\nLMP version: 0.29.2-compiled\n", "lmp://[2001:db8::1]:8800/", "kerbin.example.com:8800",
          "Max 30 char. Min value = 5000. Values: Sandbox, Career, Science", "0.29.2-compiled", "60 Join our Discord!\n120 Back up your saves"],

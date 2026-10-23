@@ -40,6 +40,7 @@ public sealed class MainWindow : Window
     internal const string VesselsKey = "vessels";
     internal const string MapKey = "map";
     internal const string PatchesKey = "patches";
+    internal const string TowerKey = "tower";
     internal const string ServerSettingsKey = "serverSettings";
     internal const string ModControlFile = "LMPModControl.xml";
 
@@ -59,7 +60,7 @@ public sealed class MainWindow : Window
     ];
 
     /// <summary>Rail pages hidden in simple mode.</summary>
-    private static readonly string[] AdvancedPages = [PlayersKey, VesselsKey, MapKey, ModControlFile, ProfilesKey, CraftsKey];
+    private static readonly string[] AdvancedPages = [PlayersKey, VesselsKey, MapKey, ModControlFile, ProfilesKey, CraftsKey, TowerKey];
 
     private readonly HashSet<SettingRow> _essentialRows = [];
     private TextBox? _settingsSearch;
@@ -94,6 +95,7 @@ public sealed class MainWindow : Window
     private readonly BrowserPage _browserPage;
     private readonly MapPage _mapPage;
     private readonly PatchesPage _patchesPage;
+    private readonly TowerPage _towerPage;
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
@@ -182,6 +184,11 @@ public sealed class MainWindow : Window
         {
             if (TryGetPlatformHandle() is { } handle)
                 DesktopNotifier.Attach(handle.Handle);
+            if (options.TowerPort is { } towerPort)
+            {
+                _towerPage.Start(towerPort);
+                Navigate(TowerKey); // started for the tower: show it
+            }
             if (!Settings.HomeServerMode)
                 return;
             // Home server mode: started by Windows at login → straight to the notification area, and the server up.
@@ -192,6 +199,7 @@ public sealed class MainWindow : Window
         };
         Closed += (_, _) =>
         {
+            _towerPage.Stop();
             _server?.Dispose();
             _players?.Dispose();
             _joinPage?.Dispose();
@@ -212,6 +220,7 @@ public sealed class MainWindow : Window
         _browserPage = new BrowserPage(this);
         _mapPage = new MapPage(this);
         _patchesPage = new PatchesPage(this);
+        _towerPage = new TowerPage(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(SettingsPath)!, "logs")); // next to the settings: a test's own
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
         var exe = CurrentExe; // this window's exe, not whatever CurrentExe is in 15 seconds
@@ -254,6 +263,7 @@ public sealed class MainWindow : Window
     internal CkanPage Ckan => _ckanPage;
     internal BrowserPage Browser => _browserPage;
     internal MapPage Map => _mapPage;
+    internal TowerPage Tower => _towerPage;
     internal SettingsPage SettingsPageForTests => _settingsPage;
 
     /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>
@@ -620,6 +630,9 @@ public sealed class MainWindow : Window
             case PatchesKey:
                 _patchesPage.Refresh();
                 break;
+            case TowerKey:
+                _towerPage.Refresh();
+                break;
             case MapKey:
                 _mapPage.Refresh();
                 break;
@@ -970,6 +983,7 @@ public sealed class MainWindow : Window
             AddNav(MapKey, new TextBlock { Text = "Map" }, _mapPage.View);
         AddNav(CraftsKey, new TextBlock { Text = "Crafts" }, _craftsPage.View);
         AddNav(CkanKey, new TextBlock { Text = "CKAN mods" }, _ckanPage.View);
+        AddNav(TowerKey, new TextBlock { Text = "KSC tower" }, _towerPage.View);
     }
 
     private void AddLunaEvoSection()

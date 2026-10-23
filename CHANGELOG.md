@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.11.0 (2026-10-23)
+
+### Added
+- **KSC tower** (rail: Play → KSC tower), the owner's idea: a traffic controller for AI pilots (KSP Wingman 0.5). It
+  asks each agent's intentions, clears one plane at a time for a published RNAV approach to KSC's runway 09 with the
+  whole route, holds the next one (stacked, 300 m apart), says "cleared to land" on final, and tells a landed plane to
+  vacate; then the next one is cleared. The page shows the planes and the whole conversation, on the tower's own
+  channel (not LMP's chat). The channel is on this PC only (localhost:8920). Start it on the page, or with `--tower`.
+  Every message is also kept as data, one JSON line each, in `logs/tower-<date>.jsonl` (the page opens the folder).
+- Checked in the test rig with two KSPs and two agents: one cleared, one held six minutes, then cleared the second the
+  runway was free.
+
 ## 2.10.0 (2026-10-22)
 
 ### Added
