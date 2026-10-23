@@ -84,6 +84,25 @@ is under [Tested with](#tested-with).
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
 
+## Audit 13 (2.11.0, October 2026)
+
+Scope: the KSC tower (2.11: `Core/Tower`, the page, `--tower`, the channel log) and its other side in KSP Wingman 0.5
+(`TowerClient`), the first time LUNA EVO listens on a port itself.
+
+Checked and clean: no vulnerable packages (13 projects here, 8 in Wingman, 4 in the private support tools); nothing
+personal in the commits since audit 12 (the rig's player names are made up); the channel is shown as plain text; the
+log folder button goes through `Ui.Open` (folders and web links only); the log is written next to the settings file,
+so a test's `--settings` keeps it out of the user's AppData; the tower's request parser is fuzzed.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| T1 | Medium | A web page open in the user's browser could post to `http://localhost:8920` while the tower runs: a "simple" cross-site POST needs no CORS preflight, and a DNS-rebinding page could too. It could put fake planes and lines on the channel (no code runs; the page shows text) | Refused before parsing: any `Origin` header (browsers send it on cross-site requests), a `Host` other than `localhost` or `127.0.0.1` on the tower's port, and anything not `application/json` (which makes a browser ask first, and the tower never answers yes). Checked over real HTTP: browser-style and text/plain requests get 403, an agent gets 200 |
+| T2 | Low | Anything on this PC could grow the channel, the plane list and the log without end | At most 5,000 messages kept in memory (delivery now goes by message id), 50 planes (then 429), and the day's log stops at 20 MB |
+| T3 | Low (Wingman) | The agent flew whatever route or hold the tower sent; anything on the PC can talk on the channel | Wingman 0.5.1 flies a route only with at most 12 fixes, each within 60 km of KSC, at 400-5,000 m and 60-250 m/s, and a hold only within 60 km, at 400-5,000 m, with a 1-5 km circle; otherwise it says it refused |
+| T4 | Info | The tower has no authentication: any program on this PC can be an agent | Accepted: it only listens on localhost, and the worst a local program can do is talk on the channel (T2 caps it, T3 keeps agents from flying nonsense). A shared token is the next step if agents ever connect from another PC |
+| T5 | Info | "Vacate" makes the agent recover its plane | Only when it's Landed and stopped, and the plane is the agent's own |
+| T6 | Info (ours) | A rig check started the app with an unquoted `--settings` path containing a space, so the log went to `D:\logs` | Test command only (RigRun quotes it); the page now shows the log's real path, which is how it was caught |
+
 ## Audit 12 (2.9.2, October 2026)
 
 Scope: everything since audit 11 (2.7 to 2.9.1: the network patches, the in-game window and its stand-ins, What's new,

@@ -12,6 +12,10 @@
 - Checked in the test rig with two KSPs and two agents: one cleared, one held six minutes, then cleared the second the
   runway was free.
 
+### Security
+- Audit 13 (see SECURITY.md): the tower refuses requests from web browsers and other hosts, and caps how much a local
+  program can put on the channel.
+
 ## 2.10.0 (2026-10-22)
 
 ### Added

@@ -38,7 +38,7 @@ public sealed class TowerPlane(string callSign)
     public string? Approach { get; internal set; }
     public int Number { get; internal set; }
     public string Intent { get; internal set; } = "";
-    internal int Delivered;
+    internal int DeliveredId;
     internal bool ToldClearedToLand;
 }
 
@@ -49,11 +49,21 @@ public sealed class Tower
 
     public const string Name = "KSC tower";
 
+    /// <summary>Kept in memory (audit 13, T2: a local flood can't grow it without end); the log keeps everything.</summary>
+    public const int MaxChannel = 5000;
+
+    /// <summary>Planes on the channel at once (KSC's pattern takes a handful; anything more is a flood).</summary>
+    public const int MaxPlanes = 50;
+
     private readonly List<TowerMessage> _channel = [];
     private readonly Dictionary<string, TowerPlane> _planes = new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyList<TowerMessage> Channel => _channel;
     public IReadOnlyCollection<TowerPlane> Planes => _planes.Values;
+
+    /// <summary>Whether a call sign may talk: one already on the channel, or a new one while there's room.</summary>
+    public bool Accepts(string callSign) =>
+        _planes.ContainsKey(callSign) || _planes.Values.Count(p => p.State != PlaneState.Gone) < MaxPlanes;
 
     /// <summary>A report from a plane: the tower's new messages for it (none, usually).</summary>
     public IReadOnlyList<TowerMessage> Report(PlaneReport report, DateTime now)
@@ -180,13 +190,21 @@ public sealed class Tower
     private void Send(DateTime now, string to, string kind, string text, TowerRoute? Route = null, TowerHold? Hold = null) =>
         Log(now, Name, to, kind, text, Route, Hold);
 
-    private void Log(DateTime now, string from, string to, string kind, string text, TowerRoute? route = null, TowerHold? hold = null) =>
-        _channel.Add(new TowerMessage(_channel.Count + 1, now, from, to, kind, text, route, hold));
+    private int _nextId = 1;
+
+    private void Log(DateTime now, string from, string to, string kind, string text, TowerRoute? route = null, TowerHold? hold = null)
+    {
+        _channel.Add(new TowerMessage(_nextId++, now, from, to, kind, text, route, hold));
+        if (_channel.Count > MaxChannel)
+            _channel.RemoveRange(0, _channel.Count - MaxChannel);
+        foreach (var gone in _planes.Where(p => p.Value.State == PlaneState.Gone && now - p.Value.LastSeen > Timeout * 10).Select(p => p.Key).ToList())
+            _planes.Remove(gone);
+    }
 
     private IReadOnlyList<TowerMessage> Undelivered(TowerPlane plane)
     {
-        var mine = _channel.Skip(plane.Delivered).Where(m => m.From == Name && m.To.Equals(plane.CallSign, StringComparison.OrdinalIgnoreCase)).ToList();
-        plane.Delivered = _channel.Count;
+        var mine = _channel.Where(m => m.Id > plane.DeliveredId && m.From == Name && m.To.Equals(plane.CallSign, StringComparison.OrdinalIgnoreCase)).ToList();
+        plane.DeliveredId = _nextId - 1;
         return mine;
     }
 }

@@ -15,6 +15,9 @@ public sealed class TowerServer : IDisposable
     public const int DefaultPort = 8920;
     private const int MaxBody = 16 * 1024;
 
+    /// <summary>The day's channel log stops growing here (audit 13, T2): a local flood fills no disk.</summary>
+    public const long MaxLogBytes = 20 * 1024 * 1024;
+
     private readonly HttpListener _listener = new();
     private readonly Func<DateTime> _clock;
     private readonly CancellationTokenSource _stop = new();
@@ -69,7 +72,10 @@ public sealed class TowerServer : IDisposable
         var response = context.Response;
         try
         {
-            var (status, body) = Answer(context.Request.HttpMethod, context.Request.Url?.AbsolutePath ?? "", Read(context.Request));
+            var request = context.Request;
+            var (status, body) = Refuse(request.Headers["Origin"], request.Headers["Host"], request.ContentType, Port) is { } why
+                ? (403, Error(why))
+                : Answer(request.HttpMethod, request.Url?.AbsolutePath ?? "", Read(request));
             var bytes = Encoding.UTF8.GetBytes(body);
             response.StatusCode = status;
             response.ContentType = "application/json";
@@ -102,6 +108,24 @@ public sealed class TowerServer : IDisposable
         return Encoding.UTF8.GetString(buffer, 0, total);
     }
 
+    /// <summary>
+    /// Why a request isn't an agent's, or null (audit 13, T1). A web page in the user's browser can send a "simple" POST
+    /// to localhost without asking first; browsers mark it with an Origin header, a DNS-rebinding page has the wrong
+    /// Host, and a JSON content type makes the browser ask first (and the tower never answers yes). Agents send none of
+    /// that.
+    /// </summary>
+    public static string? Refuse(string? origin, string? host, string? contentType, int port)
+    {
+        if (!string.IsNullOrEmpty(origin))
+            return "not from a browser";
+        var hostName = host?.Split(':')[0];
+        if (hostName is not ("localhost" or "127.0.0.1") || (port != 0 && host != $"{hostName}:{port}"))
+            return "localhost only";
+        if (contentType?.Split(';')[0].Trim().Equals("application/json", StringComparison.OrdinalIgnoreCase) != true)
+            return "application/json only";
+        return null;
+    }
+
     /// <summary>One request, without the network (tested directly): the status code and the JSON answer.</summary>
     public (int Status, string Body) Answer(string method, string path, string? body)
     {
@@ -126,6 +150,8 @@ public sealed class TowerServer : IDisposable
             IReadOnlyList<TowerMessage> messages;
             lock (Tower)
             {
+                if (!Tower.Accepts(callSign))
+                    return (429, Error("too many planes on the channel"));
                 switch (path)
                 {
                     case "/v1/report":
@@ -157,14 +183,16 @@ public sealed class TowerServer : IDisposable
         List<TowerMessage> fresh;
         lock (Tower)
         {
-            fresh = Tower.Channel.Skip(_logged).ToList();
-            _logged = Tower.Channel.Count;
+            fresh = Tower.Channel.Where(m => m.Id > _logged).ToList();
+            _logged = Tower.Channel.Count == 0 ? _logged : Tower.Channel[^1].Id;
         }
         if (fresh.Count == 0)
             return;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
+            if (File.Exists(LogPath) && new FileInfo(LogPath).Length > MaxLogBytes)
+                return;
             File.AppendAllLines(LogPath, fresh.Select(m => JsonSerializer.Serialize(m, Json)));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)

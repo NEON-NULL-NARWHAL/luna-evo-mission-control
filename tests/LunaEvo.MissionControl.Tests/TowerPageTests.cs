@@ -68,6 +68,11 @@ public class TowerPageTests
         Assert.Contains(channel, l => l.Contains("Bravo → KSC tower:  land"));
         Assert.Contains(channel, l => l.Contains("number 2. Hold at KSC-HS"));
 
+        // The channel is kept as data next to the settings file (this test's own temp one).
+        var log = Path.Combine(Path.GetDirectoryName(ui.Window.SettingsPath)!, "logs", $"tower-{DateTime.Now:yyyy-MM-dd}.jsonl");
+        Assert.True(File.Exists(log), $"channel log at {log}");
+        Assert.Contains(File.ReadAllLines(log), l => l.Contains("\"kind\":\"hold\""));
+
         ui.Click(ui.Find<Button>("tower/start")); // stop
         Assert.Null(ui.Window.Tower.Server);
         Assert.StartsWith("Off.", Description(ui, "tower/status"));

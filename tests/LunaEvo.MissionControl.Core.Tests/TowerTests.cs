@@ -92,6 +92,29 @@ public class TowerTests
     }
 
     [Fact]
+    public void Browsers_and_other_hosts_are_refused_and_floods_are_capped()
+    {
+        // Audit 13: T1 (a web page posting to localhost, DNS rebinding), T2 (planes and the channel can't grow without end).
+        Assert.Null(TowerServer.Refuse(null, "localhost:8920", "application/json; charset=utf-8", 8920));
+        Assert.Null(TowerServer.Refuse(null, "127.0.0.1:8920", "application/json", 8920));
+        Assert.NotNull(TowerServer.Refuse("https://evil.example", "localhost:8920", "application/json", 8920));
+        Assert.NotNull(TowerServer.Refuse(null, "evil.example:8920", "application/json", 8920));
+        Assert.NotNull(TowerServer.Refuse(null, "localhost:9999", "application/json", 8920));
+        Assert.NotNull(TowerServer.Refuse(null, "localhost:8920", "text/plain", 8920));
+        Assert.NotNull(TowerServer.Refuse(null, null, null, 8920));
+
+        using var server = new TowerServer(0, () => T0);
+        string Say(string callSign, string text) => JsonSerializer.Serialize(new { callSign, kind = "intent", text });
+        for (var i = 0; i < Tower.Tower.MaxPlanes; i++)
+            Assert.Equal(200, server.Answer("POST", "/v1/say", Say($"p{i}", "local")).Status);
+        Assert.Equal(429, server.Answer("POST", "/v1/say", Say("one too many", "local")).Status);
+        Assert.Equal(200, server.Answer("POST", "/v1/say", Say("p0", "still me")).Status);
+        for (var i = 0; i < Tower.Tower.MaxChannel; i++)
+            server.Answer("POST", "/v1/say", Say("p1", "spam"));
+        Assert.True(server.Tower.Channel.Count <= Tower.Tower.MaxChannel);
+    }
+
+    [Fact]
     public void The_channel_is_kept_as_data_one_json_line_per_message()
     {
         var folder = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "tower-" + Guid.NewGuid().ToString("N"));

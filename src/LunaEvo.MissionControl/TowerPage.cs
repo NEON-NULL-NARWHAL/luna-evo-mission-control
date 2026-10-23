@@ -107,7 +107,8 @@ internal sealed class TowerPage
         {
             var open = Ui.Button("Open the log folder", "text").WithId("tower/logs");
             open.Click += (_, _) => { Directory.CreateDirectory(_logFolder); Ui.Open(_logFolder); };
-            _status.Children.Add(Ui.Row("Channel log", "Every message, with its route or hold, as data: tower-<date>.jsonl, one JSON line each.", open));
+            _status.Children.Add(Ui.Row("Channel log", "Every message, with its route or hold, as data, one JSON line each: " +
+                (Server?.LogPath ?? Path.Combine(_logFolder, "tower-<date>.jsonl")), open).WithId("tower/log"));
         }
 
         _planes.Children.Clear();
