@@ -4,6 +4,12 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.11: a tower for AI pilots
+
+- **KSC tower** (Play → KSC tower): a traffic controller for KSP Wingman agents. It asks their intentions, clears one
+  plane at a time for an approach to KSC's runway with the whole route, holds the next, and tells a landed plane to
+  vacate. The whole conversation is on the page, and saved as data.
+
 ## 2.10: all the patches on one page
 
 - **LUNA EVO patches** in the rail: every fix for LMP, what it does, what it measured, and Install, Update or Remove for
