@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the eighteen security audits (0.4.0 to 2.15.0) found and changed, newest first, and which real
+what the nineteen security audits (0.4.0 to 2.16.0) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
@@ -83,6 +83,19 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 19 (2.16.0, October 2026)
+
+Scope: go-around resequencing and traffic information (tower), the rejected takeoff, the go-around report and the
+held clearance (Wingman 0.10), and a free-flight loop the rig found. No new packages, nothing personal.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| B1 | Low | Anything on this PC can say "go-around" for any plane on approach (T4) | It only resequences that plane (to the back, or the short visual); nothing else changes |
+| B2 | Low (found in the rig) | Training on new planes with none left looped without pause, thousands of times in seconds, filling the session log at megabytes a minute | Training stops with the reason; free flight drops that drill for the session; five rounds in a row without a flight stop free flight |
+| B3 | Info | Traffic information shares other planes' call signs and altitudes with every agent | Only what the tower already shows on its page and says on the radio |
+| B4 | Info | A clearance received while climbing out of a go-around is held until 300 m above the ground | So a new route is never flown just off the deck |
+| B5 | Info | Plane notes are lessons with a plane's name | The same rules as every lesson (cite a flight, that flight's plane, 10-200 characters, facts not orders); plane names come from the flight records, cut to 60 characters |
 
 ## Audit 18 (2.15.0, October 2026)
 

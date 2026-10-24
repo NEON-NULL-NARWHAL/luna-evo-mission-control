@@ -76,6 +76,11 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
   within 25 km, 12 at most); cleared as filed when the runway is free, held for traffic and flown when its turn comes
   (if it still checks out from there), "unable: why" otherwise. The plan is used once.
 
+- **Go-arounds** (2.16, the owner's idea): an agent going around says `go-around`; with others holding, the next
+  one is cleared first and the go-around joins the back of the overhead hold; alone, it's cleared again at once for
+  the short visual. Holds and clearances carry **traffic information** (each other plane: on approach, holding over the
+  runway, or on the runway, and its altitude).
+
 ## 28.3b The radio (talking on LMP chat)
 
 "Talk on LMP chat" on the page (or `--tower-chat`), with a server open: every channel message is also appended to

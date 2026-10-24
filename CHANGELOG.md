@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.16.0 (2026-10-24)
+
+### Added
+- **Go-arounds are resequenced** (the owner's idea): an agent that goes around tells the KSC tower, which puts it at
+  the back of the hold over the runway and clears the next plane, or, with nobody waiting, clears it again at once for
+  the short visual from where it is.
+- **Traffic information**: the tower's holds and clearances say who else is around ("Traffic: RigViewer holding over
+  the runway at 1,500 m").
+- **What the agents know about each plane** (the owner's idea): every plane flown gets a profile on the Wingman page
+  (its flights, landings and crashes, its best landing, the fastest and highest it's been) and a list of what's still
+  to learn about it (take off, land it, a good landing, its top speed, its ceiling, notes on how it handles, three
+  flights without a crash). Lessons can be about one plane (how it handles, its speeds, how it differs from the others).
+
+### In the test rig
+- RigPilot trained on new planes: the Aeris 4A went into the sea after 48 s; the Albatross 3 flew the short visual,
+  went around, and was put back in sequence ("roger the go-around. number 2. Hold at KSC-OH ... Traffic: RigViewer on
+  approach at 1477 m") while RigViewer, cleared from the hold, landed 2 m off the centerline.
+
+### Fixed
+- The landing clearance's fallback (2.5 km out) also fired for a plane circling in the overhead hold; it's only for a
+  plane lined up on final now.
+
+### Security
+- Audit 19 (see SECURITY.md).
+
 ## 2.15.0 (2026-10-24)
 
 ### Added

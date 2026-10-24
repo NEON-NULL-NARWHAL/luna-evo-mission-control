@@ -132,6 +132,29 @@ public sealed class Tower
         var plane = Plane(callSign, now);
         plane.LastSeen = now;
         Log(now, callSign, Name, kind, text);
+        // A go-around (the owner's idea): back into the sequence. With others waiting it holds at the back and the next
+        // one is cleared; alone it's cleared again at once for the short visual from where it is, for another try.
+        if (kind == "go-around" && plane.State == PlaneState.Approach)
+        {
+            plane.ToldClearedToLand = false;
+            plane.RunwayInSight = false;
+            if (_planes.Values.Where(p => p != plane && p.State == PlaneState.Holding).OrderBy(p => p.Number).FirstOrDefault() is { } next)
+            {
+                // The next one goes first, then this one joins the back of the hold.
+                plane.State = PlaneState.Holding; // counted as traffic in the next one's clearance
+                plane.Number = int.MaxValue;
+                Clear(next, now);
+                foreach (var p in _planes.Values.Where(p => p.State == PlaneState.Holding))
+                    p.Number--;
+                Hold(plane, now, "roger the go-around. ");
+            }
+            else
+            {
+                plane.Asked = Ksc.VisualName;
+                Clear(plane, now, "roger the go-around, ");
+            }
+            return Undelivered(plane);
+        }
         if (kind == "runway-in-sight" && plane.State == PlaneState.Approach)
         {
             plane.RunwayInSight = true;
@@ -164,7 +187,21 @@ public sealed class Tower
         return Undelivered(plane);
     }
 
-    private void Clear(TowerPlane plane, DateTime now)
+    /// <summary>The other planes the tower is handling, for traffic information: who, doing what, how high.</summary>
+    private string Traffic(TowerPlane plane)
+    {
+        var others = _planes.Values.Where(p => p != plane && p.State is PlaneState.Approach or PlaneState.Holding or PlaneState.Landed && p.Last != null)
+            .OrderBy(p => p.State == PlaneState.Landed ? 0 : p.Number)
+            .Select(p => p.CallSign + (p.State switch
+            {
+                PlaneState.Approach => string.Create(CultureInfo.InvariantCulture, $" on approach at {p.Last!.Altitude:0} m"),
+                PlaneState.Holding => string.Create(CultureInfo.InvariantCulture, $" holding over the runway at {p.Last!.Altitude:0} m"),
+                _ => " on the runway",
+            })).ToList();
+        return others.Count == 0 ? "" : " Traffic: " + string.Join("; ", others) + ".";
+    }
+
+    private void Clear(TowerPlane plane, DateTime now, string intro = "")
     {
         var r = plane.Last;
         var (along, cross) = r == null ? (0.0, 0.0) : Ksc.Frame(r.Latitude, r.Longitude);
@@ -182,14 +219,14 @@ public sealed class Tower
         plane.ToldClearedToLand = false;
         plane.RunwayInSight = false;
         var first = route.Fixes[0];
-        Send(now, plane.CallSign, "clearance", filed != null
-            ? $"{plane.CallSign}, {Name}, cleared as filed: {string.Join(", ", route.Fixes.Select(f => f.Name))}, runway 09."
+        Send(now, plane.CallSign, "clearance", $"{plane.CallSign}, {Name}, {intro}" + (filed != null
+            ? $"cleared as filed: {string.Join(", ", route.Fixes.Select(f => f.Name))}, runway 09."
             : string.Create(CultureInfo.InvariantCulture,
-            $"{plane.CallSign}, {Name}, cleared {route.Name}. Proceed to {first.Name} at {first.Altitude:0} m, {first.Speed:0} m/s, " +
-            $"then {string.Join(", ", route.Fixes.Skip(1).Select(f => f.Name))}, runway 09."), Route: route);
+            $"cleared {route.Name}. Proceed to {first.Name} at {first.Altitude:0} m, {first.Speed:0} m/s, " +
+            $"then {string.Join(", ", route.Fixes.Skip(1).Select(f => f.Name))}, runway 09.")) + Traffic(plane), Route: route);
     }
 
-    private void Hold(TowerPlane plane, DateTime now)
+    private void Hold(TowerPlane plane, DateTime now, string intro = "")
     {
         var number = _planes.Values.Count(p => p.State is PlaneState.Approach or PlaneState.Holding or PlaneState.Landed && p != plane) + 1;
         var r = plane.Last;
@@ -202,8 +239,8 @@ public sealed class Tower
         plane.Number = number;
         var ahead = _planes.Values.FirstOrDefault(p => p.State is PlaneState.Approach or PlaneState.Landed && p != plane);
         Send(now, plane.CallSign, "hold", string.Create(CultureInfo.InvariantCulture,
-            $"{plane.CallSign}, {Name}, number {number}. Hold at {hold.Fix}, {hold.Altitude:0} m, right turns. " +
-            $"Expect the approach after {ahead?.CallSign ?? "the traffic"}."), Hold: hold);
+            $"{plane.CallSign}, {Name}, {intro}number {number}. Hold at {hold.Fix}, {hold.Altitude:0} m, right turns. " +
+            $"Expect the approach after {ahead?.CallSign ?? "the traffic"}.") + Traffic(plane), Hold: hold);
     }
 
     /// <summary>An agent that never calls the runway in sight is cleared this close (m before touchdown).</summary>

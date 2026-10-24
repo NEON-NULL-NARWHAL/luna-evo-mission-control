@@ -34,6 +34,15 @@ free flight are in chapter 29.
 
 Flight records carry `maxSpeed` and `maxHeight` (Wingman 0.9).
 
+## 30.2b Planes (2.16)
+
+`Knowledge.Crafts()`: a `CraftProfile` per plane flown (the owner's idea): flights, landed, crashed, good landings, the
+best landing, the top speed and height reached, who flew it, its notes (lessons with `Craft` set), and `ToLearn`: take
+off, land it, a good landing, its top speed (180 m/s reached), its ceiling (4,000 m), notes on how it handles, three
+flights in a row without a crash, each with what's been found. `/v1/knowledge` returns them (`crafts`, with the items
+still open), the `knowledge` tool shows them to agents, the Wingman page lists them. A lesson with `aboutCraft: true`
+is tied to the plane of the flights it cites (they must all be one plane), and only merges with that plane's notes.
+
 A skill is **open** once everything it requires has 3 good flights by any agent on the server (shared). Proficiency
 is good flights out of attempts, per agent and for everyone.
 

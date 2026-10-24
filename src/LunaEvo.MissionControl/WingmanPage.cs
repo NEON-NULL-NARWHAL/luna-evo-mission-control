@@ -232,6 +232,16 @@ internal sealed class WingmanPage
                 _knowledge.Children.Add(Ui.Row(skill.Name, $"{skill.What} · {all}" +
                     (open ? "" : $" · locked until {string.Join(" and ", skill.Requires)} have {Knowledge.UnlockAfter} good flights"), null).WithId($"wingman/skill/{skill.Id}"));
             }
+            // The planes (the owner's idea): what each has done, what's still to learn about it, and its handling notes.
+            foreach (var craft in k.Crafts())
+            {
+                var open = craft.ToLearn.Where(i => !i.Done).Select(i => i.What).ToList();
+                var facts = craft.ToLearn.Where(i => i.Note.Length > 0).Select(i => i.Note);
+                _knowledge.Children.Add(Ui.Row("✈ " + craft.Name,
+                    $"{craft.Flights} flight(s) by {string.Join(", ", craft.FlownBy)} · {craft.Landed} landed, {craft.Crashed} crashed · " +
+                    string.Join(" · ", facts) + (open.Count > 0 ? " · still to learn: " + string.Join(", ", open).ToLowerInvariant() : " · nothing left on its list") +
+                    string.Concat(craft.Notes.Select(n => $"\n• {n.Text}")), null).WithId($"wingman/craft/{craft.Name}"));
+            }
             foreach (var lesson in k.Lessons.OrderBy(l => l.Skill).ThenByDescending(l => l.Weight))
             {
                 var delete = Ui.Button("Delete", "text").WithId($"wingman/lesson/{lesson.Id}/delete");

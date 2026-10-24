@@ -177,12 +177,14 @@ public class WingmanPageTests
 
         // What the agents know: a flight and a lesson through the tower's channel, shown with everyone's numbers; Delete.
         var server = ui.Window.Tower.Server!;
-        var flight = server.Answer("POST", "/v1/flight", """{"callSign":"Wingman1","result":"landed","approach":"VISUAL 09","goArounds":0,"minutes":6,"landing":{"downRunway":900,"offCenterline":5,"headingError":1},"phases":["TakingOff","Climbing","OnRoute","OnFinal","Stopped"]}""");
+        var flight = server.Answer("POST", "/v1/flight", """{"callSign":"Wingman1","craft":"Aeris 3A","maxSpeed":160,"result":"landed","approach":"VISUAL 09","goArounds":0,"minutes":6,"landing":{"downRunway":900,"offCenterline":5,"headingError":1},"phases":["TakingOff","Climbing","OnRoute","OnFinal","Stopped"]}""");
         Assert.Equal(200, flight.Status);
         Assert.Equal(200, server.Answer("POST", "/v1/lesson", """{"callSign":"Wingman1","skill":"land-visual","text":"Join the short visual's downwind at 700 m.","evidence":[1]}""").Status);
         ui.Window.Wingman.Refresh();
         Assert.Contains("1 of 1 good", Description(ui, "wingman/skill/land-visual"));
         Assert.Contains("locked until route and land-visual", Description(ui, "wingman/skill/land-rnav"));
+        Assert.Contains("1 flight(s) by Wingman1 · 1 landed, 0 crashed", Description(ui, "wingman/craft/Aeris 3A"));
+        Assert.Contains("still to learn: its top speed", Description(ui, "wingman/craft/Aeris 3A"));
         Assert.Contains(Path.Combine(Path.GetDirectoryName(ui.Window.SettingsPath)!, "agents", "knowledge.json"), Description(ui, "wingman/knowledge/where"));
         Assert.True(File.Exists(server.KnowledgePath)); // no server open: next to the settings
         ui.Click(ui.Find<Button>("wingman/lesson/1/delete"));

@@ -253,7 +253,8 @@ public sealed class TowerServer : IDisposable
                     var evidence = root.TryGetProperty("evidence", out var ev) && ev.ValueKind == JsonValueKind.Array
                         ? ev.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.Number && e.TryGetInt64(out _)).Select(e => e.GetInt64()).Take(10).ToList()
                         : [];
-                    var (lesson, problem) = Knowledge.AddLesson(callSign, Text(root, "skill", 30) ?? "", Text(root, "text", Knowledge.MaxLessonText + 50) ?? "", evidence, now);
+                    var aboutCraft = root.TryGetProperty("aboutCraft", out var ac) && ac.ValueKind == JsonValueKind.True;
+                    var (lesson, problem) = Knowledge.AddLesson(callSign, Text(root, "skill", 30) ?? "", Text(root, "text", Knowledge.MaxLessonText + 50) ?? "", evidence, now, aboutCraft);
                     if (lesson == null)
                         return (422, Error(problem!));
                     SaveKnowledge();
@@ -271,8 +272,14 @@ public sealed class TowerServer : IDisposable
                         Lessons = Knowledge.For(s.Id).Select(x => new { x.Id, x.Text, x.Confirmations, Flights = x.Evidence.Count }),
                     });
                     var flights = Knowledge.Flights.Where(f => f.CallSign.Equals(callSign, StringComparison.OrdinalIgnoreCase)).TakeLast(5)
-                        .Select(f => new { f.Id, f.Result, f.Approach, f.Skills });
-                    return (200, JsonSerializer.Serialize(new { skills, flights }, Json));
+                        .Select(f => new { f.Id, f.Result, f.Approach, f.Craft, f.Skills });
+                    var crafts = Knowledge.Crafts().Take(12).Select(c => new
+                    {
+                        c.Name, c.Flights, c.Landed, c.Crashed, c.TopSpeed, c.TopHeight, c.BestOffCenterline,
+                        ToLearn = c.ToLearn.Where(i => !i.Done).Select(i => i.What),
+                        Notes = c.Notes.Select(n => n.Text),
+                    });
+                    return (200, JsonSerializer.Serialize(new { skills, flights, crafts }, Json));
                 }
             }
         }

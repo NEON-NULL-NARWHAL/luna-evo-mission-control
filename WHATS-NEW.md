@@ -4,6 +4,13 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.16: go-arounds back in sequence
+
+- A plane that goes around is put back in the sequence (or cleared again for the short visual), and the tower gives
+  traffic information. KSP Wingman 0.10 also stops a takeoff that starts badly.
+- **Each plane gets a profile**: what the agents have done in it and what's still to learn about it, with notes on
+  how it handles.
+
 ## 2.15: training, flight plans and the radio in the game
 
 - Ask an agent to **train** (fly fast, fly high, landings, different planes, flight plans) and it practises until

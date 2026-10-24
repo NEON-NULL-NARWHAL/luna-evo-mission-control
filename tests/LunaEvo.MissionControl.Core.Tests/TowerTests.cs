@@ -139,6 +139,32 @@ public class TowerTests
     }
 
     [Fact]
+    public void A_go_around_is_resequenced_with_traffic_or_cleared_again_for_the_short_visual()
+    {
+        // Alone: cleared again at once for the short visual.
+        var alone = new Tower.Tower();
+        alone.Report(At("Alpha", 15_000, -1000), T0);
+        alone.Say("Alpha", "request-approach", "", T0);
+        alone.Report(At("Alpha", -500, 40), T0.AddMinutes(4));
+        var again = alone.Say("Alpha", "go-around", "going around", T0.AddMinutes(4.1)).Single(m => m.Kind == "clearance");
+        Assert.StartsWith("Alpha, KSC tower, roger the go-around, cleared VISUAL 09", again.Text);
+
+        // Traffic waiting: to the back of the hold, with traffic information; the next one is cleared.
+        var busy = new Tower.Tower();
+        busy.Report(At("Alpha", 15_000, -1000), T0);
+        busy.Report(At("Bravo", 3000, 2000), T0);
+        busy.Say("Alpha", "request-approach", "", T0);
+        busy.Say("Bravo", "request-approach", "", T0);
+        busy.Report(At("Bravo", 900, 0), T0.AddMinutes(0.5));
+        busy.Report(At("Alpha", -500, 40), T0.AddMinutes(0.5));
+        var held = busy.Say("Alpha", "go-around", "going around", T0.AddMinutes(0.6)).Single(m => m.Kind == "hold");
+        Assert.Contains("roger the go-around. number 2. Hold at KSC-OH", held.Text);
+        Assert.Contains("Traffic: Bravo", held.Text);
+        Assert.Equal(PlaneState.Approach, busy.Planes.Single(p => p.CallSign == "Bravo").State);
+        Assert.Contains("Traffic: Alpha holding over the runway", busy.Report(At("Bravo", 900, 0), T0.AddMinutes(0.7)).Single(m => m.Kind == "clearance").Text);
+    }
+
+    [Fact]
     public void A_silent_plane_gives_up_its_place()
     {
         var tower = new Tower.Tower();

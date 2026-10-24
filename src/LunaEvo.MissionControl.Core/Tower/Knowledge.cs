@@ -14,11 +14,22 @@ public sealed record Skill(string Id, string Name, string What, IReadOnlyList<st
 /// <summary>One finished flight as the server keeps it: Wingman's outcome, and what it says about each skill it used.</summary>
 public sealed record FlightRecord(long Id, DateTime Time, string CallSign, string Craft, string Result, string? Approach,
     int GoArounds, double Minutes, double? DownRunway, double? OffCenterline, double? HeadingError, IReadOnlyList<string> Phases,
-    IReadOnlyDictionary<string, bool> Skills);
+    IReadOnlyDictionary<string, bool> Skills, double MaxSpeed = 0, double MaxHeight = 0);
+
+/// <summary>One thing to learn about a plane, whether it's been done, and what was found.</summary>
+public sealed record CraftItem(string What, bool Done, string Note = "");
+
+/// <summary>
+/// What the server's agents know about one plane (the owner's idea): its flights, how they went, what it can do, the
+/// notes about its handling, and the list of what's still to learn about it.
+/// </summary>
+public sealed record CraftProfile(string Name, int Flights, int Landed, int Crashed, int GoodLandings, double? BestOffCenterline,
+    double TopSpeed, double TopHeight, IReadOnlyList<string> FlownBy, IReadOnlyList<CraftItem> ToLearn, IReadOnlyList<Lesson> Notes);
 
 /// <summary>A short fact an agent learned, with the flights it came from. Confirmed when another flight says it again.</summary>
+/// <param name="Craft">The plane the lesson is about (its handling, speeds), or null for one about flying in general.</param>
 public sealed record Lesson(long Id, string Skill, string Text, string Author, DateTime Created, DateTime Confirmed,
-    IReadOnlyList<long> Evidence, int Confirmations)
+    IReadOnlyList<long> Evidence, int Confirmations, string? Craft = null)
 {
     /// <summary>Lessons with more evidence come first.</summary>
     public int Weight => Evidence.Count + Confirmations;
@@ -120,7 +131,7 @@ public sealed class Knowledge
                 skills["new-craft"] = landing.Value;
         }
         var record = new FlightRecord(_nextFlight++, now, callSign, craft, result, approach, goArounds, minutes, downRunway, offCenterline,
-            headingError, phases, skills);
+            headingError, phases, skills, maxSpeed, maxHeight);
         _flights.Add(record);
         if (_flights.Count > MaxFlights)
             _flights.RemoveRange(0, _flights.Count - MaxFlights);
@@ -142,7 +153,9 @@ public sealed class Knowledge
     /// Adds a lesson, or confirms one that says the same. Refused (with why) without evidence: it must cite flights by
     /// the same agent that used the skill. Lessons are data shown to agents as facts, never as orders.
     /// </summary>
-    public (Lesson? Lesson, string? Problem) AddLesson(string callSign, string skill, string text, IReadOnlyList<long> evidence, DateTime now)
+    /// <param name="aboutCraft">The lesson is about the plane of the flights it cites (they must all be the same plane).</param>
+    public (Lesson? Lesson, string? Problem) AddLesson(string callSign, string skill, string text, IReadOnlyList<long> evidence, DateTime now,
+        bool aboutCraft = false)
     {
         text = text.Trim();
         if (Tree.All(s => s.Id != skill))
@@ -152,8 +165,17 @@ public sealed class Knowledge
         var cited = evidence.Distinct().Take(10).Where(id => _flights.Any(f => f.Id == id && f.CallSign.Equals(callSign, StringComparison.OrdinalIgnoreCase) && f.Skills.ContainsKey(skill))).ToList();
         if (cited.Count == 0)
             return (null, $"a lesson must cite a flight of yours that used {skill} (its flight id)");
+        string? craft = null;
+        if (aboutCraft)
+        {
+            var crafts = _flights.Where(f => cited.Contains(f.Id)).Select(f => f.Craft).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (crafts.Count != 1 || crafts[0].Length == 0)
+                return (null, "a note about a plane cites flights in that one plane");
+            craft = crafts[0];
+        }
 
-        var same = _lessons.Where(l => l.Skill == skill).OrderByDescending(l => Similarity(l.Text, text)).FirstOrDefault();
+        var same = _lessons.Where(l => l.Skill == skill && string.Equals(l.Craft, craft, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(l => Similarity(l.Text, text)).FirstOrDefault();
         if (same != null && Similarity(same.Text, text) >= 0.6)
         {
             var fresh = cited.Except(same.Evidence).ToList();
@@ -166,7 +188,7 @@ public sealed class Knowledge
             _lessons[_lessons.IndexOf(same)] = confirmed;
             return (confirmed, null);
         }
-        var lesson = new Lesson(_nextLesson++, skill, text, callSign, now, now, cited, 0);
+        var lesson = new Lesson(_nextLesson++, skill, text, callSign, now, now, cited, 0, craft);
         _lessons.Add(lesson);
         // Too many for a skill or overall: the weakest, oldest goes.
         foreach (var group in new[] { _lessons.Where(l => l.Skill == skill).ToList() })
@@ -185,6 +207,37 @@ public sealed class Knowledge
         var x = Words(a);
         var y = Words(b);
         return x.Count + y.Count == 0 ? 0 : (double)x.Intersect(y).Count() / x.Union(y).Count();
+    }
+
+    /// <summary>Every plane flown on the server, most flown first, with what's known and what's still to learn about it.</summary>
+    public IReadOnlyList<CraftProfile> Crafts() => _flights.Where(f => f.Craft.Length > 0)
+        .GroupBy(f => f.Craft, StringComparer.OrdinalIgnoreCase)
+        .OrderByDescending(g => g.Count())
+        .Select(g => Profile(g.First().Craft, g.ToList())).ToList();
+
+    private CraftProfile Profile(string name, List<FlightRecord> flights)
+    {
+        bool Good(FlightRecord f, string skill) => f.Skills.TryGetValue(skill, out var good) && good;
+        var landed = flights.Count(f => f.Result == "landed");
+        var crashed = flights.Count(f => f.Result is "crashed" or "splashed");
+        var goodLandings = flights.Count(f => Good(f, "land-visual") || Good(f, "land-rnav"));
+        var best = flights.Where(f => f.Result == "landed" && f.OffCenterline != null).Select(f => f.OffCenterline!.Value).DefaultIfEmpty(double.NaN).Min();
+        var topSpeed = flights.Select(f => f.MaxSpeed).DefaultIfEmpty(0).Max();
+        var topHeight = flights.Select(f => f.MaxHeight).DefaultIfEmpty(0).Max();
+        var notes = _lessons.Where(l => string.Equals(l.Craft, name, StringComparison.OrdinalIgnoreCase)).OrderByDescending(l => l.Weight).Take(5).ToList();
+        var lastThree = flights.TakeLast(3).ToList();
+        var toLearn = new List<CraftItem>
+        {
+            new("Take off", flights.Any(f => Good(f, "takeoff"))),
+            new("Land it", landed > 0, landed > 0 ? $"{landed} of {flights.Count}" : ""),
+            new("A good landing (within 15 m of the centerline)", goodLandings > 0, double.IsNaN(best) ? "" : $"best {best:0} m off"),
+            new("Its top speed", topSpeed >= FastSpeed * 0.9, topSpeed > 0 ? $"fastest so far {topSpeed:0} m/s" : ""),
+            new("Its ceiling", topHeight >= HighHeight * 0.8, topHeight > 0 ? $"highest so far {topHeight:0} m above the ground" : ""),
+            new("Notes on how it handles", notes.Count > 0, notes.Count > 0 ? $"{notes.Count} note(s)" : ""),
+            new("Three flights in a row without a crash", lastThree.Count == 3 && lastThree.All(f => f.Result is not ("crashed" or "splashed"))),
+        };
+        return new CraftProfile(name, flights.Count, landed, crashed, goodLandings, double.IsNaN(best) ? null : best, topSpeed, topHeight,
+            flights.Select(f => f.CallSign).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), toLearn, notes);
     }
 
     public bool Delete(long lessonId) => _lessons.RemoveAll(l => l.Id == lessonId) > 0;

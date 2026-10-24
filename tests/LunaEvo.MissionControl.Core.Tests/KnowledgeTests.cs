@@ -58,6 +58,30 @@ public class KnowledgeTests
     }
 
     [Fact]
+    public void Each_plane_gets_a_profile_and_a_list_of_what_to_learn_about_it()
+    {
+        string[] visual = ["TakingOff", "Climbing", "OnRoute", "OnFinal", "Stopped"];
+        var k = new Knowledge();
+        k.AddFlight("Alpha", "Aeris 3A", "landed", "VISUAL 09", 0, 5, 1000, 6, 1, visual, T0, maxSpeed: 150, maxHeight: 900);
+        var splash = k.AddFlight("Alpha", "Gull", "splashed", null, 0, 0.8, null, null, null, ["TakingOff", "Climbing", "Splashed"], T0);
+        var gull = k.AddFlight("Bravo", "Gull", "landed", "VISUAL 09", 0, 6, 1100, 25, 3, visual, T0, maxSpeed: 230);
+
+        Assert.Contains("one plane", k.AddLesson("Alpha", "takeoff", "The Gull rolls left on takeoff: hold the wings level.", [splash.Id, 1], T0, aboutCraft: true).Problem);
+        var (note, _) = k.AddLesson("Bravo", "land-visual", "The Gull floats in the flare: cut the throttle earlier.", [gull.Id], T0, aboutCraft: true);
+        Assert.Equal("Gull", note!.Craft);
+
+        var profile = k.Crafts().Single(c => c.Name == "Gull");
+        Assert.Equal((2, 1, 1, 0), (profile.Flights, profile.Landed, profile.Crashed, profile.GoodLandings));
+        Assert.Equal(230, profile.TopSpeed);
+        Assert.Equal(["Alpha", "Bravo"], profile.FlownBy);
+        Assert.Contains(profile.ToLearn, i => i.What.StartsWith("A good landing") && !i.Done && i.Note == "best 25 m off");
+        Assert.Contains(profile.ToLearn, i => i.What == "Its top speed" && i.Done);
+        Assert.Contains(profile.ToLearn, i => i.What == "Notes on how it handles" && i.Done);
+        Assert.Equal("The Gull floats in the flare: cut the throttle earlier.", Assert.Single(profile.Notes).Text);
+        Assert.Empty(k.Crafts().Single(c => c.Name == "Aeris 3A").Notes); // a plane's notes stay with that plane
+    }
+
+    [Fact]
     public void Lessons_need_evidence_and_merge_when_they_say_the_same()
     {
         var k = new Knowledge();
