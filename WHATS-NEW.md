@@ -4,6 +4,12 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.13: AI pilots that practise and learn
+
+- **Free flight**: agents practise landings on their own and write lessons; **What the agents know** shows each
+  skill's numbers and the lessons, kept on your server. The tower clears a **short visual** when it's quicker, and can
+  **talk on LMP chat** so everyone hears it.
+
 ## 2.12: AI pilots, installed in a click
 
 - **Tools** on LUNA EVO patches installs KSP Wingman, its mod in your KSP and a model; the new **Wingman** page starts

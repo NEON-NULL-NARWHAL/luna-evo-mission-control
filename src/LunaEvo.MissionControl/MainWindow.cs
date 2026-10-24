@@ -188,12 +188,13 @@ public sealed class MainWindow : Window
                 DesktopNotifier.Attach(handle.Handle);
             if (options.TowerPort is { } towerPort)
             {
+                _towerPage.OnChat = options.TowerChat;
                 _towerPage.Start(towerPort);
                 Navigate(TowerKey); // started for the tower: show it
             }
             if (options.WingmanAgents.Count > 0)
             {
-                _wingmanPage.StartFromCommandLine(options.WingmanAgents);
+                _wingmanPage.StartFromCommandLine(options.WingmanAgents, options.WingmanPlanner, options.WingmanFree);
                 Navigate(WingmanKey);
             }
             if (!Settings.HomeServerMode)
@@ -228,10 +229,11 @@ public sealed class MainWindow : Window
         _browserPage = new BrowserPage(this);
         _mapPage = new MapPage(this);
         _patchesPage = new PatchesPage(this);
-        _towerPage = new TowerPage(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(SettingsPath)!, "logs")); // next to the settings: a test's own
+        _towerPage = new TowerPage(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(SettingsPath)!, "logs"), // next to the settings: a test's own
+            () => KnowledgePath, () => _session is { } s ? System.IO.Path.Combine(s.ServerDirectory, "LunaEvo", "radio.jsonl") : null);
         // KSP Wingman next to the settings too (%APPDATA%: the default; a rig or demo run with --settings, or a test, gets its own).
         Core.Wingman.WingmanTools.Root = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(SettingsPath)!, "Tools", "KspWingman");
-        _wingmanPage = new WingmanPage(this);
+        _wingmanPage = new WingmanPage(this, System.IO.Path.Combine(System.IO.Path.GetDirectoryName(SettingsPath)!, "logs"));
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
         var exe = CurrentExe; // this window's exe, not whatever CurrentExe is in 15 seconds
@@ -276,6 +278,14 @@ public sealed class MainWindow : Window
     internal MapPage Map => _mapPage;
     internal TowerPage Tower => _towerPage;
     internal WingmanPage Wingman => _wingmanPage;
+
+    /// <summary>
+    /// Where the agents' knowledge is kept: on the open LMP server (the owner's pick: what agents learn belongs to the
+    /// server they fly on), or next to LUNA EVO's settings when no server is open.
+    /// </summary>
+    internal string KnowledgePath => _session is { } session
+        ? System.IO.Path.Combine(session.ServerDirectory, "LunaEvo", "agents", "knowledge.json")
+        : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(SettingsPath)!, "agents", "knowledge.json");
     internal SettingsPage SettingsPageForTests => _settingsPage;
 
     /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>

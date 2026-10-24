@@ -44,6 +44,13 @@ public class WingmanPageTests
     });
 
     [AvaloniaFact]
+    public void The_agents_knowledge_is_kept_on_the_open_server()
+    {
+        using var ui = new UiHarness(); // a server open
+        Assert.Equal(Path.Combine(ui.ServerDirectory, "LunaEvo", "agents", "knowledge.json"), ui.Window.KnowledgePath);
+    }
+
+    [AvaloniaFact]
     public void Installs_wingman_its_mod_and_shows_its_page()
     {
         using var ui = new UiHarness(openServer: false);
@@ -126,8 +133,10 @@ public class WingmanPageTests
         Assert.Contains("0.6.0", Description(ui, "wingman/status"));
         Assert.True(ui.Find<TextBlock>("wingman/none").IsVisible);
         ui.Find<TextBox>("wingman/port").Text = "50010";
+        ui.Find<TextBox>("wingman/planner").Text = "qwen3:4b";
         ui.Click(ui.Find<Button>("wingman/start"));
         var (info, agent) = Assert.Single(fakes);
+        Assert.Equal("qwen3:4b", info.ArgumentList[info.ArgumentList.IndexOf("--planner-model") + 1]);
         Assert.Contains("--ipc", info.ArgumentList);
         Assert.Equal($"http://localhost:{towerPort}/", info.Environment["WINGMAN_TOWER_URL"]);
         Assert.Equal("Wingman2", ui.Find<TextBox>("wingman/callSign").Text); // ready for the next one
@@ -151,6 +160,30 @@ public class WingmanPageTests
         ui.Click(ui.Find<Button>("wingman/agent/Wingman1/send"));
         Assert.Equal("land at KSC", JsonNode.Parse(agent.Sent.Last())!["text"]!.GetValue<string>());
         Assert.Equal("", ui.Find<TextBox>("wingman/agent/Wingman1/order").Text);
+
+        // Free flight: asked for, shown while the console says it's on, stopped from the same button.
+        ui.Click(ui.Find<Button>("wingman/agent/Wingman1/free"));
+        Assert.Equal("free", JsonNode.Parse(agent.Sent.Last())!["type"]!.GetValue<string>());
+        agent.Say("""{"type":"event","kind":"free","text":"Free flight for 30 minutes: practising landings around KSC. Any order stops it."}""");
+        agent.Say("""{"type":"event","kind":"free","text":"Next: land on the short visual (fewest good landings)."}""");
+        ui.WaitFor(() => ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.Contains("· free flight"), "free flight shown");
+        ui.Click(ui.Find<Button>("wingman/agent/Wingman1/free"));
+        Assert.Equal("stop-free", JsonNode.Parse(agent.Sent.Last())!["type"]!.GetValue<string>());
+        agent.Say("""{"type":"event","kind":"free","text":"Free flight stopped for an order."}""");
+        ui.WaitFor(() => !ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.Contains("free flight"), "free flight over");
+
+        // What the agents know: a flight and a lesson through the tower's channel, shown with everyone's numbers; Delete.
+        var server = ui.Window.Tower.Server!;
+        var flight = server.Answer("POST", "/v1/flight", """{"callSign":"Wingman1","result":"landed","approach":"VISUAL 09","goArounds":0,"minutes":6,"landing":{"downRunway":900,"offCenterline":5,"headingError":1},"phases":["TakingOff","Climbing","OnRoute","OnFinal","Stopped"]}""");
+        Assert.Equal(200, flight.Status);
+        Assert.Equal(200, server.Answer("POST", "/v1/lesson", """{"callSign":"Wingman1","skill":"land-visual","text":"Join the short visual's downwind at 700 m.","evidence":[1]}""").Status);
+        ui.Window.Wingman.Refresh();
+        Assert.Contains("1 of 1 good", Description(ui, "wingman/skill/land-visual"));
+        Assert.Contains("locked until route and land-visual", Description(ui, "wingman/skill/land-rnav"));
+        Assert.Contains(Path.Combine(Path.GetDirectoryName(ui.Window.SettingsPath)!, "agents", "knowledge.json"), Description(ui, "wingman/knowledge/where"));
+        Assert.True(File.Exists(server.KnowledgePath)); // no server open: next to the settings
+        ui.Click(ui.Find<Button>("wingman/lesson/1/delete"));
+        Assert.Null(ui.TryFind<Control>("wingman/lesson/1"));
 
         ui.Click(ui.Find<Button>("wingman/agent/Wingman1/stop"));
         ui.WaitFor(() => ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.StartsWith("stopped"), "agent stopped");

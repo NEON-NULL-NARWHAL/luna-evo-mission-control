@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the fourteen security audits (0.4.0 to 2.12.0) found and changed, newest first, and which real
+what the fifteen security audits (0.4.0 to 2.13.0) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
@@ -83,6 +83,31 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 15 (2.13.0, October 2026)
+
+Scope: the agents' knowledge store (`Core/Tower/Knowledge.cs`, `/v1/flight`, `/v1/lesson`, `/v1/knowledge`, the file
+on the server), the radio (the tower writing `radio.jsonl`, the server plugin 1.2 saying it in LMP's chat), the short
+visual and approach requests, the session recorder, and in KSP Wingman 0.7 the planner, the debrief, free flight and
+the bridge's new procedures (free kerbals, closing KSP's Mission Summary).
+
+Checked and clean: no vulnerable packages; nothing personal in the changes (the rig's names only); every new endpoint
+goes through the channel's checks (localhost, no browsers, JSON only, cut strings, finite numbers, short lists) and is
+fuzzed; the knowledge file is capped (20 MB, 2,000 flights, 300 lessons), written through a temp file, and an
+unreadable one is kept as `.bad`; the planner's answers only ever choose from a menu or fill a checked SKILL/LESSON
+line, so a model can't make code do anything else; free flight's limits are code (a box, a ceiling, crash and failure
+limits, any order stops it); the planner model name is checked like the pilot's (W1); the bridge's new procedures only
+count kerbals and close KSP's own recovery window.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| X1 | Low | Lessons are read by models (the `knowledge` tool, the debrief prompt), and anything on this PC can add one through the tower's channel (T4): a crafted "lesson" could try to steer an agent (prompt injection) | A lesson must cite a flight by the same call sign that used the skill; 10-200 characters, control characters dropped; shown to models as facts, never orders (prompts and tool text say so); the host sees and deletes them on the Wingman page; whatever a model is talked into, it only has Wingman's tools and their guardrails |
+| X2 | Low | The radio puts text from the tower's channel in every player's chat | Off by default (the Tower page, a server open); always said as "KSC tower", never as an agent's or player's name (an agent's line reads "RigPilot → tower: ..."); one line a second, 200 characters, control characters dropped, old lines skipped, the file stops at 1 MB |
+| X3 | Low (Wingman) | Tower fixes are now flown from 300 m (was 400, audit 13 T3) for the short visual's final fix; a fix that low far from the runway could be in the hills west of KSC | Fixes still within 60 km of KSC; the pilot's terrain guard (climbs when under 150 m above the ground and sinking) stays on; the tower only sends its published routes |
+| X4 | Low (found in the rig) | KSP's "No Control!" and Mission Summary windows stopped a launch forever (kRPC can't answer them): an agent stuck with its MCP session blocked | `launch` refuses with a reason when no kerbal is free; `recover` and `launch` close the Mission Summary through the bridge |
+| X5 | Info | The session recorder keeps what agents say, including players' chat orders (their names), in LUNA EVO's logs folder | Local only (next to the settings file, 20 MB a day); never in a repo |
+| X6 | Info | Fake flights from a local program could raise or lower a call sign's numbers | Same trust as the channel (T4): the numbers decide what an agent practises, nothing else; the host can see each flight and delete lessons |
+| X7 | Info (ours) | The tower's "already written" mark didn't move while nothing was written, so turning the radio on later would have replayed the whole channel into chat | Fixed before release (a test caught it) |
 
 ## Audit 14 (2.12.0, October 2026)
 

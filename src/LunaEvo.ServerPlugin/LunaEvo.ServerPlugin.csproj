@@ -7,7 +7,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <AssemblyName>LunaEvo.ServerPlugin</AssemblyName>
     <RootNamespace>LunaEvo.ServerPlugin</RootNamespace>
     <!-- .NET 6 is out of support, but it's what LMP 0.29 runs on; the plugin only uses what the server already has. -->

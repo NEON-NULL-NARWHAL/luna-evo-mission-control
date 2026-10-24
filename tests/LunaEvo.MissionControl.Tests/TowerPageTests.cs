@@ -53,7 +53,7 @@ public class TowerPageTests
 
         ui.Window.Tower.Start(FreePort());
         var server = ui.Window.Tower.Server!;
-        Assert.Equal(200, server.Answer("POST", "/v1/report", Report("Alpha", 2000, -1000)).Status);
+        Assert.Equal(200, server.Answer("POST", "/v1/report", Report("Alpha", 15_000, -1000)).Status);
         server.Answer("POST", "/v1/report", Report("Bravo", 3000, 2000));
         server.Answer("POST", "/v1/say", """{"callSign":"Alpha","kind":"request-approach","text":""}""");
         server.Answer("POST", "/v1/say", """{"callSign":"Bravo","kind":"intent","text":"land"}""");

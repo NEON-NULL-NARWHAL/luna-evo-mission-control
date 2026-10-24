@@ -1,10 +1,12 @@
 // LUNA EVO · LunaEvo.ServerPlugin/LunaEvoPlugin.cs
-// [Plugin] The LMP server plugin: watches position messages and writes LunaEvo/live.json for Mission Control's live map.
+// [Plugin] The LMP server plugin: watches position messages and writes LunaEvo/live.json for Mission Control's live map;
+//          and says the KSC tower's radio lines in LMP's chat when Mission Control writes them (RadioRelay).
 // Used by: LMP's server (Plugins folder, ILmpPlugin)
 // Guide:   Meat and Potatoes/26-Server-Plugin.md
 
 using HarmonyLib;
 using LmpCommon.Locks;
+using LmpCommon.Message.Data.Chat;
 using LmpCommon.Message.Server;
 using LunaEvo.ClientPatches;
 using LmpCommon.Message.Data.Vessel;
@@ -17,7 +19,8 @@ using Server.System;
 namespace LunaEvo.ServerPlugin;
 
 /// <summary>
-/// It never blocks or sends a message and opens no network port. What it learns goes into one file next to the server,
+/// It never blocks and opens no network port, and it sends one kind of message only: a chat line from "KSC tower" when
+/// Mission Control's tower talks on LMP's chat (its Tower page, off by default; 2.13). What it learns goes into one file next to the server,
 /// &lt;server&gt;/LunaEvo/live.json, rewritten at most twice a second. Since 1.1 it also makes two server-side fixes from
 /// audit 11 that change nothing in any message: 1 ms timers on Windows (P3) and a Lidgren channel per vessel for the
 /// fast updates it relays (P1). Each can be switched off for the test rig (LUNAEVO_PATCHES_OFF).
@@ -33,6 +36,7 @@ public sealed class LunaEvoPlugin : ILmpPlugin
     private DateTime _lastWrite = DateTime.MinValue;
     private long _writtenChanges = -1;
     private int _writing;
+    private RadioRelay? _radio;
 
     internal static string Version => typeof(LunaEvoPlugin).Assembly.GetName().Version?.ToString(3) ?? "?";
 
@@ -46,6 +50,7 @@ public sealed class LunaEvoPlugin : ILmpPlugin
                 return;
             var folder = Directory.CreateDirectory(Path.Combine(server, "LunaEvo")).FullName;
             _file = Path.Combine(folder, "live.json");
+            _radio = new RadioRelay(Path.Combine(folder, "radio.jsonl"));
             State.Clear();
             var fixes = new List<string>();
             if (!PatchSwitches.IsOff("P3") && TimerResolution.Raise())
@@ -106,6 +111,20 @@ public sealed class LunaEvoPlugin : ILmpPlugin
     public void OnUpdate()
     {
         var now = DateTime.UtcNow;
+        try
+        {
+            if (_radio?.Next(now) is { } line)
+            {
+                var chat = ServerContext.ServerMessageFactory.CreateNewMessageData<ChatMsgData>();
+                chat.From = RadioRelay.Speaker;
+                chat.Text = line;
+                Server.Server.MessageQueuer.SendToAllClients<ChatSrvMsg>(chat);
+            }
+        }
+        catch (Exception)
+        {
+            // Nothing from the radio may reach LMP.
+        }
         var changes = State.Changes;
         if (_file == null || now - _lastWrite < (changes != _writtenChanges ? WriteInterval : HeartbeatInterval))
             return;

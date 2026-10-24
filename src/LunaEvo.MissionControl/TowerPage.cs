@@ -28,11 +28,30 @@ internal sealed class TowerPage
     private int _port = TowerServer.DefaultPort;
     private string? _problem;
     private readonly string? _logFolder;
+    private readonly Func<string?> _knowledgePath;
+    private readonly Func<string?> _radioPath;
+    private bool _onChat;
+
+    /// <summary>"Talk on LMP chat": the tower writes its lines for the server plugin (the page's box, or --tower-chat).</summary>
+    internal bool OnChat
+    {
+        get => _onChat;
+        set
+        {
+            _onChat = value;
+            if (Server != null)
+                Server.RadioPath = _onChat ? _radioPath() : null;
+        }
+    }
 
     /// <param name="logFolder">Where the channel's data goes (tower-&lt;date&gt;.jsonl), or null for nowhere (tests).</param>
-    public TowerPage(string? logFolder = null)
+    /// <param name="knowledgePath">Where the agents' knowledge is kept when the tower starts (the open server's), or null.</param>
+    /// <param name="radioPath">The open server's LunaEvo/radio.jsonl (for "Talk on LMP chat"), or null without a server.</param>
+    public TowerPage(string? logFolder = null, Func<string?>? knowledgePath = null, Func<string?>? radioPath = null)
     {
         _logFolder = logFolder;
+        _radioPath = radioPath ?? (() => null);
+        _knowledgePath = knowledgePath ?? (() => null);
         var header = new StackPanel
         {
             Spacing = 2,
@@ -73,6 +92,8 @@ internal sealed class TowerPage
             var server = new TowerServer(port)
             {
                 LogPath = _logFolder == null ? null : Path.Combine(_logFolder, $"tower-{DateTime.Now:yyyy-MM-dd}.jsonl"),
+                KnowledgePath = _knowledgePath(),
+                RadioPath = _onChat ? _radioPath() : null,
             };
             server.Changed += () => Dispatcher.UIThread.Post(Refresh);
             server.Start();
@@ -103,6 +124,12 @@ internal sealed class TowerPage
             ? $"On, on localhost:{_port}. Agents connect with WINGMAN_TOWER_URL=http://localhost:{_port}/ (KSP Wingman 0.5 or later)."
             : "Off. Start it before the agents ask to land.");
         _status.Children.Add(Ui.Row("KSC tower · runway 09", state, button).WithId("tower/status"));
+        var radio = _radioPath();
+        var onChat = new CheckBox { IsChecked = _onChat, IsEnabled = radio != null }.WithId("tower/onChat");
+        onChat.IsCheckedChanged += (_, _) => OnChat = onChat.IsChecked == true;
+        _status.Children.Add(Ui.Row("Talk on LMP chat", radio == null
+            ? "Open a server to use this: the tower's lines and the agents' calls are said in its chat, as \"KSC tower\", by the LUNA EVO server plugin."
+            : "The tower's lines and the agents' calls, said in the server's chat as \"KSC tower\" (needs the LUNA EVO server plugin, 2.13 or later), so players hear the traffic.", onChat).WithId("tower/radio"));
         if (_logFolder != null)
         {
             var open = Ui.Button("Open the log folder", "text").WithId("tower/logs");

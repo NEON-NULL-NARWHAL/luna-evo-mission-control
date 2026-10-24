@@ -1,6 +1,8 @@
 // LUNA EVO · LunaEvo.MissionControl.Core/Tower/TowerServer.cs
 // [Core] The tower's channel over HTTP, for KSP Wingman agents on this PC: POST /v1/report and /v1/say with a small
-//        JSON body; the answer is the tower's new messages for that plane. Listens on localhost only.
+//        JSON body; the answer is the tower's new messages for that plane. Also the agents' knowledge (Knowledge.cs):
+//        /v1/flight (a finished flight), /v1/lesson (a lesson citing flights), /v1/knowledge (skills and lessons).
+//        Listens on localhost only.
 // Used by: TowerPage
 // Guide:   Meat and Potatoes/28-Tower.md
 
@@ -33,6 +35,21 @@ public sealed class TowerServer : IDisposable
     public int Port { get; }
     public Tower Tower { get; } = new();
 
+    /// <summary>The agents' skills and lessons. Lock it to read; saved to <see cref="KnowledgePath"/> after each change.</summary>
+    public Knowledge Knowledge { get; private set; } = new();
+
+    /// <summary>
+    /// The radio: when set (the Tower page's "Talk on LMP chat"), every channel message is also appended here, one JSON
+    /// line each, for the LUNA EVO server plugin to say in LMP's chat (&lt;server&gt;/LunaEvo/radio.jsonl).
+    /// </summary>
+    public string? RadioPath { get; set; }
+
+    /// <summary>The radio file stops growing here (the plugin only reads what's new).</summary>
+    public const long MaxRadioBytes = 1024 * 1024;
+
+    /// <summary>Where the knowledge is kept (the server's LunaEvo/agents/knowledge.json), or null for memory only (tests).</summary>
+    public string? KnowledgePath { get; init; }
+
     /// <summary>
     /// Where the channel is kept as data, one JSON line per message (with its route or hold), or null for nowhere:
     /// tower-&lt;date&gt;.jsonl in LUNA EVO's logs folder, so a test or a session can be looked at afterwards.
@@ -46,6 +63,8 @@ public sealed class TowerServer : IDisposable
 
     public void Start()
     {
+        if (KnowledgePath != null)
+            Knowledge = Knowledge.Load(KnowledgePath);
         _listener.Start();
         _ = Task.Run(Loop);
     }
@@ -165,6 +184,11 @@ public sealed class TowerServer : IDisposable
                             return (400, Error("needs a kind"));
                         messages = Tower.Say(callSign, kind, Text(root, "text", 300) ?? "", _clock());
                         break;
+                    case "/v1/flight" or "/v1/lesson" or "/v1/knowledge":
+                        var answer = Learn(path, callSign, root);
+                        if (answer.Status == 200)
+                            Changed?.Invoke();
+                        return answer;
                     default:
                         return (404, Error("unknown"));
                 }
@@ -175,18 +199,112 @@ public sealed class TowerServer : IDisposable
         }
     }
 
+    /// <summary>The knowledge endpoints. Inputs are checked like the channel's: cut strings, finite numbers, short lists.</summary>
+    private (int Status, string Body) Learn(string path, string callSign, JsonElement root)
+    {
+        var now = _clock();
+        lock (Knowledge)
+        {
+            switch (path)
+            {
+                case "/v1/flight":
+                {
+                    if (Text(root, "result", 30) is not { Length: > 0 } result)
+                        return (400, Error("needs a result"));
+                    var phases = root.TryGetProperty("phases", out var p) && p.ValueKind == JsonValueKind.Array
+                        ? p.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Take(40)
+                            .Select(e => new string((e.GetString() ?? "").Where(char.IsAsciiLetter).Take(20).ToArray())).ToList()
+                        : [];
+                    var landing = root.TryGetProperty("landing", out var l) && l.ValueKind == JsonValueKind.Object ? l : default;
+                    double? FromLanding(string name) => landing.ValueKind == JsonValueKind.Object ? Number(landing, name) : null;
+                    var goArounds = (int)Math.Clamp(Number(root, "goArounds") ?? 0, 0, 100);
+                    var record = Knowledge.AddFlight(callSign, Text(root, "craft", 60) ?? "", result, Text(root, "approach", 40), goArounds,
+                        Math.Clamp(Number(root, "minutes") ?? 0, 0, 10_000), FromLanding("downRunway"), FromLanding("offCenterline"),
+                        FromLanding("headingError"), phases, now);
+                    SaveKnowledge();
+                    return (200, JsonSerializer.Serialize(new { flight = new { record.Id, record.Skills } }, Json));
+                }
+                case "/v1/lesson":
+                {
+                    var evidence = root.TryGetProperty("evidence", out var ev) && ev.ValueKind == JsonValueKind.Array
+                        ? ev.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.Number && e.TryGetInt64(out _)).Select(e => e.GetInt64()).Take(10).ToList()
+                        : [];
+                    var (lesson, problem) = Knowledge.AddLesson(callSign, Text(root, "skill", 30) ?? "", Text(root, "text", Knowledge.MaxLessonText + 50) ?? "", evidence, now);
+                    if (lesson == null)
+                        return (422, Error(problem!));
+                    SaveKnowledge();
+                    return (200, JsonSerializer.Serialize(new { lesson }, Json));
+                }
+                default:
+                {
+                    Knowledge.Expire(now);
+                    var skills = Knowledge.Tree.Select(s => new
+                    {
+                        s.Id, s.Name, s.What, s.Requires,
+                        Unlocked = Knowledge.Unlocked(s.Id),
+                        Mine = Knowledge.Of(s.Id, callSign),
+                        All = Knowledge.Of(s.Id),
+                        Lessons = Knowledge.For(s.Id).Select(x => new { x.Id, x.Text, x.Confirmations, Flights = x.Evidence.Count }),
+                    });
+                    var flights = Knowledge.Flights.Where(f => f.CallSign.Equals(callSign, StringComparison.OrdinalIgnoreCase)).TakeLast(5)
+                        .Select(f => new { f.Id, f.Result, f.Approach, f.Skills });
+                    return (200, JsonSerializer.Serialize(new { skills, flights }, Json));
+                }
+            }
+        }
+    }
+
+    private void SaveKnowledge()
+    {
+        if (KnowledgePath == null)
+            return;
+        try
+        {
+            Knowledge.Save(KnowledgePath);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // A failing disk loses the update on disk, not the knowledge in memory.
+        }
+    }
+
+    /// <summary>The host deletes a lesson (Wingman page).</summary>
+    public bool DeleteLesson(long id)
+    {
+        lock (Knowledge)
+        {
+            if (!Knowledge.Delete(id))
+                return false;
+            SaveKnowledge();
+        }
+        Changed?.Invoke();
+        return true;
+    }
+
     /// <summary>Appends the channel's new messages to the log (a failing disk loses the log, not the tower).</summary>
     private void WriteLog()
     {
-        if (LogPath == null)
-            return;
-        List<TowerMessage> fresh;
+        List<TowerMessage> fresh; // always taken, so turning the radio on later doesn't replay old lines
         lock (Tower)
         {
             fresh = Tower.Channel.Where(m => m.Id > _logged).ToList();
             _logged = Tower.Channel.Count == 0 ? _logged : Tower.Channel[^1].Id;
         }
-        if (fresh.Count == 0)
+        if (fresh.Count == 0 || (LogPath == null && RadioPath == null))
+            return;
+        if (RadioPath is { } radio)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(radio)!);
+                if (!File.Exists(radio) || new FileInfo(radio).Length < MaxRadioBytes)
+                    File.AppendAllLines(radio, fresh.Select(m => JsonSerializer.Serialize(new { m.Id, m.Time, m.From, m.To, m.Text }, Json)));
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+        if (LogPath == null)
             return;
         try
         {

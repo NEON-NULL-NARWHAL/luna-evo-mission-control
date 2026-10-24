@@ -191,6 +191,23 @@ public class WingmanTests
     }
 
     [Fact]
+    public void Each_agents_session_is_recorded_one_json_line_each()
+    {
+        var folder = Temp("sessions");
+        var fake = new FakeAgent();
+        using var host = new AgentHost(_ => fake, logFolder: folder);
+        var agent = host.Start(new WingmanInstall("0.7.0", folder), new AgentStart("Wingman1", 50000, "qwen3:4b-instruct", "http://127.0.0.1:11434/v1/"));
+        fake.Say("""{"type":"event","kind":"free","text":"Next: land on the short visual."}""");
+        fake.Say("""{"type":"event","kind":"lesson","text":"Learned (land-visual): line up before F09V.","data":{"skill":"land-visual"}}""");
+        var lines = File.ReadAllLines(agent.LogPath!);
+        Assert.Equal(2, lines.Length);
+        var first = JsonNode.Parse(lines[1])!;
+        Assert.Equal("Wingman1", first["callSign"]!.GetValue<string>());
+        Assert.Equal("land-visual", first["data"]!["skill"]!.GetValue<string>());
+        Assert.StartsWith(Path.Combine(folder, "wingman-Wingman1-"), agent.LogPath);
+    }
+
+    [Fact]
     public void Agent_lines_are_read_safely()
     {
         var now = new DateTime(2026, 10, 23, 12, 0, 0, DateTimeKind.Utc);

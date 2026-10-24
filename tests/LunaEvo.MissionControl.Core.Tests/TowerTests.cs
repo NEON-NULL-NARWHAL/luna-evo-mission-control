@@ -36,7 +36,7 @@ public class TowerTests
     public void Clears_the_first_and_holds_the_second_then_hands_over_the_runway()
     {
         var tower = new Tower.Tower();
-        tower.Report(At("Alpha", 2000, -1000), T0); // north of the runway
+        tower.Report(At("Alpha", 15_000, -1000), T0); // north of the runway, too far out for the short visual
         tower.Report(At("Bravo", 3000, 2000), T0); // south of it
         var alpha = Assert.Single(tower.Say("Alpha", "request-approach", "", T0.AddSeconds(1)));
         Assert.Equal("clearance", alpha.Kind);
@@ -64,7 +64,7 @@ public class TowerTests
         tower.Report(At("Alpha", 800, 5, situation: "", speed: 0), T0.AddMinutes(6.5));
         var cleared = Assert.Single(tower.Report(At("Bravo", 2000, 6000), T0.AddMinutes(6.6)));
         Assert.Equal("clearance", cleared.Kind);
-        Assert.Equal("RNAV 09 SOUTH", cleared.Route!.Name);
+        Assert.Equal(Ksc.VisualName, cleared.Route!.Name); // alone now, and close in: the short visual
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class TowerTests
             server.Answer("POST", "/v1/say", """{"callSign":"Alpha","kind":"request-approach","text":""}""");
             var lines = File.ReadAllLines(log);
             Assert.Equal(["ask-intent", "request-approach", "clearance"], lines.Select(l => JsonDocument.Parse(l).RootElement.GetProperty("kind").GetString()));
-            Assert.Equal("RNAV 09 SOUTH", JsonDocument.Parse(lines[2]).RootElement.GetProperty("route").GetProperty("name").GetString());
+            Assert.Equal(Ksc.VisualName, JsonDocument.Parse(lines[2]).RootElement.GetProperty("route").GetProperty("name").GetString());
         }
         finally
         {

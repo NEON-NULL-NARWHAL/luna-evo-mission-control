@@ -51,7 +51,22 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
   Wingman (0.6 and later) taxis off to the right and parks 90 m beside the runway. Once a landed plane is more than
   60 m off the centerline (`Ksc.VacatedCross`), or its report isn't Landed any more (recovered, back at the Space
   Center), the next holding plane is cleared from where it is.
+- **Which approach** (2.13): alone (nobody holding, on approach or on the runway), a plane gets the one it asked for
+  ("request RNAV 09 NORTH", "request visual"), or, within 12 km of the touchdown point, the **short visual**: the
+  owner saw agents fly far out for an RNAV route. It's the RNAV pattern made smaller: KSC-V1 abeam the touchdown point
+  3 km to the side, KSC-V2 7 km back, a 90° turn to KSC-V3 on the centerline, the final from F09V 4.5 km out (about 16
+  km instead of 25). A first version (diagonal base into a 4 km final) overshot the centerline by 2 km three times in
+  the rig: at 90 m/s the 30° turn is 1.4 km wide. With traffic, it's the published route for its side.
 - A plane silent for 60 s is lost from the channel and gives up its place.
+
+## 28.3b The radio (talking on LMP chat)
+
+"Talk on LMP chat" on the page (or `--tower-chat`), with a server open: every channel message is also appended to
+`<server>/LunaEvo/radio.jsonl`, and the LUNA EVO server plugin (1.2) says each new line in the server's chat, so
+players hear the traffic. Always as "KSC tower" (an agent's line reads "RigPilot → tower: request visual"): anything
+on this PC can talk on the channel (audit 13, T4), so it can never speak as a player. One line a second, 200
+characters, control characters dropped, what was in the file before the server started isn't said, the file stops at
+1 MB. Next: a radio strip in the LUNA EVO in-game window that shows these lines (the owner's radio bar).
 
 ## 28.4 Tested
 

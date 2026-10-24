@@ -1,8 +1,9 @@
 // LUNA EVO · LunaEvo.MissionControl/WingmanPage.cs
 // [UI] The Wingman page: AI pilots (KSP Wingman agents) started from LUNA EVO, one per KSP (kRPC port), each with its
-//      phase, its flights, the tower's messages, its tool calls and answers, and a box for orders.
+//      phase, its flights, the tower's messages, its tool calls and answers, a box for orders and free flight; and
+//      what the server's agents know (skills from their flights, lessons), kept by the tower.
 // Used by: MainWindow (rail: Play → Wingman, once KSP Wingman is installed on LUNA EVO patches → Tools)
-// Guide:   Meat and Potatoes/29-Wingman.md
+// Guide:   Meat and Potatoes/29-Wingman.md, 30-Knowledge.md
 
 using System.Globalization;
 using Avalonia;
@@ -10,6 +11,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Threading;
+using LunaEvo.MissionControl.Core.Tower;
 using LunaEvo.MissionControl.Core.Wingman;
 
 namespace LunaEvo.MissionControl;
@@ -31,17 +33,21 @@ internal sealed class WingmanPage
     private readonly TextBox _port = new TextBox { Text = "50000", Width = 100 }.WithId("wingman/port");
     private readonly TextBox _model = new TextBox { Text = WingmanTools.DefaultModel, Width = 240 }.WithId("wingman/model");
     private readonly TextBox _llm = new TextBox { Text = new Uri(new Uri(WingmanTools.OllamaUrl), "v1/").ToString(), Width = 280 }.WithId("wingman/llm");
+    private readonly TextBox _planner = new TextBox { PlaceholderText = "the pilot's model", Width = 200 }.WithId("wingman/planner");
     private readonly CheckBox _tower = new CheckBox { Content = "Use the KSC tower", IsChecked = true }.WithId("wingman/useTower");
+    private readonly StackPanel _knowledge = new() { Spacing = 2 };
     private readonly TextBlock _result = Ui.Text("", "sublabel").WithId("wingman/result");
     private readonly TextBlock _none = Ui.Text("No agents yet.", "sublabel").WithId("wingman/none");
     private readonly Dictionary<WingmanAgent, AgentCard> _cards = [];
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(15) };
-    private AgentHost _agentHost = new();
+    private AgentHost _agentHost;
     private bool _refreshQueued;
 
-    public WingmanPage(MainWindow host)
+    /// <param name="logFolder">Where each agent's session is recorded (LUNA EVO's logs folder), or null.</param>
+    public WingmanPage(MainWindow host, string? logFolder = null)
     {
         _host = host;
+        _agentHost = new AgentHost(logFolder: logFolder);
         var header = new StackPanel
         {
             Spacing = 2,
@@ -56,7 +62,7 @@ internal sealed class WingmanPage
         var start = Ui.Button("Start the agent", "fab").WithId("wingman/start");
         start.Click += (_, _) => StartAgent();
         var form = new WrapPanel { Orientation = Orientation.Horizontal };
-        foreach (var (label, box) in new (string, Control)[] { ("Call sign", _callSign), ("kRPC port", _port), ("Model", _model), ("Model server", _llm) })
+        foreach (var (label, box) in new (string, Control)[] { ("Call sign", _callSign), ("kRPC port", _port), ("Model", _model), ("Model server", _llm), ("Planner (thinks)", _planner) })
             form.Children.Add(new StackPanel { Margin = new Thickness(0, 0, 12, 8), Spacing = 2, Children = { Ui.Text(label, "sublabel"), box } });
         var (setup, setupBody, _) = Ui.Group("Start an agent");
         setupBody.Children.Add(_setup);
@@ -65,9 +71,11 @@ internal sealed class WingmanPage
         var (agents, agentsBody, _) = Ui.Group("Agents");
         agentsBody.Children.Add(_none);
         agentsBody.Children.Add(_agents);
+        var (knowledge, knowledgeBody, _) = Ui.Group("What the agents know");
+        knowledgeBody.Children.Add(_knowledge);
         View = new ScrollViewer
         {
-            Content = new StackPanel { Margin = new Thickness(28, 20, 28, 28), Spacing = 16, Children = { header, _result, setup, agents } },
+            Content = new StackPanel { Margin = new Thickness(28, 20, 28, 28), Spacing = 16, Children = { header, _result, setup, agents, knowledge } },
         };
         Host = _agentHost;
         // Their planes' numbers now and then (the status tool, no model involved), while LUNA EVO is open.
@@ -97,9 +105,14 @@ internal sealed class WingmanPage
 
     internal string LastMessage => _result.Text ?? "";
 
-    /// <summary>The command line's --wingman-agent CallSign:port[:model]: start agents at launch (rig tests).</summary>
-    public void StartFromCommandLine(IEnumerable<string> specs)
+    /// <summary>
+    /// The command line's --wingman-agent CallSign:port[:model] (and --wingman-planner, --wingman-free minutes): start
+    /// agents at launch, and their free flight once they're connected (rig tests).
+    /// </summary>
+    public void StartFromCommandLine(IEnumerable<string> specs, string? planner = null, double? freeMinutes = null)
     {
+        if (planner != null)
+            _planner.Text = planner;
         foreach (var spec in specs)
         {
             var parts = spec.Split(':', 3);
@@ -110,6 +123,12 @@ internal sealed class WingmanPage
                 _model.Text = parts[2];
             StartAgent();
         }
+        if (freeMinutes is { } minutes)
+            _ = Task.Delay(TimeSpan.FromSeconds(30)).ContinueWith(_ => Dispatcher.UIThread.Post(() =>
+            {
+                foreach (var agent in _agentHost.Agents.Where(a => a.Running))
+                    agent.FreeFlight(minutes);
+            }), TaskScheduler.Default);
     }
 
     internal void StartAgent()
@@ -125,7 +144,8 @@ internal sealed class WingmanPage
             return;
         }
         var tower = _tower.IsChecked == true && _host.Tower.Server != null ? $"http://localhost:{_host.Tower.Server.Port}/" : null;
-        var start = new AgentStart(_callSign.Text?.Trim() ?? "", port, _model.Text?.Trim() ?? "", _llm.Text?.Trim() ?? "", tower);
+        var start = new AgentStart(_callSign.Text?.Trim() ?? "", port, _model.Text?.Trim() ?? "", _llm.Text?.Trim() ?? "", tower,
+            _planner.Text?.Trim() is { Length: > 0 } planner ? planner : null);
         if (_agentHost.Check(start) is { } problem)
         {
             _result.Text = problem;
@@ -184,6 +204,43 @@ internal sealed class WingmanPage
             card.Update();
         }
         _none.IsVisible = _agentHost.Agents.Count == 0;
+        RefreshKnowledge();
+    }
+
+    /// <summary>The tower's knowledge store: the skill tree with everyone's numbers, and the lessons (the host can delete them).</summary>
+    private void RefreshKnowledge()
+    {
+        _knowledge.Children.Clear();
+        if (_host.Tower.Server is not { } server)
+        {
+            _knowledge.Children.Add(Ui.Text("Start the KSC tower (Play → KSC tower): it keeps what the agents learn, on the open server.", "sublabel").WithId("wingman/knowledge/off"));
+            return;
+        }
+        lock (server.Knowledge)
+        {
+            var k = server.Knowledge;
+            _knowledge.Children.Add(Ui.Row("Kept in", (server.KnowledgePath ?? "memory only") + $" · {k.Flights.Count} flight(s), {k.Lessons.Count} lesson(s). " +
+                "Each finished flight grades the skills it used; a lesson must cite a flight that showed it.", null).WithId("wingman/knowledge/where"));
+            foreach (var skill in Knowledge.Tree)
+            {
+                var all = k.Of(skill.Id);
+                var open = k.Unlocked(skill.Id);
+                _knowledge.Children.Add(Ui.Row(skill.Name, $"{skill.What} · {all}" +
+                    (open ? "" : $" · locked until {string.Join(" and ", skill.Requires)} have {Knowledge.UnlockAfter} good flights"), null).WithId($"wingman/skill/{skill.Id}"));
+            }
+            foreach (var lesson in k.Lessons.OrderBy(l => l.Skill).ThenByDescending(l => l.Weight))
+            {
+                var delete = Ui.Button("Delete", "text").WithId($"wingman/lesson/{lesson.Id}/delete");
+                var id = lesson.Id;
+                delete.Click += (_, _) =>
+                {
+                    server.DeleteLesson(id);
+                    Refresh();
+                };
+                _knowledge.Children.Add(Ui.Row(lesson.Text, $"{lesson.Skill} · from {lesson.Author} · {lesson.Evidence.Count} flight(s)" +
+                    (lesson.Confirmations > 0 ? $", confirmed {lesson.Confirmations}×" : ""), delete).WithId($"wingman/lesson/{lesson.Id}"));
+            }
+        }
     }
 
     /// <summary>Stops every agent (LUNA EVO closing). Their planes keep their last orders.</summary>
@@ -204,6 +261,7 @@ internal sealed class WingmanPage
         private readonly ScrollViewer _scroll;
         private readonly TextBox _order;
         private readonly Button _stop;
+        private readonly Button _free;
         private int _shown = -1;
 
         public AgentCard(WingmanPage page, WingmanAgent agent)
@@ -223,6 +281,15 @@ internal sealed class WingmanPage
                 if (e.Key == Key.Enter)
                     Send();
             };
+            _free = Ui.Button("Free flight", "text").WithId(id + "/free");
+            _free.Click += (_, _) =>
+            {
+                if (_agent.FreeFlying)
+                    _agent.StopFreeFlight();
+                else
+                    _agent.FreeFlight(30);
+            };
+            ToolTip.SetTip(_free, "30 minutes of practice on its own: it picks what to practise (its weakest landings first), flies it, and learns from each flight. Any order stops it.");
             var status = Ui.Button("Status", "text").WithId(id + "/askStatus");
             status.Click += (_, _) => _agent.AskStatus();
             _stop = Ui.Button("Stop", "text").WithId(id + "/stop");
@@ -242,7 +309,7 @@ internal sealed class WingmanPage
                     Spacing = 6,
                     Children =
                     {
-                        new DockPanel { Children = { Dock(_stop, Avalonia.Controls.Dock.Right), Dock(status, Avalonia.Controls.Dock.Right), Ui.Text(agent.Start.CallSign, "label") } },
+                        new DockPanel { Children = { Dock(_stop, Avalonia.Controls.Dock.Right), Dock(status, Avalonia.Controls.Dock.Right), Dock(_free, Avalonia.Controls.Dock.Right), Ui.Text(agent.Start.CallSign, "label") } },
                         _summary,
                         _status,
                         _scroll,
@@ -273,7 +340,10 @@ internal sealed class WingmanPage
         public void Update()
         {
             var s = _agent.Start;
-            _summary.Text = $"{(_agent.Running ? Ui.Humanize(_agent.Phase).ToLowerInvariant() : "stopped")} · kRPC port {s.KrpcPort} · {s.Model}" +
+            _free.Content = Ui.IconAndText(_agent.FreeFlying ? "Stop free flight" : "Free flight", null);
+            _free.IsEnabled = _agent.Running;
+            _summary.Text = $"{(_agent.Running ? Ui.Humanize(_agent.Phase).ToLowerInvariant() : "stopped")}{(_agent.FreeFlying ? " · free flight" : "")} · kRPC port {s.KrpcPort} · {s.Model}" +
+                            (s.PlannerModel != null ? $" (planner {s.PlannerModel})" : "") +
                             (s.TowerUrl != null ? " · with the tower" : "") + (_agent.LastOutcome is { } last ? " · last flight: " + last : "");
             _status.Text = _agent.Status ?? "";
             _status.IsVisible = _agent.Status != null;
@@ -287,7 +357,7 @@ internal sealed class WingmanPage
             foreach (var e in events.TakeLast(ShownEvents))
             {
                 var line = Ui.Text(string.Create(CultureInfo.InvariantCulture, $"{e.Time.ToLocalTime():HH:mm:ss}  {Label(e.Kind)}  {e.Text}"),
-                    e.Kind is "answer" or "flight" or "error" ? "label" : "sublabel");
+                    e.Kind is "answer" or "flight" or "error" or "debrief" ? "label" : "sublabel");
                 line.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
                 _events.Children.Add(line);
             }
@@ -304,6 +374,8 @@ internal sealed class WingmanPage
             "flight" => "flight",
             "tower" => "tower",
             "phase" => "phase",
+            "free" => "free",
+            "debrief" or "lesson" or "knowledge" => "learn",
             "error" => "error",
             _ => "·",
         };

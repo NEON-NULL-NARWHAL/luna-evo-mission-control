@@ -66,7 +66,8 @@ public interface IAgentProcess : IDisposable
 }
 
 /// <summary>What to start: which Wingman, which model where, which KSP (its kRPC port), and the tower if it's on.</summary>
-public sealed record AgentStart(string CallSign, int KrpcPort, string Model, string LlmUrl, string? TowerUrl = null);
+/// <param name="PlannerModel">A model that thinks (free-flight goals, debriefs), on the same server; null: the pilot's.</param>
+public sealed record AgentStart(string CallSign, int KrpcPort, string Model, string LlmUrl, string? TowerUrl = null, string? PlannerModel = null);
 
 /// <summary>One AI pilot: its console process and everything it said, newest last.</summary>
 public sealed class WingmanAgent : IDisposable
@@ -81,15 +82,22 @@ public sealed class WingmanAgent : IDisposable
     private readonly Func<DateTime> _now;
     private DateTime? _statusAsked;
 
-    internal WingmanAgent(AgentStart start, IAgentProcess process, Func<DateTime> now)
+    /// <summary>The session's log stops growing here (a runaway agent can't fill the disk).</summary>
+    public const long MaxLogBytes = 20L * 1024 * 1024;
+
+    private static readonly JsonSerializerOptions LogJson = new(JsonSerializerDefaults.Web);
+
+    internal WingmanAgent(AgentStart start, IAgentProcess process, Func<DateTime> now, string? logPath = null)
     {
         Start = start;
         _now = now;
+        LogPath = logPath;
         _process = process;
         process.Output += line =>
         {
             if (AgentEvent.Parse(line, now()) is not { } e)
                 return;
+            Record(e);
             lock (_gate)
             {
                 if (e.Kind == "phase" && e.Data is JsonObject data && data["to"] is JsonValue to && to.GetValueKind() == JsonValueKind.String)
@@ -103,6 +111,9 @@ public sealed class WingmanAgent : IDisposable
                 {
                     if (e.Kind == "flight")
                         LastOutcome = e.Text;
+                    if (e.Kind == "free")
+                        // "Free flight for 30 minutes..." starts it; "Free flight over/stopped..." ends it; the rest is on the way.
+                        FreeFlying = e.Text.StartsWith("Free flight for", StringComparison.Ordinal) || (FreeFlying && !e.Text.StartsWith("Free flight", StringComparison.Ordinal));
                     _events.Add(e);
                     if (_events.Count > MaxEvents)
                         _events.RemoveRange(0, _events.Count - MaxEvents);
@@ -114,9 +125,34 @@ public sealed class WingmanAgent : IDisposable
     }
 
     public AgentStart Start { get; }
+
+    /// <summary>The session recorder: every line this agent said, one JSON object each, or null (tests).</summary>
+    public string? LogPath { get; }
+
+    private void Record(AgentEvent e)
+    {
+        if (LogPath == null)
+            return;
+        try
+        {
+            lock (LogJson)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
+                if (!File.Exists(LogPath) || new FileInfo(LogPath).Length < MaxLogBytes)
+                    File.AppendAllText(LogPath, JsonSerializer.Serialize(new { e.Time, callSign = Start.CallSign, e.Kind, e.Text, e.Data }, LogJson) + "\n");
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A full disk loses the log, not the agent.
+        }
+    }
     public string Phase { get; private set; } = "Starting";
     public string? Status { get; private set; }
     public string? LastOutcome { get; private set; }
+
+    /// <summary>In free flight (from the console's own "free" lines).</summary>
+    public bool FreeFlying { get; private set; }
     public bool Running => !_process.HasExited;
 
     /// <summary>Something new to show (an event, or the process ended). Raised on the process's thread.</summary>
@@ -166,6 +202,11 @@ public sealed class WingmanAgent : IDisposable
             _process.Kill();
     }
 
+    /// <summary>Free flight: the agent practises landings around KSC on its own for some minutes (any order stops it).</summary>
+    public void FreeFlight(double minutes) => Send(new JsonObject { ["type"] = "free", ["minutes"] = Math.Clamp(minutes, 5, 240) });
+
+    public void StopFreeFlight() => Send(new JsonObject { ["type"] = "stop-free" });
+
     /// <summary>Asks the console to quit, without waiting.</summary>
     public void Quit() => Send(new JsonObject { ["type"] = "quit" });
 
@@ -199,9 +240,12 @@ public sealed class AgentHost : IDisposable
     private readonly List<WingmanAgent> _agents = [];
     private readonly Func<ProcessStartInfo, IAgentProcess> _launch;
     private readonly Func<DateTime> _now;
+    private readonly string? _logFolder;
 
-    public AgentHost(Func<ProcessStartInfo, IAgentProcess>? launch = null, Func<DateTime>? now = null)
+    /// <param name="logFolder">Where sessions are recorded (wingman-&lt;call sign&gt;-&lt;date&gt;.jsonl), or null.</param>
+    public AgentHost(Func<ProcessStartInfo, IAgentProcess>? launch = null, Func<DateTime>? now = null, string? logFolder = null)
     {
+        _logFolder = logFolder;
         _launch = launch ?? (info => new AgentProcess(info));
         _now = now ?? (() => DateTime.UtcNow);
     }
@@ -228,6 +272,11 @@ public sealed class AgentHost : IDisposable
         foreach (var arg in new[] { "--ipc", "--model", start.Model, "--llm", start.LlmUrl, "--krpc-port", start.KrpcPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
                      "--call-sign", start.CallSign, "--mcp", install.McpServer })
             info.ArgumentList.Add(arg);
+        if (start.PlannerModel is { Length: > 0 } planner)
+        {
+            info.ArgumentList.Add("--planner-model");
+            info.ArgumentList.Add(planner);
+        }
         if (start.TowerUrl != null)
             info.Environment["WINGMAN_TOWER_URL"] = start.TowerUrl;
         return info;
@@ -241,7 +290,7 @@ public sealed class AgentHost : IDisposable
         if (string.IsNullOrWhiteSpace(start.Model))
             return "Pick a model.";
         // Audit 14, W1: a value starting with "-" would be read by the console as one of its options.
-        if (start.Model.Length > 100 || start.Model.StartsWith('-') || start.Model.Any(c => char.IsControl(c) || char.IsWhiteSpace(c)))
+        if (!ModelName(start.Model) || (start.PlannerModel is { Length: > 0 } p && !ModelName(p)))
             return "A model name is up to 100 characters, without spaces, and doesn't start with \"-\" (e.g. qwen3:4b-instruct).";
         if (!Uri.TryCreate(start.LlmUrl, UriKind.Absolute, out var url) || url.Scheme is not ("http" or "https"))
             return "The model server's address must be an http:// or https:// address.";
@@ -256,12 +305,16 @@ public sealed class AgentHost : IDisposable
         return null;
     }
 
+    private static bool ModelName(string name) =>
+        name.Length <= 100 && !name.StartsWith('-') && !name.Any(c => char.IsControl(c) || char.IsWhiteSpace(c));
+
     public WingmanAgent Start(WingmanInstall install, AgentStart start)
     {
         if (Check(start) is { } problem)
             throw new InvalidOperationException(problem);
         _agents.RemoveAll(a => !a.Running && a.Start.KrpcPort == start.KrpcPort); // its old card goes
-        var agent = new WingmanAgent(start, _launch(StartInfo(install, start)), _now);
+        var log = _logFolder == null ? null : Path.Combine(_logFolder, $"wingman-{start.CallSign}-{DateTime.Now:yyyy-MM-dd}.jsonl");
+        var agent = new WingmanAgent(start, _launch(StartInfo(install, start)), _now, log);
         agent.Changed += () => Changed?.Invoke();
         _agents.Add(agent);
         Changed?.Invoke();

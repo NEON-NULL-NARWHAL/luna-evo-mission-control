@@ -45,6 +45,7 @@ Every source file starts with a short header pointing back here, like this:
 | 27 | [LUNA EVO patches for the LMP client](27-Client-Patches.md) | change or add a client patch, how Join installs it, or the `-lmp` launch |
 | 28 | [The KSC tower](28-Tower.md) | change the tower's rules or its channel (KSP Wingman agents), or add an airport |
 | 29 | [KSP Wingman in LUNA EVO](29-Wingman.md) | change how Wingman is installed (release, mod, Ollama) or how agents are run and shown (`--ipc`) |
+| 30 | [What the agents know](30-Knowledge.md) | change the skill tree, how flights are graded, or the lessons' rules |
 
 ## 🔣 Legend
 
@@ -180,6 +181,7 @@ Symbols used in the map below and throughout these chapters:
 | | File | What it is |
 |:---:|---|---|
 | ⚠️🔌 | `LunaEvoPlugin.cs` | The `ILmpPlugin` LMP loads: watches position messages from logged-in players, writes `LunaEvo/live.json`. net6.0. See [26](26-Server-Plugin.md). |
+| 🔌 | `RadioRelay.cs` | The radio: new lines of `LunaEvo/radio.jsonl` (the tower's channel, when it talks on chat) said in LMP's chat as "KSC tower", one a second. See [28](28-Tower.md). |
 | 🔌 | `LiveState.cs` | Each vessel's latest position, and the JSON it writes. |
 
 ### `src/LunaEvo.ClientPatches/`: a KSP mod on top of LMP's client 🔌
@@ -190,6 +192,7 @@ Symbols used in the map below and throughout these chapters:
 | ⚠️🔌 | `CommandLinePatch.cs` | Replaces LMP's `-lmp` reading (which breaks LMP's startup with a port); the password comes from LMP's server list. |
 | 🔌 | `LmpAddress.cs` | Parses `lmp://host:port`; no KSP types, so Core.Tests compiles and fuzzes it too. |
 | ⚠️🔌 | `TimeSyncPatch.cs` | Alone in your subspace and far off its time: a subspace at your own time instead of LMP's clock jump. |
+| 🧠 | `Core/Tower/Knowledge.cs` | The agents' knowledge store: skills graded from flights, lessons citing them, saved on the server. See [30](30-Knowledge.md). |
 | 🖥️🧠 | `TowerPage.cs` (app), `Core/Tower/Tower.cs`, `Core/Tower/TowerServer.cs` | The KSC tower: rules for AI pilots (intentions, clearances with the route, holds, vacate), its localhost channel, the page. See [28](28-Tower.md). |
 | 🖥️🧠 | `WingmanPage.cs` (app), `Core/Wingman/WingmanTools.cs`, `Core/Wingman/AgentHost.cs` | KSP Wingman as a tool: verified install, its mod in a KSP, kRPC, Ollama and a model (patches → Tools); agents run with `--ipc`, one card each (Play → Wingman). See [29](29-Wingman.md). |
 | 🖥️ | `PatchesPage.cs` (app) and `Core/Join/PatchCatalog.cs` | The LUNA EVO patches page: every fix, what it does and measured, install/update/remove for KSP and the server. See [27](27-Client-Patches.md#210-the-luna-evo-patches-page). |

@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.13.0 (2026-10-24)
+
+### Added
+- **What the agents know** (Wingman page), the owner's "tech tree", kept on the LMP server
+  (`LunaEvo/agents/knowledge.json`): every finished flight of a KSP Wingman agent is graded on six skills (take off,
+  fly a route, hold, land visual, land RNAV, land in sequence), each skill opens once what it needs has 3 good flights,
+  and agents save short lessons that must cite one of their flights. The page shows everyone's numbers and the lessons,
+  and you can delete one.
+- **Free flight**: an agent practises landings on its own (the card's Free flight button): a thinking planner model
+  picks what to practise (its weakest first), the agent flies it inside a box around KSC, and after each flight it
+  writes a lesson for every agent on the server. A "Planner (thinks)" model can be set per agent.
+- **The short visual**: close in with nobody else waiting, the KSC tower clears a short circuit instead of a long RNAV
+  route (the owner saw agents flying far out). An agent can also ask for an approach by name.
+- **The tower on LMP chat**: "Talk on LMP chat" on the Tower page says the tower's lines and the agents' calls in the
+  server's chat, as "KSC tower", through the LUNA EVO server plugin (1.2), so players hear the traffic.
+- Each agent's session is recorded in the logs folder, one JSON line per event.
+
+### Security
+- Audit 15 (see SECURITY.md).
+
 ## 2.12.0 (2026-10-23)
 
 ### Added

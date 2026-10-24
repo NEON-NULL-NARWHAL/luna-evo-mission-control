@@ -12,7 +12,7 @@ in your KSP and a model; **Play → Wingman** (on the rail once it's installed) 
 | `Core/Wingman/AgentHost.cs` | Agents: KSP Wingman's console started with `--ipc`, one per kRPC port; `AgentEvent.Parse` reads its lines; `WingmanAgent` keeps the phase, status, last flight and the last 500 events; orders and quit go in as JSON lines. `IAgentProcess` is faked in tests. |
 | `PatchesPage.cs` | The Tools group: KSP Wingman (Install / Check for updates), "Wingman in your KSP" (the Join page's KSP: mod and kRPC, a button to CKAN when kRPC is missing), "Local model (Ollama)" (ready, or Download it). |
 | `WingmanPage.cs` | Start an agent (call sign, kRPC port, model, model server, use the tower), and a card per agent: phase, kRPC port, model, last flight, the plane's status, its events, an order box, Status, Stop/Remove. |
-| `Program.cs` | `--wingman-agent CallSign:port[:model]` (any number) starts agents at startup and opens the page (rig tests). |
+| `Program.cs` | `--wingman-agent CallSign:port[:model]` (any number) starts agents at startup and opens the page; `--wingman-planner model`, `--wingman-free minutes` (rig tests). |
 
 ## 29.2 The console's --ipc mode (KSP Wingman 0.6)
 
@@ -31,6 +31,25 @@ they're the same events whether a model is talking or not.
 
 Anything the console prints that isn't such a line (a .NET crash) is shown as an `error` line, cut to 4,000
 characters; lines over 64 KB are dropped (`FuzzTests.Wingman_agent_lines`).
+
+## 29.2b Free flight, the planner and the debrief (2.13, Wingman 0.7)
+
+- **The planner** is a second model that thinks (Qwen3 4B with thinking, through Ollama's own `/api/chat`: its OpenAI
+  endpoint ignores thinking switches). It picks free-flight goals and writes debriefs, never flies. The page's "Planner
+  (thinks)" box; empty = the pilot's model.
+- **Free flight** (the card's button, 30 minutes; `{"type":"free"}`): the planner picks a goal from a numbered menu
+  (land on RNAV 09 NORTH, SOUTH, STRAIGHT-IN, or the short visual) with its skill's numbers, preferring the weakest;
+  code flies it (recover, a new plane, take off, `land` with that approach, which asks the tower for it). Code keeps it
+  in a box (25 km of KSC, under 3,000 m: outside, sent back to land), stops after two crashes in a row or when a launch
+  is refused, drops a goal that failed twice without a lesson, and any order or Stop free flight stops it.
+- **The debrief**: after each recorded flight (the tower's knowledge event), the planner reads the record and writes
+  one lesson; code refuses reports ("Landed 25 m off...": it must be advice, starting with a verb) and anything not
+  for a skill the flight used, then `learn` saves it citing the flight (chapter 30).
+- **Sessions are recorded**: every line an agent says goes to `logs/wingman-<call sign>-<date>.jsonl` next to the
+  settings file (20 MB a day at most).
+- **KSP's dialogs** that kRPC can't answer: the bridge (0.7) closes the Mission Summary after a recovery, and `launch`
+  refuses with a reason when no kerbal is free (otherwise KSP stops on "No Control!" and the launch never returns;
+  seen in the rig with every kerbal in a parked plane).
 
 ## 29.3 Rules
 
@@ -61,6 +80,12 @@ characters; lines over 64 KB are dropped (`FuzzTests.Wingman_agent_lines`).
   agents with `--wingman-agent` on the rig's KSPs: cards with phase, tower lines and status (screenshot in
   docs/SCREENSHOTS.md). Found there and fixed: a plane settling after it spawns looked like a takeoff roll (now 3 m/s
   to start rolling, 1 to stop), and the end of the taxi, still braking, looked like a takeoff (Parked beside = stopped).
+
+- Free flight in the rig (2026-10-24, two agents, the planner, the tower on chat): six flights recorded on the server,
+  all landed with no crash or go-around; straight-ins 7-25 m off the centerline, the short visual 4.9 min alone but
+  16-23 m off (next to tune); sequencing graded good when one held. Found there and fixed: KSP's "No Control!" and
+  Mission Summary windows blocking launches, the first visual's geometry, reports saved as lessons, the planner's
+  missing "|", the visual's route not counted, a stale "Parked beside" hiding a takeoff.
 
 ## 29.5 Next
 

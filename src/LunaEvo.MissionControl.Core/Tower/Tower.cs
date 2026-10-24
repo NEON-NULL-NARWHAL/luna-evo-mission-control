@@ -38,6 +38,9 @@ public sealed class TowerPlane(string callSign)
     public string? Approach { get; internal set; }
     public int Number { get; internal set; }
     public string Intent { get; internal set; } = "";
+
+    /// <summary>The approach it asked for, if it named one (granted when nobody else is waiting).</summary>
+    public string? Asked { get; internal set; }
     internal int DeliveredId;
     internal bool ToldClearedToLand;
 }
@@ -115,6 +118,7 @@ public sealed class Tower
         if (wantsToLand && plane.State is not (PlaneState.Approach or PlaneState.Holding))
         {
             plane.Intent = "land";
+            plane.Asked = kind == "request-approach" ? Ksc.Named(text) : null; // "request RNAV 09 NORTH", "request visual"
             if (_planes.Values.Any(p => p.State == PlaneState.Approach || (p.State == PlaneState.Landed && p != plane)))
                 Hold(plane, now);
             else
@@ -134,7 +138,11 @@ public sealed class Tower
     {
         var r = plane.Last;
         var (along, cross) = r == null ? (0.0, 0.0) : Ksc.Frame(r.Latitude, r.Longitude);
-        var route = Ksc.Pick(along, cross, r?.Heading ?? 90);
+        // Alone on the runway (nobody holding), it may have what it asked for, or the short visual when that's quicker.
+        var alone = !_planes.Values.Any(p => p != plane && p.State is PlaneState.Holding or PlaneState.Approach or PlaneState.Landed);
+        var route = alone && plane.Asked != null
+            ? Ksc.Route(plane.Asked, cross)
+            : Ksc.Pick(along, cross, r?.Heading ?? 90, visualAllowed: alone);
         plane.State = PlaneState.Approach;
         plane.Approach = route.Name;
         plane.Number = 1;
@@ -245,14 +253,57 @@ public static class Ksc
     public static TowerRoute South => new("RNAV 09 SOUTH", "KSC 09",
         [At("KSC-S1", -1000, 4000, 900, 110), At("KSC-S2", -11_000, 4000, 800, 90), At("KSC-S3", -11_000, 0, 750, 90), Final]);
 
-    /// <summary>The same rule as Wingman's own: far out west and facing the runway, straight in; otherwise its side.</summary>
-    public static TowerRoute Pick(double along, double cross, double heading)
+    /// <summary>
+    /// The short visual (the owner's "visual override"): the RNAV patterns' shape made smaller, on the plane's side:
+    /// downwind 3 km out, a 90° base turn 7 km before the runway onto the centerline, and a 4.5 km final (about 16 km
+    /// flown instead of 25). A diagonal base into a 4 km final overshot the centerline by 2 km three times in the rig:
+    /// at 90 m/s the 30° turn is 1.4 km wide, so each turn needs the room.
+    /// </summary>
+    public static TowerRoute Visual(double cross)
+    {
+        var s = cross < 0 ? -1 : 1;
+        return new TowerRoute(VisualName, "KSC 09",
+        [
+            At("KSC-V1", 0, s * 3000, 650, 100), At("KSC-V2", -7000, s * 3000, 600, 90), At("KSC-V3", -7000, 0, 520, 85),
+            At("F09V", -VisualFinal, 0, Math.Round(69 + VisualFinal * Math.Tan(4 * Math.PI / 180)), 85),
+        ]);
+    }
+
+    public const string VisualName = "VISUAL 09";
+
+    /// <summary>Where the short visual's final starts (m before touchdown).</summary>
+    public const double VisualFinal = 4500;
+
+    /// <summary>Within this distance of the touchdown point, the short visual is quicker than any RNAV route.</summary>
+    public const double VisualWithin = 12_000;
+
+    /// <summary>
+    /// The same rule as Wingman's own: far out west and facing the runway, straight in; close in (and allowed: nobody else
+    /// waiting), the short visual; otherwise its side's pattern.
+    /// </summary>
+    public static TowerRoute Pick(double along, double cross, double heading, bool visualAllowed = false)
     {
         var off = ((heading - Heading) % 360 + 540) % 360 - 180;
         if (along < -9000 && Math.Abs(cross) < 3000 && Math.Abs(off) < 60)
             return StraightIn;
+        if (visualAllowed && Math.Sqrt(along * along + cross * cross) < VisualWithin)
+            return Visual(cross);
         return cross < 0 ? North : South;
     }
+
+    /// <summary>An approach named in a request ("request RNAV 09 NORTH", "visual", "straight-in"), or null.</summary>
+    public static string? Named(string text)
+    {
+        var t = text.ToUpperInvariant();
+        return t.Contains("VISUAL") ? VisualName
+            : t.Contains("STRAIGHT") ? StraightIn.Name
+            : t.Contains("NORTH") ? North.Name
+            : t.Contains("SOUTH") ? South.Name
+            : null;
+    }
+
+    public static TowerRoute Route(string name, double cross) =>
+        name == VisualName ? Visual(cross) : name == StraightIn.Name ? StraightIn : name == North.Name ? North : South;
 
     /// <summary>
     /// A holding point 4 km past the touchdown point and 7 km to the side: its 2 km circle stays 3.8 km from the downwind
