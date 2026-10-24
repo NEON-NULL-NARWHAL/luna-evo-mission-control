@@ -184,6 +184,15 @@ public sealed class TowerServer : IDisposable
                             return (400, Error("needs a kind"));
                         messages = Tower.Say(callSign, kind, Text(root, "text", 300) ?? "", _clock());
                         break;
+                    case "/v1/procedures":
+                        return (200, Procedures());
+                    case "/v1/plan":
+                        var names = root.TryGetProperty("fixes", out var fx) && fx.ValueKind == JsonValueKind.Array
+                            ? fx.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Take(13)
+                                .Select(e => new string((e.GetString() ?? "").Where(c => char.IsAsciiLetterOrDigit(c) || c == '-').Take(12).ToArray())).ToList()
+                            : [];
+                        messages = Tower.File(callSign, names, _clock());
+                        break;
                     case "/v1/flight" or "/v1/lesson" or "/v1/knowledge":
                         var answer = Learn(path, callSign, root);
                         if (answer.Status == 200)
@@ -197,6 +206,20 @@ public sealed class TowerServer : IDisposable
             Changed?.Invoke();
             return (200, JsonSerializer.Serialize(new { messages }, Json));
         }
+    }
+
+    /// <summary>The published table as JSON: fixes, legs, final fixes, the hold.</summary>
+    private static string Procedures()
+    {
+        var t = Ksc.Table;
+        return JsonSerializer.Serialize(new
+        {
+            runway = "KSC 09",
+            fixes = t.Fixes,
+            legs = t.Legs.Select(l => new[] { l.From, l.To }),
+            finals = t.Finals,
+            hold = t.Hold,
+        }, Json);
     }
 
     /// <summary>The knowledge endpoints. Inputs are checked like the channel's: cut strings, finite numbers, short lists.</summary>
@@ -220,7 +243,8 @@ public sealed class TowerServer : IDisposable
                     var goArounds = (int)Math.Clamp(Number(root, "goArounds") ?? 0, 0, 100);
                     var record = Knowledge.AddFlight(callSign, Text(root, "craft", 60) ?? "", result, Text(root, "approach", 40), goArounds,
                         Math.Clamp(Number(root, "minutes") ?? 0, 0, 10_000), FromLanding("downRunway"), FromLanding("offCenterline"),
-                        FromLanding("headingError"), phases, now);
+                        FromLanding("headingError"), phases, now,
+                        Math.Clamp(Number(root, "maxSpeed") ?? 0, 0, 5000), Math.Clamp(Number(root, "maxHeight") ?? 0, 0, 100_000));
                     SaveKnowledge();
                     return (200, JsonSerializer.Serialize(new { flight = new { record.Id, record.Skills } }, Json));
                 }

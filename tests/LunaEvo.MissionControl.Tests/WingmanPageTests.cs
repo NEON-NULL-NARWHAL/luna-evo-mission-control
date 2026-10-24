@@ -169,6 +169,9 @@ public class WingmanPageTests
         ui.WaitFor(() => ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.Contains("· free flight"), "free flight shown");
         ui.Click(ui.Find<Button>("wingman/agent/Wingman1/free"));
         Assert.Equal("stop-free", JsonNode.Parse(agent.Sent.Last())!["type"]!.GetValue<string>());
+        ui.Find<ComboBox>("wingman/agent/Wingman1/training").SelectedIndex = 1; // Fly fast
+        ui.Click(ui.Find<Button>("wingman/agent/Wingman1/train"));
+        Assert.Equal("fast", JsonNode.Parse(agent.Sent.Last())!["focus"]!.GetValue<string>());
         agent.Say("""{"type":"event","kind":"free","text":"Free flight stopped for an order."}""");
         ui.WaitFor(() => !ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.Contains("free flight"), "free flight over");
 

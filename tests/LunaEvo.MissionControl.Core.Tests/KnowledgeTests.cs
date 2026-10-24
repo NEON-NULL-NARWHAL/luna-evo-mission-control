@@ -29,12 +29,32 @@ public class KnowledgeTests
         var held = Knowledge.Grade("landed", "RNAV 09 SOUTH", 0, 5, ["TakingOff", "Climbing", "Holding", "OnRoute", "OnFinal", "Stopped"]);
         Assert.True(held["hold"] && held["sequencing"]);
         Assert.True(Knowledge.Grade("landed", "VISUAL 09", 0, 5, ["TakingOff", "Climbing", "OnRoute", "OnFinal", "Stopped"])["land-visual"]);
+        // Its own plan (the rig's): ending on F09 it's an RNAV landing, on F09V a visual one.
+        Assert.True(Knowledge.Grade("landed", "FILED KSC-OH KSC-N1 KSC-N2 KSC-N3 F09", 0, 4, ["TakingOff", "OnRoute", "OnFinal", "Stopped"])["land-rnav"]);
+        Assert.True(Knowledge.Grade("landed", "FILED KSC-OH KSC-VN1 KSC-VN2 KSC-VN3 F09V", 0, 4, ["TakingOff", "OnRoute", "OnFinal", "Stopped"])["land-visual"]);
 
         // A crash on final: the landing failed, the takeoff didn't.
         var crash = Knowledge.Grade("crashed", "RNAV 09 NORTH", 0, null, ["TakingOff", "Climbing", "OnRoute", "OnFinal", "Crashed"]);
         Assert.False(crash["land-rnav"]);
         Assert.True(crash["takeoff"]);
         Assert.Empty(Knowledge.Grade("ended in the air", null, 0, null, ["Cruising", "NotFlying"])); // joined in the air: nothing
+    }
+
+    [Fact]
+    public void Training_drills_and_new_planes_are_skills_too()
+    {
+        string[] visual = ["TakingOff", "Climbing", "Cruising", "OnRoute", "OnFinal", "Stopped"];
+        var fast = Knowledge.Grade("landed", "VISUAL 09", 0, 30, visual, maxSpeed: 226);
+        Assert.True(fast["fly-fast"]);
+        Assert.False(fast.ContainsKey("fly-high"));
+        Assert.False(Knowledge.Grade("crashed", null, 0, null, ["TakingOff", "Climbing", "Crashed"], maxHeight: 6100)["fly-high"]); // didn't get back down
+        Assert.False(Knowledge.Grade("landed", "VISUAL 09", 0, 5, visual, maxHeight: 4300)["fly-high"]); // tried, not high enough
+
+        var k = new Knowledge();
+        Assert.False(k.AddFlight("Alpha", "Aeris 3A", "landed", "VISUAL 09", 0, 5, 1000, 5, 1, visual, T0).Skills.ContainsKey("new-craft")); // its first plane
+        Assert.True(k.AddFlight("Alpha", "Stearwing A300", "landed", "VISUAL 09", 0, 5, 1000, 8, 1, visual, T0).Skills["new-craft"]);
+        Assert.False(k.AddFlight("Alpha", "Stearwing A300", "landed", "VISUAL 09", 0, 5, 1000, 8, 1, visual, T0).Skills.ContainsKey("new-craft")); // not new now
+        Assert.Equal(9, Knowledge.Tree.Count);
     }
 
     [Fact]
@@ -134,7 +154,7 @@ public class KnowledgeTests
         tower.Report(At("Alpha", 3000, 1500), T0);
         var visual = tower.Say("Alpha", "request-approach", "request approach, KSC runway 09", T0).Single(m => m.Kind == "clearance");
         Assert.Equal(Ksc.VisualName, visual.Route!.Name);
-        Assert.Equal(["KSC-V1", "KSC-V2", "KSC-V3", "F09V"], visual.Route.Fixes.Select(f => f.Name));
+        Assert.Equal(["KSC-VS1", "KSC-VS2", "KSC-VS3", "F09V"], visual.Route.Fixes.Select(f => f.Name));
         Assert.All(visual.Route.Fixes, f => Assert.InRange(f.Altitude, 300, 700)); // Wingman flies fixes from 300 m (audit 15)
         Assert.True(visual.Route.Fixes[0].Latitude < Ksc.ThresholdLatitude); // its own side (south)
 

@@ -51,6 +51,16 @@ characters; lines over 64 KB are dropped (`FuzzTests.Wingman_agent_lines`).
   refuses with a reason when no kerbal is free (otherwise KSP stops on "No Control!" and the launch never returns;
   seen in the rig with every kerbal in a parked plane).
 
+## 29.2c Training (2.15, Wingman 0.9)
+
+The owner's "ask it to train": `/train <what> [minutes]`, `{"type":"train","focus":...}`, the card's Train menu, or in
+plain words to the pilot (it has a `train` tool of the console's own). Free flight on one focus until it's learned (3
+good flights in a row) or the time's up. Focuses: landings (RNAV and visual), fast (220 m/s legs, then land), high
+(climb to 6,000 m in legs over KSC, the box's ceiling raised to 8,000 for that drill only, then land), planes (launch a
+plane from the SPH it hasn't flown this session; one that won't take off is skipped), plans (the planner builds a
+flight plan from the tower's table, code checks it with the tower's rules, files it, once more with the reason if it's
+refused). Free flight without a focus offers all of them.
+
 ## 29.3 Rules
 
 - **Downloads**: only a release asset named `KspWingman-<version>.zip` with a GitHub SHA-256, through

@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.15.0 (2026-10-24)
+
+### Added
+- **Training on request** (the owner's idea): each agent's card has a Train menu (work on landings, fly fast, fly
+  high, try different planes, flight plans); the agent practises that until it's learned (3 good flights in a row) or
+  30 minutes are up. Three new skills in the tree: fly fast, fly high, a new plane.
+- **The tower's table and the agents' own flight plans**: the KSC tower publishes its fixes, the legs between them and
+  the final fixes; an agent's planner builds a plan from them, like a pilot from the charts, and files it; the tower
+  checks it and clears it "as filed", holds it for traffic, or says why not. New departure fixes 5 km past the runway.
+- **Holding over the runway** (the owner's idea) instead of 7 km out, so the next plane is right there; and **directs**:
+  a plane west of the runway and facing it goes straight to the final fix.
+- **The radio in the game**: the LUNA EVO client patches (1.6) show the tower's lines and the agents' calls on a strip
+  at the top of KSP's screen (with "Talk on LMP chat" on); a toggle in the LUNA EVO window.
+
+### In the test rig
+- Both agents on gemma4:e4b, training fly fast and flight plans: RigViewer filed its own plans ("KSC-OH KSC-N1 KSC-N2
+  KSC-N3 F09"), was cleared as filed and stopped 4 m off the centerline; RigPilot held over the runway, flew its 220 m/s
+  legs (fly fast: good) and landed the short visual 2 m off. The radio strip showed the tower's lines in KSP.
+
+### Fixed (found in the rig)
+- The tower asked agents their intentions while they were still at the Space Center (the owner noticed): it waits
+  for a plane on the runway or in the air now.
+- A plane in the overhead hold was cleared to land by the 2.5 km fallback: only a plane lined up on final is now.
+- A filed plan ending on F09 was graded as a visual landing: it's an RNAV landing; on F09V, visual.
+
+### Security
+- Audit 18 (see SECURITY.md).
+
 ## 2.14.0 (2026-10-24)
 
 ### Added

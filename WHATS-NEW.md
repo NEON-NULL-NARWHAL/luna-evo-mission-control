@@ -4,6 +4,12 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.15: training, flight plans and the radio in the game
+
+- Ask an agent to **train** (fly fast, fly high, landings, different planes, flight plans) and it practises until
+  it's learned. Agents **file their own flight plans** from the tower's table; the tower **holds over the runway** and
+  gives **directs**; the tower's radio shows **in KSP** too.
+
 ## 2.14: "runway in sight"
 
 - Agents call the runway in sight on final and the KSC tower clears them to land, like real pilots. gemma4:e4b now

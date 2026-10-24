@@ -66,7 +66,7 @@ public class TowerPageTests
         Assert.Contains(channel, l => l.Contains("KSC tower → Alpha:  Alpha, KSC tower, say intentions."));
         Assert.Contains(channel, l => l.Contains("cleared RNAV 09 NORTH"));
         Assert.Contains(channel, l => l.Contains("Bravo → KSC tower:  land"));
-        Assert.Contains(channel, l => l.Contains("number 2. Hold at KSC-HS"));
+        Assert.Contains(channel, l => l.Contains("number 2. Hold at KSC-OH"));
 
         // The channel is kept as data next to the settings file (this test's own temp one).
         var log = Path.Combine(Path.GetDirectoryName(ui.Window.SettingsPath)!, "logs", $"tower-{DateTime.Now:yyyy-MM-dd}.jsonl");

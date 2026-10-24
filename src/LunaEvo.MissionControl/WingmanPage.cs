@@ -109,7 +109,7 @@ internal sealed class WingmanPage
     /// The command line's --wingman-agent CallSign:port[:model] (and --wingman-planner, --wingman-free minutes): start
     /// agents at launch, and their free flight once they're connected (rig tests).
     /// </summary>
-    public void StartFromCommandLine(IEnumerable<string> specs, string? planner = null, double? freeMinutes = null)
+    public void StartFromCommandLine(IEnumerable<string> specs, string? planner = null, double? freeMinutes = null, IReadOnlyList<string>? train = null)
     {
         if (planner != null)
             _planner.Text = planner;
@@ -123,11 +123,15 @@ internal sealed class WingmanPage
                 _model.Text = parts[2];
             StartAgent();
         }
-        if (freeMinutes is { } minutes)
+        if (freeMinutes != null || train is { Count: > 0 })
             _ = Task.Delay(TimeSpan.FromSeconds(30)).ContinueWith(_ => Dispatcher.UIThread.Post(() =>
             {
-                foreach (var agent in _agentHost.Agents.Where(a => a.Running))
-                    agent.FreeFlight(minutes);
+                var running = _agentHost.Agents.Where(a => a.Running).ToList();
+                for (var i = 0; i < running.Count; i++)
+                    if (train is { Count: > 0 } && i < train.Count)
+                        running[i].Train(train[i], freeMinutes ?? 30);
+                    else if (freeMinutes is { } minutes)
+                        running[i].FreeFlight(minutes);
             }), TaskScheduler.Default);
     }
 
@@ -262,6 +266,7 @@ internal sealed class WingmanPage
         private readonly TextBox _order;
         private readonly Button _stop;
         private readonly Button _free;
+        private readonly ComboBox _training;
         private int _shown = -1;
 
         public AgentCard(WingmanPage page, WingmanAgent agent)
@@ -290,6 +295,10 @@ internal sealed class WingmanPage
                     _agent.FreeFlight(30);
             };
             ToolTip.SetTip(_free, "30 minutes of practice on its own: it picks what to practise (its weakest landings first), flies it, and learns from each flight. Any order stops it.");
+            _training = new ComboBox { ItemsSource = WingmanAgent.Trainings.Select(t => t.Label).ToList(), SelectedIndex = 0, MinWidth = 170 }.WithId(id + "/training");
+            var train = Ui.Button("Train", "text").WithId(id + "/train");
+            ToolTip.SetTip(train, "Practise one ability on its own until it goes well (3 good flights in a row) or 30 minutes are up, learning as it goes. Any order stops it.");
+            train.Click += (_, _) => _agent.Train(WingmanAgent.Trainings[Math.Max(0, _training.SelectedIndex)].Focus);
             var status = Ui.Button("Status", "text").WithId(id + "/askStatus");
             status.Click += (_, _) => _agent.AskStatus();
             _stop = Ui.Button("Stop", "text").WithId(id + "/stop");
@@ -309,7 +318,7 @@ internal sealed class WingmanPage
                     Spacing = 6,
                     Children =
                     {
-                        new DockPanel { Children = { Dock(_stop, Avalonia.Controls.Dock.Right), Dock(status, Avalonia.Controls.Dock.Right), Dock(_free, Avalonia.Controls.Dock.Right), Ui.Text(agent.Start.CallSign, "label") } },
+                        new DockPanel { Children = { Dock(_stop, Avalonia.Controls.Dock.Right), Dock(status, Avalonia.Controls.Dock.Right), Dock(_free, Avalonia.Controls.Dock.Right), Dock(train, Avalonia.Controls.Dock.Right), Dock(_training, Avalonia.Controls.Dock.Right), Ui.Text(agent.Start.CallSign, "label") } },
                         _summary,
                         _status,
                         _scroll,

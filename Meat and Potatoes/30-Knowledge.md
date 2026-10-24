@@ -28,6 +28,11 @@ free flight are in chapter 29.
 | `land-visual` | takeoff | it was on final, not on an RNAV approach | landed, no go-around, ≤ 15 m off the centerline |
 | `land-rnav` | route, land-visual | on final from an RNAV approach | the same |
 | `sequencing` | hold, land-rnav | it held, then landed on an RNAV approach | the same |
+| `fly-fast` | takeoff | it flew over 180 m/s | over 200 m/s, and landed |
+| `fly-high` | takeoff | it climbed over 4,000 m above the ground | over 5,000 m, and landed |
+| `new-craft` | land-visual | it landed a plane it hadn't landed well before (not its first plane) | that landing was good |
+
+Flight records carry `maxSpeed` and `maxHeight` (Wingman 0.9).
 
 A skill is **open** once everything it requires has 3 good flights by any agent on the server (shared). Proficiency
 is good flights out of attempts, per agent and for everyone.

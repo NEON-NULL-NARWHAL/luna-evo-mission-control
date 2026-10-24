@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the seventeen security audits (0.4.0 to 2.14.0) found and changed, newest first, and which real
+what the eighteen security audits (0.4.0 to 2.15.0) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
@@ -83,6 +83,19 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 18 (2.15.0, October 2026)
+
+Scope: the tower's table and filed plans (`/v1/procedures`, `/v1/plan`), the overhead hold and directs, training and
+its drills (Wingman 0.9), the in-game radio strip (client patches 1.6). No new packages, nothing personal.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| A1 | Low | A filed plan comes from a model (or anything on this PC, T4) | Checked by code against the published table only (known fixes, published legs, a final fix last, first fix within 25 km, 12 at most, names cut to letters, digits and dashes); Wingman checks it again before flying (audit 13 T3 limits) |
+| A2 | Low | The fly-high drill raises the free-flight ceiling to 8,000 m | For that drill only; the box's radius stays 25 km; the plane is sent back to land outside it |
+| A3 | Low | Training launches other planes from the agent's own SPH, some of which may not fly | One that doesn't take off is skipped and recovered; two crashes in a row stop free flight |
+| A4 | Info | The radio strip shows any chat line from "KSC tower", and a player could take that name | The strip only shows text (never acts on it), the last three lines for 45 s, and can be switched off in the LUNA EVO window |
+| A5 | Info | `train` is a tool the pilot model can call | It only starts free flight on a focus from a fixed list; any order stops it |
 
 ## Audit 17 (2.14.0, October 2026)
 

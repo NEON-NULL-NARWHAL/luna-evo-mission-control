@@ -51,5 +51,7 @@
 | **Light theme.** | **Welcome:** host, open a server, or just play. |
 | ![KSC tower](../docs/screenshots/tower.png) | ![Wingman](../docs/screenshots/wingman.png) |
 | **KSC tower (2.11):** two KSP Wingman agents in the test rig, one cleared, one holding. | **Wingman (2.12):** two AI pilots started from LUNA EVO, parked after landing and taxiing off, with their status and events. |
+| ![The tower's radio in KSP](../docs/screenshots/radio.png) | |
+| **The radio in KSP (2.15):** the tower's lines at the top of a player's screen. | |
 
 <sub>Screenshots are LUNA EVO 0.6 to 2.2 (older ones still say "Config Manager", its name before 2.0) running a sandbox copy of a real LMP 0.29.2 server, with personal details removed: network addresses are examples and the players are made-up Kerbals. The setup wizard is shown step by step in [Set up a new server](HOSTING.md#set-up-a-new-server-step-by-step).</sub>

@@ -194,7 +194,7 @@ public sealed class MainWindow : Window
             }
             if (options.WingmanAgents.Count > 0)
             {
-                _wingmanPage.StartFromCommandLine(options.WingmanAgents, options.WingmanPlanner, options.WingmanFree);
+                _wingmanPage.StartFromCommandLine(options.WingmanAgents, options.WingmanPlanner, options.WingmanFree, options.WingmanTrain);
                 Navigate(WingmanKey);
             }
             if (!Settings.HomeServerMode)

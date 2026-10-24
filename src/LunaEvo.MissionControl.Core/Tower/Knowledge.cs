@@ -43,7 +43,13 @@ public sealed class Knowledge
         new("land-visual", "Land, visual", "a circuit or the short visual, then the final", ["takeoff"]),
         new("land-rnav", "Land, RNAV", "a published RNAV approach, then the final", ["route", "land-visual"]),
         new("sequencing", "Land in sequence", "hold for the traffic, then land when the tower clears it", ["hold", "land-rnav"]),
+        new("fly-fast", "Fly fast", "over 200 m/s, and back down to land", ["takeoff"]),
+        new("fly-high", "Fly high", "above 5,000 m over the ground, and back down to land", ["takeoff"]),
+        new("new-craft", "A new plane", "a good landing in a plane this agent hadn't landed before", ["land-visual"]),
     ];
+
+    /// <summary>Fast enough (m/s) and high enough (m above the ground) for fly-fast and fly-high.</summary>
+    public const double FastSpeed = 200, HighHeight = 5000;
 
     public const int MaxFlights = 2000;
     public const int MaxLessons = 300;
@@ -67,7 +73,8 @@ public sealed class Knowledge
     /// How a flight shows each skill it used (true = done well). From the phases it went through, in order, and how it
     /// ended: a landing counts as good when it stopped on the runway within 15 m of the centerline, first time.
     /// </summary>
-    public static Dictionary<string, bool> Grade(string result, string? approach, int goArounds, double? offCenterline, IReadOnlyList<string> phases)
+    public static Dictionary<string, bool> Grade(string result, string? approach, int goArounds, double? offCenterline, IReadOnlyList<string> phases,
+        double maxSpeed = 0, double maxHeight = 0)
     {
         var skills = new Dictionary<string, bool>();
         int At(string phase) => phases.ToList().IndexOf(phase);
@@ -82,19 +89,38 @@ public sealed class Knowledge
             skills["hold"] = (At("OnRoute") > At("Holding") || At("OnFinal") > At("Holding")) && result != "crashed";
         if (Has("OnFinal"))
         {
-            var rnav = approach != null && approach.StartsWith("RNAV", StringComparison.OrdinalIgnoreCase);
+            // An RNAV approach: a published one, or a filed plan or a direct ending on F09 (F09V's short final is the visual's).
+            var rnav = approach != null && (approach.StartsWith("RNAV", StringComparison.OrdinalIgnoreCase) ||
+                       ((approach.StartsWith("FILED", StringComparison.OrdinalIgnoreCase) || approach.StartsWith("DIRECT", StringComparison.OrdinalIgnoreCase)) &&
+                        approach.EndsWith(" F09", StringComparison.OrdinalIgnoreCase)));
             skills[rnav ? "land-rnav" : "land-visual"] = landedWell;
             if (Has("Holding") && rnav)
                 skills["sequencing"] = landedWell;
         }
+        // The training drills (2.15): flown fast or high, and got back down.
+        if (maxSpeed >= FastSpeed * 0.9)
+            skills["fly-fast"] = maxSpeed >= FastSpeed && result == "landed";
+        if (maxHeight >= HighHeight * 0.8)
+            skills["fly-high"] = maxHeight >= HighHeight && result == "landed";
         return skills;
     }
 
     public FlightRecord AddFlight(string callSign, string craft, string result, string? approach, int goArounds, double minutes,
-        double? downRunway, double? offCenterline, double? headingError, IReadOnlyList<string> phases, DateTime now)
+        double? downRunway, double? offCenterline, double? headingError, IReadOnlyList<string> phases, DateTime now,
+        double maxSpeed = 0, double maxHeight = 0)
     {
+        var skills = Grade(result, approach, goArounds, offCenterline, phases, maxSpeed, maxHeight);
+        // A plane it hadn't landed well before (the owner's "try different planes"): the landing in it counts once more.
+        var landing = skills.FirstOrDefault(s => s.Key.StartsWith("land-", StringComparison.Ordinal));
+        if (craft.Length > 0 && landing.Key != null && !_flights.Any(f => f.CallSign.Equals(callSign, StringComparison.OrdinalIgnoreCase) &&
+                f.Craft.Equals(craft, StringComparison.OrdinalIgnoreCase) && f.Skills.Any(s => s.Key.StartsWith("land-", StringComparison.Ordinal) && s.Value)))
+        {
+            var others = _flights.Any(f => f.CallSign.Equals(callSign, StringComparison.OrdinalIgnoreCase) && !f.Craft.Equals(craft, StringComparison.OrdinalIgnoreCase));
+            if (others) // its first plane isn't "a new plane"
+                skills["new-craft"] = landing.Value;
+        }
         var record = new FlightRecord(_nextFlight++, now, callSign, craft, result, approach, goArounds, minutes, downRunway, offCenterline,
-            headingError, phases, Grade(result, approach, goArounds, offCenterline, phases));
+            headingError, phases, skills);
         _flights.Add(record);
         if (_flights.Count > MaxFlights)
             _flights.RemoveRange(0, _flights.Count - MaxFlights);

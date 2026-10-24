@@ -12,7 +12,7 @@ host and run your own server, find public ones, get your game modded with CKAN, 
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 
-**Version 2.14.0** · [What's new](WHATS-NEW.md) · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
+**Version 2.15.0** · [What's new](WHATS-NEW.md) · Windows 10/11 · .NET 10 · Avalonia 12 · GPL-3.0
 
 **[⚡ Quickstart](QUICKSTART.md)** · **[Download](#download)** · **[Features](#what-it-does)** · **[Screenshots](docs/SCREENSHOTS.md#screenshots)** · **[Host a server](docs/HOSTING.md#set-up-a-new-server-step-by-step)** · **[Find and join](docs/PLAYING.md#join-a-friends-server)** · **[Mods with CKAN](docs/PLAYING.md#using-the-ckan-page)** · **[No open ports](docs/PLAYING.md#play-together-without-opening-any-ports-tailscale-twingate)** · **[For developers](docs/DEVELOPERS.md)**
 

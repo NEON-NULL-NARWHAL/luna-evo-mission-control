@@ -52,10 +52,12 @@ internal static class Program
 /// <param name="SettingsPath">Where LUNA EVO keeps its own settings. Defaults to %APPDATA%; tests use a temp file.</param>
 /// <param name="TowerPort">--tower [port]: start the KSC tower at startup (for agents and rig tests).</param>
 /// <param name="WingmanAgentList">--wingman-agent CallSign:port[:model], any number: start those agents at startup (rig tests).</param>
+/// <param name="WingmanTrain">--wingman-train fast,planes: each agent (in order) trains that instead of free flight.</param>
 /// <param name="TowerChat">--tower-chat: the tower talks on the open server's LMP chat (through the server plugin).</param>
 /// <param name="WingmanPlanner">--wingman-planner model: their planner. <paramref name="WingmanFree"/>: --wingman-free minutes.</param>
 internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDirectory, string? SettingsPath = null, bool Minimized = false, int? TowerPort = null,
-    IReadOnlyList<string>? WingmanAgentList = null, string? WingmanPlanner = null, double? WingmanFree = null, bool TowerChat = false)
+    IReadOnlyList<string>? WingmanAgentList = null, string? WingmanPlanner = null, double? WingmanFree = null, bool TowerChat = false,
+    IReadOnlyList<string>? WingmanTrain = null)
 {
     public IReadOnlyList<string> WingmanAgents => WingmanAgentList ?? [];
 
@@ -66,10 +68,12 @@ internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDir
         var agents = new List<string>();
         string? planner = null;
         double? free = null;
+        string[]? train = null;
         for (var i = 0; i < args.Length - 1; i++)
         {
             if (args[i] == "--wingman-agent") agents.Add(args[++i]);
             else if (args[i] == "--wingman-planner") planner = args[++i];
+            else if (args[i] == "--wingman-train") train = args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             else if (args[i] == "--wingman-free") free = double.TryParse(args[++i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var m) ? m : null;
             else if (args[i] == "--server") server = Path.GetFullPath(args[++i]);
             else if (args[i] == "--config") config = Path.GetFullPath(args[++i]);
@@ -87,6 +91,6 @@ internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDir
 
         // --minimized: started by Windows at login in home server mode; open hidden in the notification area.
         return new StartupOptions(server, config, settings, args.Contains(HomeServer.MinimizedFlag), tower, agents, planner, free,
-            args.Contains("--tower-chat"));
+            args.Contains("--tower-chat"), train);
     }
 }

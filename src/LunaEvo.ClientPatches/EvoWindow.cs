@@ -4,10 +4,12 @@
 // Guide:   Meat and Potatoes/27-Client-Patches.md
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using KSP.UI.Screens;
 using LmpClient;
 using LmpClient.Network;
+using LmpClient.Systems.Chat;
 using LmpClient.Systems.Lock;
 using LmpClient.Systems.PlayerColorSys;
 using LmpClient.Systems.SettingsSys;
@@ -124,8 +126,56 @@ namespace LunaEvo.ClientPatches
         {
         }
 
+        /// <summary>The radio strip (the owner's radio bar): the KSC tower's lines and the agents' calls, from LMP's chat.</summary>
+        internal static bool RadioBar = true;
+
+        /// <summary>LUNA EVO's tower talks in chat as this (Mission Control's "Talk on LMP chat").</summary>
+        internal const string TowerSpeaker = "KSC tower";
+
+        private const int RadioLines = 3;
+        private static readonly TimeSpan RadioShown = TimeSpan.FromSeconds(45);
+        private static readonly List<KeyValuePair<string, DateTime>> Radio = new List<KeyValuePair<string, DateTime>>();
+        private static readonly HashSet<object> RadioSeen = new HashSet<object>();
+        private static DateTime _radioRead = DateTime.MinValue;
+
+        /// <summary>Once a second: new chat lines from the tower go on the strip (each chat entry once).</summary>
+        internal static void ReadRadio()
+        {
+            var now = DateTime.UtcNow;
+            if (now - _radioRead < TimeSpan.FromSeconds(1))
+                return;
+            _radioRead = now;
+            var messages = ChatSystem.Singleton?.ChatMessages;
+            if (messages == null)
+                return;
+            foreach (var m in messages.ToList())
+            {
+                if (m == null || m.Item1 != TowerSpeaker || !RadioSeen.Add(m))
+                    continue;
+                Radio.Add(new KeyValuePair<string, DateTime>(m.Item2 ?? "", now));
+            }
+            if (RadioSeen.Count > 500)
+                RadioSeen.Clear(); // old entries are long off the strip; LMP drops old chat too
+            Radio.RemoveAll(r => now - r.Value > RadioShown);
+            while (Radio.Count > RadioLines)
+                Radio.RemoveAt(0);
+        }
+
+        private static void DrawRadio()
+        {
+            if (!RadioBar || Radio.Count == 0)
+                return;
+            const float width = 640, line = 20;
+            var left = Screen.width / 2f - width / 2;
+            const float top = 118; // under KSP's altimeter (the first rig screenshot had it on top of it)
+            GUI.Box(new Rect(left, top, width, line * Radio.Count + 10), "");
+            for (var i = 0; i < Radio.Count; i++)
+                GUI.Label(new Rect(left + 10, top + 5 + line * i, width - 20, line), Radio[i].Key);
+        }
+
         internal static void OnGUI()
         {
+            DrawRadio();
             if (!_open)
                 return;
             GUI.skin = HighLogic.Skin;
@@ -261,6 +311,8 @@ namespace LunaEvo.ClientPatches
 
         private static void DrawSettings()
         {
+            RadioBar = GUILayout.Toggle(RadioBar, "Show the KSC tower's radio at the top of the screen");
+            GUILayout.Space(8);
             GUILayout.Label("LMP SETTINGS");
             var settings = SettingsSystem.CurrentSettings;
             GUILayout.Label("Player name: " + settings.PlayerName + "  (LMP changes it only while disconnected)");

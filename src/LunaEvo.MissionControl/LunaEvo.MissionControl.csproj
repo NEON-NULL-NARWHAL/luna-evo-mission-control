@@ -9,7 +9,7 @@
     <Product>LUNA EVO Mission Control</Product>
     <!-- FileDescription: Windows shows it as the app name on notifications. -->
     <AssemblyTitle>LUNA EVO Mission Control</AssemblyTitle>
-    <Version>2.14.0</Version>
+    <Version>2.15.0</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- The client patches are a .NET Framework 4.7.2 KSP mod, only carried inside the exe (never loaded by it). -->

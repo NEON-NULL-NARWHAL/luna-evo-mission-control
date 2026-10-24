@@ -24,6 +24,7 @@ public class TowerTests
     public void Asks_a_new_plane_its_intentions_once()
     {
         var tower = new Tower.Tower();
+        Assert.Empty(tower.Report(At("Wingman", 5000, -2000, situation: "SpaceCenter"), T0.AddSeconds(-10))); // no plane yet: quiet
         var first = tower.Report(At("Wingman", 5000, -2000), T0);
         Assert.Equal("ask-intent", Assert.Single(first).Kind);
         Assert.Empty(tower.Report(At("Wingman", 5500, -2000), T0.AddSeconds(3)));
@@ -46,8 +47,8 @@ public class TowerTests
         var bravo = Assert.Single(tower.Say("Bravo", "intent", "land at KSC", T0.AddSeconds(2)));
         Assert.Equal("hold", bravo.Kind);
         Assert.Equal(2, bravo.Hold!.Number);
-        Assert.Equal("KSC-HS", bravo.Hold.Fix);
-        Assert.Equal(1200, bravo.Hold.Altitude);
+        Assert.Equal("KSC-OH", bravo.Hold.Fix); // over the runway
+        Assert.Equal(Ksc.OverheadBase, bravo.Hold.Altitude);
         Assert.Contains("after Alpha", bravo.Text);
 
         // Both report every 30 s (agents report every few seconds; a silent one is lost after a minute). Alpha flies its
@@ -101,6 +102,40 @@ public class TowerTests
         quiet.Say("Bravo", "request-approach", "", T0);
         Assert.Empty(quiet.Report(At("Bravo", -6000, 50), T0.AddMinutes(3)));
         Assert.Equal("cleared-to-land", Assert.Single(quiet.Report(At("Bravo", -2000, 20), T0.AddMinutes(4))).Kind);
+
+        // Not from the overhead hold circling near the runway: only lined up on final (the rig's early clearance).
+        var hold = new Tower.Tower();
+        hold.Report(At("Charlie", 15_000, -1000), T0);
+        hold.Say("Charlie", "request-approach", "", T0);
+        Assert.Empty(hold.Report(At("Charlie", -1100, 0, heading: 180), T0.AddMinutes(1)));
+    }
+
+    [Fact]
+    public void An_agent_files_its_own_plan_from_the_table()
+    {
+        var table = Ksc.Table;
+        Assert.Contains(table.Fixes, f => f.Name == "KSC-DS");
+        Assert.Contains(("KSC-DS", "KSC-S1"), table.Legs);
+        Assert.Null(Ksc.Check(["KSC-DS", "KSC-S1", "KSC-S2", "KSC-S3", "F09"], 4000, 2000).Problem);
+        Assert.Contains("isn't a published leg", Ksc.Check(["KSC-S1", "F09"], 4000, 2000).Problem);
+        Assert.Contains("final fix", Ksc.Check(["KSC-DS", "KSC-S1"], 4000, 2000).Problem);
+        Assert.Contains("no fix", Ksc.Check(["MUN-1", "F09"], 4000, 2000).Problem);
+        Assert.Contains("25 km", Ksc.Check(["KSC-W12", "F09"], 40_000, 0).Problem);
+
+        var tower = new Tower.Tower();
+        tower.Report(At("Alpha", 3000, 2500), T0);
+        Assert.Contains("unable", Assert.Single(tower.File("Alpha", ["KSC-S1", "F09"], T0), m => m.Kind == "info").Text);
+        var cleared = tower.File("Alpha", ["KSC-DS", "KSC-VS1", "KSC-VS2", "KSC-VS3", "F09V"], T0.AddSeconds(5)).Single(m => m.Kind == "clearance");
+        Assert.StartsWith("Alpha, KSC tower, cleared as filed: KSC-DS, KSC-VS1", cleared.Text);
+        Assert.Equal(5, cleared.Route!.Fixes.Count);
+
+        // With traffic it holds, and flies its plan when its turn comes.
+        tower.Report(At("Bravo", 4000, -3000), T0);
+        tower.File("Bravo", ["KSC-OH", "KSC-VN1", "KSC-VN2", "KSC-VN3", "F09V"], T0.AddSeconds(6));
+        Assert.Equal(PlaneState.Holding, tower.Planes.Single(p => p.CallSign == "Bravo").State);
+        tower.Report(At("Alpha", 900, 90, situation: "Landed", speed: 0), T0.AddSeconds(30));
+        var bravo = tower.Report(At("Bravo", 900, 0), T0.AddSeconds(31)).Single(m => m.Kind == "clearance");
+        Assert.StartsWith("Bravo, KSC tower, cleared as filed: KSC-OH, KSC-VN1", bravo.Text);
     }
 
     [Fact]
@@ -123,7 +158,10 @@ public class TowerTests
         var (along, cross) = Ksc.Frame(fix.Latitude, fix.Longitude);
         Assert.InRange(along, -8002, -7998);
         Assert.InRange(cross, -2, 2);
-        Assert.Equal("RNAV 09 STRAIGHT-IN", Ksc.Pick(-12_000, 500, 85).Name);
+        Assert.Equal("DIRECT F09", Ksc.Pick(-12_000, 500, 85).Name); // west and facing it: direct
+        Assert.Equal("DIRECT F09V", Ksc.Pick(-9_000, -1500, 120).Name);
+        Assert.Null(Ksc.Direct(-9_000, -6000, 0)); // more than 45° to join: a route
+        Assert.Null(Ksc.Direct(-12_000, 0, 180)); // flying away
         Assert.Equal("RNAV 09 NORTH", Ksc.Pick(1000, -800, 90).Name);
     }
 

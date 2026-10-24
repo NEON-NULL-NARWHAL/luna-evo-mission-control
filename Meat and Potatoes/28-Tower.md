@@ -62,6 +62,20 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
   the rig: at 90 m/s the 30° turn is 1.4 km wide. With traffic, it's the published route for its side.
 - A plane silent for 60 s is lost from the channel and gives up its place.
 
+## 28.3a Holds over the runway, directs, and the agents' own flight plans (2.15)
+
+- **The overhead hold** (the owner's idea): a holding plane circles KSC-OH over the middle of the runway (2 km circle),
+  stacked 300 m apart from 1,500 m, above the short visual's downwind (650 m) and the RNAV patterns (900 m). When the
+  runway frees it's right there (usually alone then, so the short visual).
+- **Directs**: west of the runway, roughly facing it (within 90°), and able to join the final at 45° or less, a plane
+  is cleared "DIRECT F09" (from beyond 10.5 km) or "DIRECT F09V" instead of a whole route (`Ksc.Direct`).
+- **The table** (`Ksc.Table`, `POST /v1/procedures`): every fix (the RNAV and visual fixes, KSC-W12, the departure
+  fixes KSC-DN/KSC-DS 5 km past the runway and 4 km to each side, the hold KSC-OH), the legs allowed between them (each
+  approach's own order, departures and the hold into the patterns), and the final fixes F09 and F09V.
+- **Filed plans** (`POST /v1/plan` with fix names): checked (known fixes, published legs, a final fix last, the first
+  within 25 km, 12 at most); cleared as filed when the runway is free, held for traffic and flown when its turn comes
+  (if it still checks out from there), "unable: why" otherwise. The plan is used once.
+
 ## 28.3b The radio (talking on LMP chat)
 
 "Talk on LMP chat" on the page (or `--tower-chat`), with a server open: every channel message is also appended to
@@ -69,7 +83,8 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
 players hear the traffic. Always as "KSC tower" (an agent's line reads "RigPilot → tower: request visual"): anything
 on this PC can talk on the channel (audit 13, T4), so it can never speak as a player. One line a second, 200
 characters, control characters dropped, what was in the file before the server started isn't said, the file stops at
-1 MB. Next: a radio strip in the LUNA EVO in-game window that shows these lines (the owner's radio bar).
+1 MB. In the game, the LUNA EVO client patches (1.6) show the tower's chat lines on a strip at the top of the screen
+for 45 s, the last three (the owner's radio bar; a toggle in the LUNA EVO window).
 
 ## 28.4 Tested
 

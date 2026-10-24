@@ -19,6 +19,10 @@ namespace UnityEngine
         public static Color color { get => throw new System.NotSupportedException(); set => throw new System.NotSupportedException(); }
 
         public static void DragWindow() => throw new System.NotSupportedException();
+
+        public static void Box(Rect position, string text) => throw new System.NotSupportedException();
+
+        public static void Label(Rect position, string text) => throw new System.NotSupportedException();
     }
 
     public sealed class GUILayoutOption

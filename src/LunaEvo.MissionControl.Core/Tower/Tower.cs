@@ -15,6 +15,10 @@ public sealed record TowerFix(string Name, double Latitude, double Longitude, do
 /// <summary>An approach the tower clears a plane for: its name, runway, and the fixes to fly before the final.</summary>
 public sealed record TowerRoute(string Name, string Runway, IReadOnlyList<TowerFix> Fixes);
 
+/// <summary>The published table: fixes, the legs allowed between them, the final fixes and the hold.</summary>
+public sealed record ProcedureTable(IReadOnlyList<TowerFix> Fixes, IReadOnlyList<(string From, string To)> Legs,
+    IReadOnlyList<string> Finals, string Hold);
+
 /// <summary>Where to hold: circle this point at this altitude until cleared.</summary>
 public sealed record TowerHold(string Fix, double Latitude, double Longitude, double Altitude, double Radius, int Number);
 
@@ -38,6 +42,9 @@ public sealed class TowerPlane(string callSign)
     public string? Approach { get; internal set; }
     public int Number { get; internal set; }
     public string Intent { get; internal set; } = "";
+
+    /// <summary>The plan it filed (fix names), flown when it's cleared.</summary>
+    public IReadOnlyList<string>? Filed { get; internal set; }
 
     /// <summary>The approach it asked for, if it named one (granted when nobody else is waiting).</summary>
     public string? Asked { get; internal set; }
@@ -77,7 +84,10 @@ public sealed class Tower
         var plane = Plane(report.CallSign, now);
         plane.Last = report;
         plane.LastSeen = now;
-        if (plane.State == PlaneState.New)
+        // Only planes: an agent still at the Space Center (no vessel) isn't called yet (the owner saw the tower ask
+        // intentions before anyone was on the runway).
+        if (plane.State == PlaneState.New && report.Situation is { Length: > 0 } situation &&
+            !situation.Equals("SpaceCenter", StringComparison.OrdinalIgnoreCase) && !situation.Equals("Destroyed", StringComparison.OrdinalIgnoreCase))
         {
             plane.State = PlaneState.Asked;
             Send(now, plane.CallSign, "ask-intent", $"{plane.CallSign}, {Name}, say intentions.");
@@ -89,7 +99,9 @@ public sealed class Tower
             var (along, cross) = Ksc.Frame(report.Latitude, report.Longitude);
             // Cleared to land when it calls the runway in sight (or, for an agent that never calls, 2.5 km out), on
             // final, with nobody still on the runway.
-            if (!plane.ToldClearedToLand && flying && (plane.RunwayInSight || along > -SightFallback) && along > -11_000 && along < 0 &&
+            // (The fallback only for a plane lined up on the centerline: the overhead hold circles within 2.5 km too.)
+            var linedUp = Math.Abs(cross) < 300 && Math.Abs(((report.Heading - Ksc.Heading) % 360 + 540) % 360 - 180) < 30;
+            if (!plane.ToldClearedToLand && flying && (plane.RunwayInSight || (along > -SightFallback && linedUp)) && along > -11_000 && along < 0 &&
                 Math.Abs(cross) < 1500 && !RunwayOccupied(plane))
             {
                 plane.ToldClearedToLand = true;
@@ -158,16 +170,21 @@ public sealed class Tower
         var (along, cross) = r == null ? (0.0, 0.0) : Ksc.Frame(r.Latitude, r.Longitude);
         // Alone on the runway (nobody holding), it may have what it asked for, or the short visual when that's quicker.
         var alone = !_planes.Values.Any(p => p != plane && p.State is PlaneState.Holding or PlaneState.Approach or PlaneState.Landed);
-        var route = alone && plane.Asked != null
+        // A filed plan, if it still checks out from where the plane is now.
+        var filed = plane.Filed is { } names ? Ksc.Check(names, along, cross).Route : null;
+        var route = filed ?? (alone && plane.Asked != null
             ? Ksc.Route(plane.Asked, cross)
-            : Ksc.Pick(along, cross, r?.Heading ?? 90, visualAllowed: alone);
+            : Ksc.Pick(along, cross, r?.Heading ?? 90, visualAllowed: alone));
+        plane.Filed = null;
         plane.State = PlaneState.Approach;
         plane.Approach = route.Name;
         plane.Number = 1;
         plane.ToldClearedToLand = false;
         plane.RunwayInSight = false;
         var first = route.Fixes[0];
-        Send(now, plane.CallSign, "clearance", string.Create(CultureInfo.InvariantCulture,
+        Send(now, plane.CallSign, "clearance", filed != null
+            ? $"{plane.CallSign}, {Name}, cleared as filed: {string.Join(", ", route.Fixes.Select(f => f.Name))}, runway 09."
+            : string.Create(CultureInfo.InvariantCulture,
             $"{plane.CallSign}, {Name}, cleared {route.Name}. Proceed to {first.Name} at {first.Altitude:0} m, {first.Speed:0} m/s, " +
             $"then {string.Join(", ", route.Fixes.Skip(1).Select(f => f.Name))}, runway 09."), Route: route);
     }
@@ -178,7 +195,9 @@ public sealed class Tower
         var r = plane.Last;
         var (_, cross) = r == null ? (0.0, 1.0) : Ksc.Frame(r.Latitude, r.Longitude);
         // Its own side's downwind fix, stacked 300 m above anyone already holding, well clear of the final.
-        var hold = Ksc.HoldFix(cross < 0 ? "N" : "S", 1200 + 300 * (number - 2), number);
+        // Over the runway (the owner's idea, 2.15): the next plane is right there when the runway frees, stacked 300 m
+        // apart from 1,500 m, well above the short visual's downwind (650 m) and the RNAV patterns (900 m).
+        var hold = Ksc.OverheadHold(Ksc.OverheadBase + 300 * (number - 2), number);
         plane.State = PlaneState.Holding;
         plane.Number = number;
         var ahead = _planes.Values.FirstOrDefault(p => p.State is PlaneState.Approach or PlaneState.Landed && p != plane);
@@ -191,6 +210,37 @@ public sealed class Tower
     public const double SightFallback = 2500;
 
     private bool RunwayOccupied(TowerPlane plane) => _planes.Values.Any(p => p != plane && p.State == PlaneState.Landed);
+
+    /// <summary>
+    /// A flight plan an agent filed (fix names from the table): checked, then cleared as filed when the runway is free,
+    /// or held for traffic and flown when its turn comes; "unable" with the reason otherwise.
+    /// </summary>
+    public IReadOnlyList<TowerMessage> File(string callSign, IReadOnlyList<string> fixes, DateTime now)
+    {
+        var plane = Plane(callSign, now);
+        plane.LastSeen = now;
+        Log(now, callSign, Name, "file-plan", string.Join(" ", fixes));
+        var r = plane.Last;
+        var (along, cross) = r == null ? (0.0, 0.0) : Ksc.Frame(r.Latitude, r.Longitude);
+        var (route, problem) = Ksc.Check(fixes, along, cross);
+        if (route == null)
+        {
+            Send(now, callSign, "info", $"{callSign}, {Name}, unable: {problem}.");
+            return Undelivered(plane);
+        }
+        plane.Filed = route.Fixes.Select(f => f.Name).ToList();
+        plane.Intent = "land";
+        if (plane.State is PlaneState.Approach)
+            Clear(plane, now); // already cleared: the new plan replaces the route
+        else if (plane.State is not PlaneState.Holding)
+        {
+            if (_planes.Values.Any(p => p.State == PlaneState.Approach || (p.State == PlaneState.Landed && p != plane)))
+                Hold(plane, now);
+            else
+                Clear(plane, now);
+        }
+        return Undelivered(plane);
+    }
 
     /// <summary>When the runway is free (no one on approach or still on it), the next holding plane is cleared.</summary>
     private void ClearNext(DateTime now)
@@ -286,9 +336,10 @@ public static class Ksc
     public static TowerRoute Visual(double cross)
     {
         var s = cross < 0 ? -1 : 1;
+        var side = s < 0 ? "N" : "S";
         return new TowerRoute(VisualName, "KSC 09",
         [
-            At("KSC-V1", 0, s * 3000, 650, 100), At("KSC-V2", -8000, s * 3000, 620, 90), At("KSC-V3", -8000, 0, 600, 85),
+            At($"KSC-V{side}1", 0, s * 3000, 650, 100), At($"KSC-V{side}2", -8000, s * 3000, 620, 90), At($"KSC-V{side}3", -8000, 0, 600, 85),
             At("F09V", -VisualFinal, 0, Math.Round(69 + VisualFinal * Math.Tan(4 * Math.PI / 180)), 85),
         ]);
     }
@@ -308,12 +359,90 @@ public static class Ksc
     public static TowerRoute Pick(double along, double cross, double heading, bool visualAllowed = false)
     {
         var off = ((heading - Heading) % 360 + 540) % 360 - 180;
+        if (Direct(along, cross, off) is { } direct)
+            return direct;
         if (along < -9000 && Math.Abs(cross) < 3000 && Math.Abs(off) < 60)
             return StraightIn;
         if (visualAllowed && Math.Sqrt(along * along + cross * cross) < VisualWithin)
             return Visual(cross);
         return cross < 0 ? North : South;
     }
+
+    /// <summary>
+    /// A direct (the owner's idea, 2.15): west of the runway, roughly facing it, and able to join the final at 45° or
+    /// less, a plane goes straight to the final fix (F09 from far out, F09V closer in) instead of a whole route.
+    /// </summary>
+    public static TowerRoute? Direct(double along, double cross, double headingOff)
+    {
+        var fixAlong = along < -10_500 ? -8000.0 : -VisualFinal;
+        var toGo = fixAlong - along; // meters still to fly along the runway's line to the fix
+        if (toGo < 2000 || Math.Abs(cross) > toGo || Math.Abs(headingOff) > 90 || Math.Sqrt(toGo * toGo + cross * cross) > 25_000)
+            return null;
+        var fix = fixAlong == -8000 ? At("F09", -8000, 0, Math.Round(69 + 8000 * Math.Tan(4 * Math.PI / 180)), 90)
+                                    : At("F09V", -VisualFinal, 0, Math.Round(69 + VisualFinal * Math.Tan(4 * Math.PI / 180)), 85);
+        return new TowerRoute("DIRECT " + fix.Name, "KSC 09", [fix]);
+    }
+
+    /// <summary>Departure fixes 5 km past the runway, 4 km to each side: the climb-out joins a pattern from there.</summary>
+    public static TowerFix DepartNorth => At("KSC-DN", 5000, -4000, 900, 130);
+    public static TowerFix DepartSouth => At("KSC-DS", 5000, 4000, 900, 130);
+
+    /// <summary>
+    /// The published table (the owner's idea, 2.15): every fix, the legs allowed between them (a small airway graph),
+    /// the final fixes and the hold, for an agent to build its own flight plan from, like a pilot from the charts.
+    /// </summary>
+    public static ProcedureTable Table { get; } = BuildTable();
+
+    private static ProcedureTable BuildTable()
+    {
+        var routes = new[] { North, South, StraightIn, Visual(-1), Visual(1) };
+        var fixes = routes.SelectMany(r => r.Fixes).Concat([DepartNorth, DepartSouth, OverheadHoldFix])
+            .GroupBy(f => f.Name).Select(g => g.First()).ToList();
+        var legs = routes.SelectMany(r => r.Fixes.Zip(r.Fixes.Skip(1), (a, b) => (a.Name, b.Name))).ToList();
+        legs.AddRange([("KSC-DN", "KSC-N1"), ("KSC-DS", "KSC-S1"), ("KSC-DN", "KSC-VN1"), ("KSC-DS", "KSC-VS1"),
+            ("KSC-OH", "KSC-VN1"), ("KSC-OH", "KSC-VS1"), ("KSC-OH", "KSC-N1"), ("KSC-OH", "KSC-S1")]);
+        return new ProcedureTable(fixes, legs.Distinct().ToList(), ["F09", "F09V"], "KSC-OH");
+    }
+
+    private static TowerFix OverheadHoldFix => At("KSC-OH", 900, 0, OverheadBase, 100);
+
+    /// <summary>
+    /// Checks a filed plan against the table: known fixes, each step a published leg, ending on a final fix, the first
+    /// fix within 25 km of the plane, 12 fixes at most. Returns the route to fly, or why not.
+    /// </summary>
+    public static (TowerRoute? Route, string? Problem) Check(IReadOnlyList<string> names, double along, double cross)
+    {
+        var table = Table;
+        if (names.Count is 0 or > 12)
+            return (null, "a plan is 1 to 12 fixes");
+        var byName = table.Fixes.ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
+        var fixes = new List<TowerFix>();
+        foreach (var n in names)
+        {
+            if (!byName.TryGetValue(n.Trim(), out var f))
+                return (null, $"no fix called {n.Trim()}");
+            fixes.Add(f);
+        }
+        for (var i = 1; i < fixes.Count; i++)
+            if (!table.Legs.Contains((fixes[i - 1].Name, fixes[i].Name)))
+                return (null, $"{fixes[i - 1].Name} to {fixes[i].Name} isn't a published leg");
+        if (!table.Finals.Contains(fixes[^1].Name))
+            return (null, $"a plan ends on a final fix ({string.Join(" or ", table.Finals)})");
+        var (fa, fc) = Frame(fixes[0].Latitude, fixes[0].Longitude);
+        if (Math.Sqrt(Math.Pow(fa - along, 2) + Math.Pow(fc - cross, 2)) > 25_000)
+            return (null, $"{fixes[0].Name} is more than 25 km away");
+        return (new TowerRoute("FILED " + string.Join(" ", fixes.Select(f => f.Name)), "KSC 09", fixes), null);
+    }
+
+    /// <summary>The overhead hold: circles centered over the middle of the runway.</summary>
+    public static TowerHold OverheadHold(double altitude, int number)
+    {
+        var fix = At("KSC-OH", 900, 0, altitude, 100);
+        return new TowerHold(fix.Name, fix.Latitude, fix.Longitude, altitude, 2000, number);
+    }
+
+    /// <summary>The overhead hold's lowest level (number 2), m.</summary>
+    public const double OverheadBase = 1500;
 
     /// <summary>An approach named in a request ("request RNAV 09 NORTH", "visual", "straight-in"), or null.</summary>
     public static string? Named(string text)
@@ -329,13 +458,4 @@ public static class Ksc
     public static TowerRoute Route(string name, double cross) =>
         name == VisualName ? Visual(cross) : name == StraightIn.Name ? StraightIn : name == North.Name ? North : South;
 
-    /// <summary>
-    /// A holding point 4 km past the touchdown point and 7 km to the side: its 2 km circle stays 3.8 km from the downwind
-    /// leg's first fix (and 300 m above the pattern), clear of the final.
-    /// </summary>
-    public static TowerHold HoldFix(string side, double altitude, int number)
-    {
-        var fix = At($"KSC-H{side}", 4000, side == "N" ? -7000 : 7000, altitude, 100);
-        return new TowerHold(fix.Name, fix.Latitude, fix.Longitude, altitude, 2000, number);
-    }
 }

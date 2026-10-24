@@ -207,6 +207,17 @@ public sealed class WingmanAgent : IDisposable
 
     public void StopFreeFlight() => Send(new JsonObject { ["type"] = "stop-free" });
 
+    /// <summary>What training can focus on (the console's words), with a label for people.</summary>
+    public static readonly IReadOnlyList<(string Focus, string Label)> Trainings =
+        [("landings", "Work on landings"), ("fast", "Fly fast"), ("high", "Fly high"), ("planes", "Try different planes"), ("plans", "Flight plans")];
+
+    /// <summary>Training (the owner's idea): free flight on one ability until it's learned (3 good in a row) or the time's up.</summary>
+    public void Train(string focus, double minutes = 30)
+    {
+        if (Trainings.Any(t => t.Focus == focus))
+            Send(new JsonObject { ["type"] = "train", ["focus"] = focus, ["minutes"] = Math.Clamp(minutes, 5, 240) });
+    }
+
     /// <summary>Asks the console to quit, without waiting.</summary>
     public void Quit() => Send(new JsonObject { ["type"] = "quit" });
 

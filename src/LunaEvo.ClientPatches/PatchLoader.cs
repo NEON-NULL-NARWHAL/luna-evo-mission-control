@@ -128,6 +128,7 @@ namespace LunaEvo.ClientPatches
             if (_windowPending)
                 AddWindow();
             EvoWindow.KeepInStep();
+            EvoWindow.ReadRadio();
             if (CommandLinePatch.PasswordPending && HighLogic.LoadedScene == GameScenes.MAINMENU)
             {
                 try

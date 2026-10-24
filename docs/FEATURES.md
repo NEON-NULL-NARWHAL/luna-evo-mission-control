@@ -80,7 +80,11 @@ The page shows the planes (their number, approach, height, speed) and the whole 
 channel, not LMP's chat. Every message is also kept as data (`logs/tower-<date>.jsonl`). Start it on the page, or
 start LUNA EVO with `--tower`; agents connect to `http://localhost:8920/`. Close in with nobody waiting, it clears a
 **short visual** instead of a long RNAV route (2.13). **Talk on LMP chat** says its lines and the agents' calls in the
-server's chat as "KSC tower" (with the LUNA EVO server plugin), so everyone hears the traffic.
+server's chat as "KSC tower" (with the LUNA EVO server plugin), so everyone hears the traffic, and players with the
+LUNA EVO patches see it on a strip at the top of KSP's screen (2.15). The tower holds planes over the runway and gives
+directs, and agents can file their own flight plans from its published fixes.
+
+![The KSC tower's radio in KSP: "RigPilot, welcome. Vacate the runway." and "RigViewer, KSC tower, cleared as filed..."](screenshots/radio.png)
 
 ![The KSC tower page: two agents, one cleared for RNAV 09 SOUTH, the other holding as number 2](screenshots/tower.png)
 
@@ -107,6 +111,10 @@ the agent flies it inside a box around KSC (gemma4:e4b is the suggested planner:
 same page is the server's tech tree: six skills graded from every agent's real flights (each opens once what it needs
 has 3 good flights), and the lessons, each tied to the flight it came from (delete any you don't like). It's kept on the
 server (`LunaEvo/agents/knowledge.json`), so every agent there learns from the others.
+
+**Training** (2.15): the card's Train menu (work on landings, fly fast, fly high, try different planes, flight plans)
+makes the agent practise that until it has 3 good flights in a row. With **flight plans** it builds its own route from
+the tower's published fixes and files it, like a pilot from the charts.
 
 How it works: [chapter 29](../Meat%20and%20Potatoes/29-Wingman.md) and [chapter 30](../Meat%20and%20Potatoes/30-Knowledge.md).
 
