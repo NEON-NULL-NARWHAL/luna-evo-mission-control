@@ -51,15 +51,21 @@ internal static class Program
 /// <param name="ConfigDirectory">Folder with the XML files. Defaults to ServerDirectory/Config.</param>
 /// <param name="SettingsPath">Where LUNA EVO keeps its own settings. Defaults to %APPDATA%; tests use a temp file.</param>
 /// <param name="TowerPort">--tower [port]: start the KSC tower at startup (for agents and rig tests).</param>
-internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDirectory, string? SettingsPath = null, bool Minimized = false, int? TowerPort = null)
+/// <param name="WingmanAgents">--wingman-agent CallSign:port[:model], any number: start those agents at startup (rig tests).</param>
+internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDirectory, string? SettingsPath = null, bool Minimized = false, int? TowerPort = null,
+    IReadOnlyList<string>? WingmanAgentList = null)
 {
-    /// <summary>Reads --server, --config, --settings and --tower; falls back to the exe's own folder when it sits next to Server.dll.</summary>
+    public IReadOnlyList<string> WingmanAgents => WingmanAgentList ?? [];
+
+    /// <summary>Reads --server, --config, --settings, --tower and --wingman-agent; falls back to the exe's own folder when it sits next to Server.dll.</summary>
     public static StartupOptions Parse(string[] args)
     {
         string? server = null, config = null, settings = null;
+        var agents = new List<string>();
         for (var i = 0; i < args.Length - 1; i++)
         {
-            if (args[i] == "--server") server = Path.GetFullPath(args[++i]);
+            if (args[i] == "--wingman-agent") agents.Add(args[++i]);
+            else if (args[i] == "--server") server = Path.GetFullPath(args[++i]);
             else if (args[i] == "--config") config = Path.GetFullPath(args[++i]);
             else if (args[i] == "--settings") settings = Path.GetFullPath(args[++i]); // portable mode, e.g. on a USB stick
         }
@@ -74,6 +80,6 @@ internal sealed record StartupOptions(string? ServerDirectory, string? ConfigDir
             tower = t + 1 < args.Length && int.TryParse(args[t + 1], out var port) && port is > 0 and < 65536 ? port : Core.Tower.TowerServer.DefaultPort;
 
         // --minimized: started by Windows at login in home server mode; open hidden in the notification area.
-        return new StartupOptions(server, config, settings, args.Contains(HomeServer.MinimizedFlag), tower);
+        return new StartupOptions(server, config, settings, args.Contains(HomeServer.MinimizedFlag), tower, agents);
     }
 }

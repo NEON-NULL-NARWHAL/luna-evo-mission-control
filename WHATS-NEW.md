@@ -4,6 +4,11 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.12: AI pilots, installed in a click
+
+- **Tools** on LUNA EVO patches installs KSP Wingman, its mod in your KSP and a model; the new **Wingman** page starts
+  AI pilots and shows what each one is doing, with a box for orders. Landed planes now taxi off the runway.
+
 ## 2.11: a tower for AI pilots
 
 - **KSC tower** (Play → KSC tower): a traffic controller for KSP Wingman agents. It asks their intentions, clears one

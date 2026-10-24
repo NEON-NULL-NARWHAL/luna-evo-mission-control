@@ -84,6 +84,23 @@ start LUNA EVO with `--tower`; agents connect to `http://localhost:8920/`.
 
 How it works: [chapter 28](../Meat%20and%20Potatoes/28-Tower.md).
 
+## AI pilots: KSP Wingman
+
+**Tools (for AI pilots)** (2.12, on LUNA EVO patches): installs [KSP Wingman](https://github.com/NEON-NULL-NARWHAL/ksp-wingman)
+from its GitHub releases (checked against GitHub's checksum) and keeps it up to date, puts its mod into your KSP (the
+folder from Join; KSP must be closed), checks that kRPC is there (Wingman flies through it; get it on the CKAN page),
+and finds [Ollama](https://ollama.com) on this PC, with a button to download the model Wingman is tested with.
+
+**Wingman** (rail: Play → Wingman, once it's installed): start an AI pilot for a KSP (its kRPC port), with a model and,
+if it's on, the KSC tower. Each agent has a card: its flight phase, its last flight (landed, and where on the runway it
+stopped), the plane's height and speed, everything it does (your orders, its tool calls and answers, the tower's
+messages), and a box for orders in plain words ("take off and fly east at 1000 m", "land at KSC"). Stop asks it to quit;
+the plane keeps its last orders. `--wingman-agent CallSign:port[:model]` starts agents with LUNA EVO.
+
+![The Wingman page: two agents in the test rig, parked beside the runway after landing, with their status and events](screenshots/wingman.png)
+
+How it works: [chapter 29](../Meat%20and%20Potatoes/29-Wingman.md).
+
 ## The app itself
 
 | | |
@@ -125,5 +142,6 @@ the Players page), **the server you type on the Join page** (a DNS lookup, 4 pin
 master servers** for the server browser (one HTTPS request each, when you open it or press Refresh), **CKAN** when you
 install a mod list (it downloads from its own catalog), and **your Discord webhook** if you add one. The **KSC
 tower**, when you start it, listens on this PC only (localhost:8920) for KSP Wingman agents; nothing from outside can
-reach it. Details are in
+reach it. **KSP Wingman**, when you install it, comes from its GitHub releases; agents you start talk to the model
+server you give them (Ollama on this PC by default). Details are in
 [`SECURITY.md`](../SECURITY.md).

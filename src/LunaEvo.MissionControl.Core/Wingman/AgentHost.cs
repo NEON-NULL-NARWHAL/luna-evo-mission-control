@@ -1,0 +1,339 @@
+// LUNA EVO · LunaEvo.MissionControl.Core/Wingman/AgentHost.cs
+// [Core] AI pilots run from LUNA EVO: KSP Wingman's console started with --ipc (JSON lines in and out), one per KSP
+//        (kRPC port), and what each one says: its phase, its flights' outcomes, the tower, its tool calls and answers.
+// Used by: WingmanPage
+// Guide:   Meat and Potatoes/29-Wingman.md
+
+using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
+namespace LunaEvo.MissionControl.Core.Wingman;
+
+/// <summary>One line from the console: "order", "answer", "call", "result", "status", "phase", "flight", "tower", "error", "wingman".</summary>
+public sealed record AgentEvent(DateTime Time, string Kind, string Text, JsonNode? Data = null)
+{
+    public const int MaxLine = 64 * 1024;
+    public const int MaxText = 4000;
+
+    /// <summary>
+    /// Reads one --ipc output line ({"type":"event","time","kind","text","data"}). Anything else the console prints
+    /// (a crash's stack trace, .NET's own messages) comes back as an "error" line, cut short; null for a blank line.
+    /// </summary>
+    public static AgentEvent? Parse(string? line, DateTime now)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+            return null;
+        if (line.Length > MaxLine)
+            return new AgentEvent(now, "error", "(an unreadably long line from the agent)");
+        try
+        {
+            if (JsonNode.Parse(line) is JsonObject o && Str(o, "type") == "event" && Str(o, "kind") is { Length: > 0 and <= 20 } kind)
+            {
+                var time = o["time"] is JsonValue t && t.GetValueKind() == JsonValueKind.String && t.TryGetValue<DateTime>(out var parsed)
+                    ? parsed.ToUniversalTime() : now;
+                return new AgentEvent(time, kind, Cut(Str(o, "text") ?? ""), o["data"]?.DeepClone());
+            }
+        }
+        catch (JsonException)
+        {
+        }
+        catch (FormatException)
+        {
+        }
+        catch (ArgumentException)
+        {
+            // A lone surrogate in the text: not JSON we can read.
+        }
+        return new AgentEvent(now, "error", Cut(line.Trim()));
+    }
+
+    private static string? Str(JsonObject o, string name) =>
+        o[name] is JsonValue v && v.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : null;
+
+    private static string Cut(string text) => text.Length <= MaxText ? text : text[..MaxText] + "…";
+}
+
+/// <summary>A started console process; tests use a fake.</summary>
+public interface IAgentProcess : IDisposable
+{
+    event Action<string?>? Output;
+    event Action? Exited;
+    bool HasExited { get; }
+    void Send(string line);
+    void Kill();
+}
+
+/// <summary>What to start: which Wingman, which model where, which KSP (its kRPC port), and the tower if it's on.</summary>
+public sealed record AgentStart(string CallSign, int KrpcPort, string Model, string LlmUrl, string? TowerUrl = null);
+
+/// <summary>One AI pilot: its console process and everything it said, newest last.</summary>
+public sealed class WingmanAgent : IDisposable
+{
+    public const int MaxEvents = 500;
+    public const int MaxOrder = 1000;
+
+    private readonly IAgentProcess _process;
+    private readonly List<AgentEvent> _events = [];
+    private readonly Lock _gate = new();
+
+    private readonly Func<DateTime> _now;
+    private DateTime? _statusAsked;
+
+    internal WingmanAgent(AgentStart start, IAgentProcess process, Func<DateTime> now)
+    {
+        Start = start;
+        _now = now;
+        _process = process;
+        process.Output += line =>
+        {
+            if (AgentEvent.Parse(line, now()) is not { } e)
+                return;
+            lock (_gate)
+            {
+                if (e.Kind == "phase" && e.Data is JsonObject data && data["to"] is JsonValue to && to.GetValueKind() == JsonValueKind.String)
+                    Phase = to.GetValue<string>();
+                if (e.Kind == "status")
+                {
+                    Status = e.Text;
+                    _statusAsked = null;
+                }
+                else
+                {
+                    if (e.Kind == "flight")
+                        LastOutcome = e.Text;
+                    _events.Add(e);
+                    if (_events.Count > MaxEvents)
+                        _events.RemoveRange(0, _events.Count - MaxEvents);
+                }
+            }
+            Changed?.Invoke();
+        };
+        process.Exited += () => Changed?.Invoke();
+    }
+
+    public AgentStart Start { get; }
+    public string Phase { get; private set; } = "Starting";
+    public string? Status { get; private set; }
+    public string? LastOutcome { get; private set; }
+    public bool Running => !_process.HasExited;
+
+    /// <summary>Something new to show (an event, or the process ended). Raised on the process's thread.</summary>
+    public event Action? Changed;
+
+    public IReadOnlyList<AgentEvent> Events
+    {
+        get
+        {
+            lock (_gate)
+                return _events.ToList();
+        }
+    }
+
+    /// <summary>An order in plain words, as the console's own prompt would take it.</summary>
+    public void Order(string text, string from = "Commander")
+    {
+        text = text.Trim();
+        if (text.Length == 0 || !Running)
+            return;
+        Send(new JsonObject { ["type"] = "order", ["text"] = text.Length > MaxOrder ? text[..MaxOrder] : text, ["from"] = from });
+    }
+
+    /// <summary>
+    /// Asks for the plane's status (comes back as Status, not in the events). The console answers between orders, so
+    /// while one is still waiting (the model busy) another isn't queued behind it, for a minute.
+    /// </summary>
+    public void AskStatus()
+    {
+        lock (_gate)
+        {
+            if (_statusAsked is { } asked && _now() - asked < TimeSpan.FromMinutes(1))
+                return;
+            _statusAsked = _now();
+        }
+        Send(new JsonObject { ["type"] = "status" });
+    }
+
+    /// <summary>Asks the console to quit (the plane keeps its last orders); kills it if it hasn't gone after a while.</summary>
+    public async Task StopAsync(TimeSpan? wait = null)
+    {
+        Quit();
+        var until = DateTime.UtcNow + (wait ?? TimeSpan.FromSeconds(10));
+        while (Running && DateTime.UtcNow < until)
+            await Task.Delay(100).ConfigureAwait(false);
+        if (Running)
+            _process.Kill();
+    }
+
+    /// <summary>Asks the console to quit, without waiting.</summary>
+    public void Quit() => Send(new JsonObject { ["type"] = "quit" });
+
+    private void Send(JsonObject message)
+    {
+        if (!Running)
+            return;
+        try
+        {
+            _process.Send(message.ToJsonString());
+        }
+        catch (IOException)
+        {
+            // It just exited: Exited will say so.
+        }
+    }
+
+    public void Dispose()
+    {
+        if (Running)
+            _process.Kill();
+        _process.Dispose();
+    }
+}
+
+/// <summary>Starts and keeps the agents. One per kRPC port (two consoles flying one KSP would fight).</summary>
+public sealed class AgentHost : IDisposable
+{
+    public const int MaxAgents = 8;
+
+    private readonly List<WingmanAgent> _agents = [];
+    private readonly Func<ProcessStartInfo, IAgentProcess> _launch;
+    private readonly Func<DateTime> _now;
+
+    public AgentHost(Func<ProcessStartInfo, IAgentProcess>? launch = null, Func<DateTime>? now = null)
+    {
+        _launch = launch ?? (info => new AgentProcess(info));
+        _now = now ?? (() => DateTime.UtcNow);
+    }
+
+    public IReadOnlyList<WingmanAgent> Agents => _agents;
+
+    public event Action? Changed;
+
+    /// <summary>The console's command line for an agent: --ipc, the model, the KSP; the tower through its variable.</summary>
+    public static ProcessStartInfo StartInfo(WingmanInstall install, AgentStart start)
+    {
+        var info = new ProcessStartInfo(install.Console)
+        {
+            WorkingDirectory = install.Folder,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardInputEncoding = new UTF8Encoding(false),
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+        foreach (var arg in new[] { "--ipc", "--model", start.Model, "--llm", start.LlmUrl, "--krpc-port", start.KrpcPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                     "--call-sign", start.CallSign, "--mcp", install.McpServer })
+            info.ArgumentList.Add(arg);
+        if (start.TowerUrl != null)
+            info.Environment["WINGMAN_TOWER_URL"] = start.TowerUrl;
+        return info;
+    }
+
+    /// <summary>What's wrong with starting this agent, or null.</summary>
+    public string? Check(AgentStart start)
+    {
+        if (start.KrpcPort is < 1 or > 65535)
+            return "The kRPC port must be between 1 and 65535.";
+        if (string.IsNullOrWhiteSpace(start.Model))
+            return "Pick a model.";
+        // Audit 14, W1: a value starting with "-" would be read by the console as one of its options.
+        if (start.Model.Length > 100 || start.Model.StartsWith('-') || start.Model.Any(c => char.IsControl(c) || char.IsWhiteSpace(c)))
+            return "A model name is up to 100 characters, without spaces, and doesn't start with \"-\" (e.g. qwen3:4b-instruct).";
+        if (!Uri.TryCreate(start.LlmUrl, UriKind.Absolute, out var url) || url.Scheme is not ("http" or "https"))
+            return "The model server's address must be an http:// or https:// address.";
+        if (start.CallSign.Length is 0 or > 20 || !start.CallSign.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
+            return "A call sign is 1 to 20 letters, digits, - or _.";
+        if (_agents.Any(a => a.Running && a.Start.KrpcPort == start.KrpcPort))
+            return $"An agent is already flying the KSP on kRPC port {start.KrpcPort}.";
+        if (_agents.Any(a => a.Running && a.Start.CallSign.Equals(start.CallSign, StringComparison.OrdinalIgnoreCase)))
+            return $"{start.CallSign} is already flying.";
+        if (_agents.Count(a => a.Running) >= MaxAgents)
+            return $"At most {MaxAgents} agents at once.";
+        return null;
+    }
+
+    public WingmanAgent Start(WingmanInstall install, AgentStart start)
+    {
+        if (Check(start) is { } problem)
+            throw new InvalidOperationException(problem);
+        _agents.RemoveAll(a => !a.Running && a.Start.KrpcPort == start.KrpcPort); // its old card goes
+        var agent = new WingmanAgent(start, _launch(StartInfo(install, start)), _now);
+        agent.Changed += () => Changed?.Invoke();
+        _agents.Add(agent);
+        Changed?.Invoke();
+        return agent;
+    }
+
+    public void Remove(WingmanAgent agent)
+    {
+        if (agent.Running)
+            return;
+        _agents.Remove(agent);
+        agent.Dispose();
+        Changed?.Invoke();
+    }
+
+    /// <summary>LUNA EVO closing: every agent asked to quit, a few seconds to do it, then the rest killed (on Dispose).</summary>
+    public void QuitAll(TimeSpan wait)
+    {
+        foreach (var agent in _agents.Where(a => a.Running))
+            agent.Quit();
+        var until = DateTime.UtcNow + wait;
+        while (_agents.Any(a => a.Running) && DateTime.UtcNow < until)
+            Thread.Sleep(100);
+    }
+
+    public void Dispose()
+    {
+        foreach (var agent in _agents)
+            agent.Dispose();
+        _agents.Clear();
+    }
+
+    private sealed class AgentProcess : IAgentProcess
+    {
+        private readonly Process _process;
+
+        public AgentProcess(ProcessStartInfo info)
+        {
+            _process = new Process { StartInfo = info, EnableRaisingEvents = true };
+            _process.OutputDataReceived += (_, e) => Output?.Invoke(e.Data);
+            _process.ErrorDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                    Output?.Invoke(e.Data); // not JSON: shown as an error line
+            };
+            _process.Exited += (_, _) => Exited?.Invoke();
+            _process.Start();
+            _process.BeginOutputReadLine();
+            _process.BeginErrorReadLine();
+        }
+
+        public event Action<string?>? Output;
+        public event Action? Exited;
+        public bool HasExited => _process.HasExited;
+
+        public void Send(string line)
+        {
+            _process.StandardInput.WriteLine(line);
+            _process.StandardInput.Flush();
+        }
+
+        public void Kill()
+        {
+            try
+            {
+                _process.Kill(entireProcessTree: true); // the console's MCP server with it
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        public void Dispose() => _process.Dispose();
+    }
+}

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.12.0 (2026-10-23)
+
+### Added
+- **KSP Wingman from LUNA EVO**, the owner's "easy installer": LUNA EVO patches has a new group, **Tools (for AI
+  pilots)**. It installs KSP Wingman from its GitHub releases (checked against GitHub's checksum) and updates it, puts
+  Wingman's mod into your KSP (the folder from Join), checks for kRPC (with a button to the CKAN page), and finds Ollama
+  on this PC, with a button that downloads the model Wingman is tested with (qwen3:4b-instruct).
+- **Wingman page** (rail: Play → Wingman, once Wingman is installed): start AI pilots, one per KSP (its kRPC port),
+  with a model and the KSC tower if it's on. Each has a card: its flight phase, its last flight's outcome (where it
+  stopped on the runway), the plane's status, everything it does (orders, tool calls, answers, the tower's messages),
+  and a box for orders. `--wingman-agent CallSign:port[:model]` starts agents at launch.
+- The tower hands the runway to the next plane as soon as a landed one has **taxied off** it (KSP Wingman 0.6 taxis
+  off to the side instead of recovering the plane).
+
+### Security
+- Audit 14 (see SECURITY.md): the installer, the agents' processes, Ollama; model names can't be read as options.
+
 ## 2.11.0 (2026-10-23)
 
 ### Added

@@ -68,6 +68,23 @@ public class TowerTests
     }
 
     [Fact]
+    public void A_plane_that_taxied_off_the_runway_hands_it_over()
+    {
+        var tower = new Tower.Tower();
+        tower.Report(At("Alpha", 2000, -1000), T0);
+        tower.Report(At("Bravo", 3000, 2000), T0);
+        tower.Say("Alpha", "request-approach", "", T0);
+        tower.Say("Bravo", "request-approach", "", T0);
+        tower.Report(At("Bravo", 2000, 6000), T0.AddMinutes(0.5)); // its messages so far (asked, hold)
+        Assert.Equal("vacate", Assert.Single(tower.Report(At("Alpha", 900, 4, situation: "Landed", speed: 0), T0.AddMinutes(1))).Kind);
+        // Taxiing off at walking pace, still landed: on the runway until it's well beside it (Wingman parks 90 m out).
+        tower.Report(At("Alpha", 920, 40, situation: "Landed", speed: 5), T0.AddMinutes(1.2));
+        Assert.Empty(tower.Report(At("Bravo", 2000, 6000), T0.AddMinutes(1.3)));
+        tower.Report(At("Alpha", 930, 90, situation: "Landed", speed: 0), T0.AddMinutes(1.5));
+        Assert.Equal("clearance", Assert.Single(tower.Report(At("Bravo", 2000, 6000), T0.AddMinutes(1.6))).Kind);
+    }
+
+    [Fact]
     public void A_silent_plane_gives_up_its_place()
     {
         var tower = new Tower.Tower();

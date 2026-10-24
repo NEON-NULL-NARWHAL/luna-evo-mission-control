@@ -41,6 +41,7 @@ public sealed class MainWindow : Window
     internal const string MapKey = "map";
     internal const string PatchesKey = "patches";
     internal const string TowerKey = "tower";
+    internal const string WingmanKey = "wingman";
     internal const string ServerSettingsKey = "serverSettings";
     internal const string ModControlFile = "LMPModControl.xml";
 
@@ -60,7 +61,7 @@ public sealed class MainWindow : Window
     ];
 
     /// <summary>Rail pages hidden in simple mode.</summary>
-    private static readonly string[] AdvancedPages = [PlayersKey, VesselsKey, MapKey, ModControlFile, ProfilesKey, CraftsKey, TowerKey];
+    private static readonly string[] AdvancedPages = [PlayersKey, VesselsKey, MapKey, ModControlFile, ProfilesKey, CraftsKey, TowerKey, WingmanKey];
 
     private readonly HashSet<SettingRow> _essentialRows = [];
     private TextBox? _settingsSearch;
@@ -96,6 +97,7 @@ public sealed class MainWindow : Window
     private readonly MapPage _mapPage;
     private readonly PatchesPage _patchesPage;
     private readonly TowerPage _towerPage;
+    private readonly WingmanPage _wingmanPage;
     private ConfigSession? _session;
     private ServerPage? _server;
     private PlayersPage? _players;
@@ -189,6 +191,11 @@ public sealed class MainWindow : Window
                 _towerPage.Start(towerPort);
                 Navigate(TowerKey); // started for the tower: show it
             }
+            if (options.WingmanAgents.Count > 0)
+            {
+                _wingmanPage.StartFromCommandLine(options.WingmanAgents);
+                Navigate(WingmanKey);
+            }
             if (!Settings.HomeServerMode)
                 return;
             // Home server mode: started by Windows at login → straight to the notification area, and the server up.
@@ -199,6 +206,7 @@ public sealed class MainWindow : Window
         };
         Closed += (_, _) =>
         {
+            _wingmanPage.StopAll();
             _towerPage.Stop();
             _server?.Dispose();
             _players?.Dispose();
@@ -221,6 +229,9 @@ public sealed class MainWindow : Window
         _mapPage = new MapPage(this);
         _patchesPage = new PatchesPage(this);
         _towerPage = new TowerPage(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(SettingsPath)!, "logs")); // next to the settings: a test's own
+        // KSP Wingman next to the settings too (%APPDATA%: the default; a rig or demo run with --settings, or a test, gets its own).
+        Core.Wingman.WingmanTools.Root = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(SettingsPath)!, "Tools", "KspWingman");
+        _wingmanPage = new WingmanPage(this);
 
         // After an update the previous exe is left as ".old"; it may still be closing, so try again shortly.
         var exe = CurrentExe; // this window's exe, not whatever CurrentExe is in 15 seconds
@@ -264,6 +275,7 @@ public sealed class MainWindow : Window
     internal BrowserPage Browser => _browserPage;
     internal MapPage Map => _mapPage;
     internal TowerPage Tower => _towerPage;
+    internal WingmanPage Wingman => _wingmanPage;
     internal SettingsPage SettingsPageForTests => _settingsPage;
 
     /// <summary>A newer LUNA EVO found on GitHub, if any.</summary>
@@ -633,6 +645,9 @@ public sealed class MainWindow : Window
             case TowerKey:
                 _towerPage.Refresh();
                 break;
+            case WingmanKey:
+                _wingmanPage.Refresh();
+                break;
             case MapKey:
                 _mapPage.Refresh();
                 break;
@@ -866,6 +881,7 @@ public sealed class MainWindow : Window
         foreach (var key in AdvancedPages)
             if (_pages.TryGetValue(key, out var page))
                 page.Nav.IsVisible = !simple;
+        ShowWingmanNav();
         _settingsTabs?.ShowOnly(simple ? key => key == EssentialsKey : null);
         if (_settingsSearch != null)
             _settingsSearch.IsVisible = !simple;
@@ -984,6 +1000,15 @@ public sealed class MainWindow : Window
         AddNav(CraftsKey, new TextBlock { Text = "Crafts" }, _craftsPage.View);
         AddNav(CkanKey, new TextBlock { Text = "CKAN mods" }, _ckanPage.View);
         AddNav(TowerKey, new TextBlock { Text = "KSC tower" }, _towerPage.View);
+        AddNav(WingmanKey, new TextBlock { Text = "Wingman" }, _wingmanPage.View);
+        ShowWingmanNav();
+    }
+
+    /// <summary>The Wingman page is on the rail once KSP Wingman is installed (LUNA EVO patches → Tools), or agents run.</summary>
+    internal void ShowWingmanNav()
+    {
+        if (_pages.TryGetValue(WingmanKey, out var page))
+            page.Nav.IsVisible = !Settings.SimpleMode && (Core.Wingman.WingmanTools.Installed() != null || _wingmanPage.Host.Agents.Count > 0);
     }
 
     private void AddLunaEvoSection()

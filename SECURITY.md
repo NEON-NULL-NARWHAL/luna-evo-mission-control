@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the ten security audits (0.4.0 to 2.1.1) found and changed, newest first, and which real
+what the fourteen security audits (0.4.0 to 2.12.0) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
@@ -83,6 +83,32 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 14 (2.12.0, October 2026)
+
+Scope: KSP Wingman as a tool (2.12: `Core/Wingman`, the Tools group on LUNA EVO patches, the Wingman page,
+`--wingman-agent`): downloading and unpacking a release, writing its mod into a KSP's GameData, starting agent
+processes and reading what they print, the calls to Ollama; the tower's new vacate rule; and in KSP Wingman 0.6 the
+events (tool and log), `--ipc` and taxiing.
+
+Checked and clean: no vulnerable packages (13 projects here, 8 in Wingman); nothing personal in the changes; a release
+is only offered with GitHub's SHA-256 and downloaded through the same checked path as LMP (GitHub hosts over HTTPS,
+size limit, checksum), and hashed again before unpacking; the unzip takes only the files a release has (two programs,
+the mod, three docs), at most 200 entries and 400 MB, nothing outside its folder, through a staging folder; the mod is
+written only into a folder with KSP_x64.exe while KSP is closed, reparse points skipped; agents start with an argument
+list (no shell), no window, at most 8, one per kRPC port and call sign; the tower's address goes to an agent only when
+the tower runs (localhost); Ollama is only ever called at 127.0.0.1:11434 and its answers are read with size caps and
+type checks; agents' lines are fuzzed (`FuzzTests.Wingman_agent_lines`) and shown as plain text; closing LUNA EVO asks
+agents to quit, then kills what's left with their MCP servers; the tools folder sits next to the settings file, so tests
+and rig runs never touch the user's.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| W1 | Low | The model name is free text and goes to the console as the value of `--model`. The console reads options by name, so a "model" like `--mcp` made it take the next argument as its MCP server's path (it then failed to start; nothing else ran) | Model names are up to 100 characters, no spaces or control characters, and can't start with `-`; call signs were already letters, digits, `-` and `_`, the model server an http(s) address |
+| W2 | Low (Wingman) | `WINGMAN_EVENTS_LOG` grew without end | Wingman 0.6 stops writing at 20 MB |
+| W3 | Info | The model server's address can be any http(s) address: the agent then sends its orders, the game's state and the chat it reads to that server | Accepted: it's the user's choice (a model server on another PC is a feature); the default is Ollama on this PC |
+| W4 | Info | An agent controls the KSP on its kRPC port: kRPC has no authentication | Accepted: kRPC listens where the user set it up (the rig: localhost); Wingman only drives the vessel it flies, and LMP's locks keep it off other players' vessels |
+| W5 | Info | Installing over a version whose agent is running fails (files in use) | The error is shown and nothing is half-installed (staging folder) |
 
 ## Audit 13 (2.11.0, October 2026)
 

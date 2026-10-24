@@ -93,8 +93,9 @@ public sealed class Tower
                 Send(now, plane.CallSign, "vacate", $"{plane.CallSign}, welcome. Vacate the runway.");
             }
         }
-        // Off the runway (recovered: back at the Space Center, not flying) or gone: the next one may come.
-        if (plane.State == PlaneState.Landed && !report.Situation.Equals("Landed", StringComparison.OrdinalIgnoreCase))
+        // Off the runway (taxied beside it, or recovered: back at the Space Center, not flying) or gone: the next one may come.
+        if (plane.State == PlaneState.Landed && (!report.Situation.Equals("Landed", StringComparison.OrdinalIgnoreCase) ||
+                                                 Math.Abs(Ksc.Frame(report.Latitude, report.Longitude).Cross) > Ksc.VacatedCross))
             plane.State = PlaneState.Gone;
         Expire(now);
         ClearNext(now);
@@ -218,6 +219,9 @@ public static class Ksc
     public const double ThresholdLatitude = -0.0486, ThresholdLongitude = -74.7244, Heading = 90, TouchdownAfterThreshold = 300;
     public const double KerbinRadius = 600_000;
     private const double MetersPerDegree = KerbinRadius * Math.PI / 180;
+
+    /// <summary>This far beside the centerline (m), a plane has left the runway (Wingman parks 90 m out).</summary>
+    public const double VacatedCross = 60;
 
     public static (double Along, double Cross) Frame(double latitude, double longitude)
     {

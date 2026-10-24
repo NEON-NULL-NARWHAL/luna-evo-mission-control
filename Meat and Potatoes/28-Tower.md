@@ -48,14 +48,15 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
   the runway holds: its side's hold point (4 km past touchdown, 7 km out, a 2 km circle), stacked 300 m apart from
   1,200 m.
 - On final within 9.5 km and 1.5 km of the centerline: "cleared to land", once. Stopped on the runway: "vacate".
-  A plane can't taxi in Wingman, so it recovers; when its next report isn't Landed (back at the Space Center), the
-  next holding plane is cleared from where it is.
+  Wingman (0.6 and later) taxis off to the right and parks 90 m beside the runway. Once a landed plane is more than
+  60 m off the centerline (`Ksc.VacatedCross`), or its report isn't Landed any more (recovered, back at the Space
+  Center), the next holding plane is cleared from where it is.
 - A plane silent for 60 s is lost from the channel and gives up its place.
 
 ## 28.4 Tested
 
-- Core: `TowerTests` (the whole two-plane sequence with a timeline of reports, a silent plane, the frame, the HTTP
-  answers) and the fuzz test. UI: `TowerPageTests` (two agents through `Answer`, the rows and channel lines, Stop).
+- Core: `TowerTests` (the whole two-plane sequence with a timeline of reports, taxiing off, a silent plane, the frame,
+  the HTTP answers) and the fuzz test. UI: `TowerPageTests` (two agents through `Answer`, the rows and channel lines, Stop).
 - In the rig (2026-10-23, two KSPs and two Wingman agents, RigRun): RigPilot cleared RNAV 09 SOUTH, RigViewer held as
   number 2 at KSC-HS for six minutes, RigPilot cleared to land, landed and vacated, RigViewer cleared the same second.
 

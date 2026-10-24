@@ -1,6 +1,6 @@
 // LUNA EVO · LunaEvo.MissionControl.Core.Tests/FuzzTests.cs
 // [Test] Every parser that reads text from outside (LMP logs and website JSON, master servers, CKAN files and output,
-//        KSP .cfg files, craft and vessel files, invites, settings comments) fed thousands of mutated and random inputs.
+//        KSP .cfg files, craft and vessel files, invites, settings comments, Wingman agents' lines) fed thousands of mutated and random inputs.
 //        A parser may only fail the way it documents; anything else would be a crash in the app.
 // Used by: dotnet test
 // Guide:   Meat and Potatoes/05-Tests.md
@@ -174,6 +174,13 @@ public class FuzzTests
                 server.Answer("POST", "/v1/say", text);
             });
     }
+
+    [Fact]
+    public void Wingman_agent_lines() => Fuzz(
+        ["""{"type":"event","time":"2026-10-23T15:00:00Z","kind":"phase","text":"Parked → TakingOff","data":{"from":"Parked","to":"TakingOff"}}""",
+         """{"type":"event","kind":"flight","text":"Flight landed.","data":{"result":"landed","landing":{"downRunway":1105}}}""",
+         "Unhandled exception. System.IO.IOException: boom"],
+        text => Wingman.AgentEvent.Parse(text, DateTime.UtcNow));
 
     [Fact]
     public void Invites_addresses_versions_and_comments() => Fuzz(

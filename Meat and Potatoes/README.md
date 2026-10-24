@@ -44,6 +44,7 @@ Every source file starts with a short header pointing back here, like this:
 | 26 | [The server plugin and the fake LMP client](26-Server-Plugin.md) | change the LUNA EVO server plugin, live.json, the plugin install on the Map page, or the fake client |
 | 27 | [LUNA EVO patches for the LMP client](27-Client-Patches.md) | change or add a client patch, how Join installs it, or the `-lmp` launch |
 | 28 | [The KSC tower](28-Tower.md) | change the tower's rules or its channel (KSP Wingman agents), or add an airport |
+| 29 | [KSP Wingman in LUNA EVO](29-Wingman.md) | change how Wingman is installed (release, mod, Ollama) or how agents are run and shown (`--ipc`) |
 
 ## 🔣 Legend
 
@@ -190,6 +191,7 @@ Symbols used in the map below and throughout these chapters:
 | 🔌 | `LmpAddress.cs` | Parses `lmp://host:port`; no KSP types, so Core.Tests compiles and fuzzes it too. |
 | ⚠️🔌 | `TimeSyncPatch.cs` | Alone in your subspace and far off its time: a subspace at your own time instead of LMP's clock jump. |
 | 🖥️🧠 | `TowerPage.cs` (app), `Core/Tower/Tower.cs`, `Core/Tower/TowerServer.cs` | The KSC tower: rules for AI pilots (intentions, clearances with the route, holds, vacate), its localhost channel, the page. See [28](28-Tower.md). |
+| 🖥️🧠 | `WingmanPage.cs` (app), `Core/Wingman/WingmanTools.cs`, `Core/Wingman/AgentHost.cs` | KSP Wingman as a tool: verified install, its mod in a KSP, kRPC, Ollama and a model (patches → Tools); agents run with `--ipc`, one card each (Play → Wingman). See [29](29-Wingman.md). |
 | 🖥️ | `PatchesPage.cs` (app) and `Core/Join/PatchCatalog.cs` | The LUNA EVO patches page: every fix, what it does and measured, install/update/remove for KSP and the server. See [27](27-Client-Patches.md#210-the-luna-evo-patches-page). |
 | 🔌 | `EvoWindow.cs` | The in-game LUNA EVO window (KSP toolbar button): connection, players, clock sync, watching a player, LMP settings. See [27](27-Client-Patches.md#28-the-in-game-luna-evo-window). |
 | 🔌 | `StampPatch.cs` | Adds the one physics tick LMP's position time stamps are short by. |
