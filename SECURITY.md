@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the sixteen security audits (0.4.0 to 2.13.1) found and changed, newest first, and which real
+what the seventeen security audits (0.4.0 to 2.14.0) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
@@ -83,6 +83,15 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 17 (2.14.0, October 2026)
+
+Scope: the tower's "runway in sight" call and Wingman 0.8's side of it. No new packages, nothing personal.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| Z1 | Low | Anything on this PC can say "runway in sight" for any call sign (the channel's trust, T4), getting that plane its landing clearance early | Only a plane the tower has on approach gets it, only while the runway is free (otherwise "continue"); the agent still flies its own approach and goes around by itself when it isn't lined up |
+| Z2 | Info | Older agents never call it | Cleared 2.5 km out instead, so nobody waits forever |
 
 ## Audit 16 (2.13.1, October 2026)
 

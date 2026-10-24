@@ -47,7 +47,9 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
   straight in; otherwise its side's pattern, north or south). Anyone asking while a plane is on approach or still on
   the runway holds: its side's hold point (4 km past touchdown, 7 km out, a 2 km circle), stacked 300 m apart from
   1,200 m.
-- On final within 9.5 km and 1.5 km of the centerline: "cleared to land", once. Stopped on the runway: "vacate".
+- "Cleared to land" (2.14) when the plane calls "runway in sight" (Wingman 0.8: on final within 10 km and 300 m of the
+  centerline), once, while nobody is on the runway (otherwise "continue approach, traffic on the runway"); a plane
+  that never calls is cleared 2.5 km out (`Tower.SightFallback`). Stopped on the runway: "vacate".
   Wingman (0.6 and later) taxis off to the right and parks 90 m beside the runway. Once a landed plane is more than
   60 m off the centerline (`Ksc.VacatedCross`), or its report isn't Landed any more (recovered, back at the Space
   Center), the next holding plane is cleared from where it is.

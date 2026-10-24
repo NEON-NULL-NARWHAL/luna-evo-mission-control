@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.14.0 (2026-10-24)
+
+### Added
+- **"Runway in sight"** (the owner's idea): an agent on final calls the runway in sight, and the KSC tower clears it to
+  land then, or says "continue approach, traffic on the runway". Agents that never call (KSP Wingman before 0.8) are
+  still cleared 2.5 km out. In the test rig every landing went this way, and the calls are in LMP chat with the radio on.
+
+### Changed
+- **gemma4:e4b can fly too**: in KSP Wingman's evals it passed 24 of 24 orders as the pilot (like qwen3:4b-instruct)
+  and wrote the best lessons as the planner, so one small model can do both (Model and Planner on the Wingman page).
+  In the rig, two agents on it alone landed the short visual 12, 8 and 6 m off the centerline.
+
+### Security
+- Audit 17 (see SECURITY.md).
+
 ## 2.13.1 (2026-10-24)
 
 ### Changed

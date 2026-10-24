@@ -55,7 +55,7 @@ public class TowerTests
         var alphaSaid = new List<string>();
         for (var t = 0.5; t <= 6; t += 0.5)
         {
-            var alphaAt = t < 4 ? At("Alpha", -7000, -3000) : t < 6 ? At("Alpha", -3000, 50) : At("Alpha", 800, 5, situation: "Landed", speed: 0);
+            var alphaAt = t < 4 ? At("Alpha", -7000, -3000) : t < 6 ? At("Alpha", -2000, 50) : At("Alpha", 800, 5, situation: "Landed", speed: 0);
             alphaSaid.AddRange(tower.Report(alphaAt, T0.AddMinutes(t)).Select(m => m.Kind));
             Assert.Empty(tower.Report(At("Bravo", 2000, 6000), T0.AddMinutes(t)));
         }
@@ -82,6 +82,25 @@ public class TowerTests
         Assert.Empty(tower.Report(At("Bravo", 2000, 6000), T0.AddMinutes(1.3)));
         tower.Report(At("Alpha", 930, 90, situation: "Landed", speed: 0), T0.AddMinutes(1.5));
         Assert.Equal("clearance", Assert.Single(tower.Report(At("Bravo", 2000, 6000), T0.AddMinutes(1.6))).Kind);
+    }
+
+    [Fact]
+    public void Cleared_to_land_when_it_calls_the_runway_in_sight()
+    {
+        var tower = new Tower.Tower();
+        tower.Report(At("Alpha", 15_000, -1000), T0);
+        tower.Say("Alpha", "request-approach", "", T0);
+        Assert.Empty(tower.Report(At("Alpha", -7000, 100), T0.AddMinutes(3))); // on final, no call yet: not yet
+        var cleared = tower.Say("Alpha", "runway-in-sight", "runway in sight", T0.AddMinutes(3.1));
+        Assert.Equal("cleared-to-land", Assert.Single(cleared).Kind);
+        Assert.Empty(tower.Report(At("Alpha", -5000, 50), T0.AddMinutes(3.5))); // once
+
+        // An agent that never calls: cleared 2.5 km out.
+        var quiet = new Tower.Tower();
+        quiet.Report(At("Bravo", 15_000, -1000), T0);
+        quiet.Say("Bravo", "request-approach", "", T0);
+        Assert.Empty(quiet.Report(At("Bravo", -6000, 50), T0.AddMinutes(3)));
+        Assert.Equal("cleared-to-land", Assert.Single(quiet.Report(At("Bravo", -2000, 20), T0.AddMinutes(4))).Kind);
     }
 
     [Fact]

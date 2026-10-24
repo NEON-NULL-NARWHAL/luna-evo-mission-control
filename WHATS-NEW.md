@@ -4,6 +4,11 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.14: "runway in sight"
+
+- Agents call the runway in sight on final and the KSC tower clears them to land, like real pilots. gemma4:e4b now
+  works as both the pilot and the planner.
+
 ## 2.13.1: straighter visual landings
 
 - The short visual now ends on the centerline (10-11 m off in the test rig, was 16-23), and the Wingman page suggests

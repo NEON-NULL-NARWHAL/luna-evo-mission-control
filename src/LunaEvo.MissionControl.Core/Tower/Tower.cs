@@ -43,6 +43,9 @@ public sealed class TowerPlane(string callSign)
     public string? Asked { get; internal set; }
     internal int DeliveredId;
     internal bool ToldClearedToLand;
+
+    /// <summary>It called "runway in sight" on this approach (the tower clears it to land then, the owner's idea).</summary>
+    public bool RunwayInSight { get; internal set; }
 }
 
 public sealed class Tower
@@ -84,7 +87,10 @@ public sealed class Tower
         if (plane.State == PlaneState.Approach)
         {
             var (along, cross) = Ksc.Frame(report.Latitude, report.Longitude);
-            if (!plane.ToldClearedToLand && flying && along > -9500 && along < 0 && Math.Abs(cross) < 1500)
+            // Cleared to land when it calls the runway in sight (or, for an agent that never calls, 2.5 km out), on
+            // final, with nobody still on the runway.
+            if (!plane.ToldClearedToLand && flying && (plane.RunwayInSight || along > -SightFallback) && along > -11_000 && along < 0 &&
+                Math.Abs(cross) < 1500 && !RunwayOccupied(plane))
             {
                 plane.ToldClearedToLand = true;
                 Send(now, plane.CallSign, "cleared-to-land", $"{plane.CallSign}, runway 09, cleared to land.");
@@ -114,6 +120,18 @@ public sealed class Tower
         var plane = Plane(callSign, now);
         plane.LastSeen = now;
         Log(now, callSign, Name, kind, text);
+        if (kind == "runway-in-sight" && plane.State == PlaneState.Approach)
+        {
+            plane.RunwayInSight = true;
+            if (!plane.ToldClearedToLand && RunwayOccupied(plane))
+                Send(now, callSign, "info", $"{callSign}, {Name}, continue approach, traffic on the runway.");
+            else if (!plane.ToldClearedToLand)
+            {
+                plane.ToldClearedToLand = true;
+                Send(now, callSign, "cleared-to-land", $"{callSign}, runway 09, cleared to land.");
+            }
+            return Undelivered(plane);
+        }
         var wantsToLand = kind == "request-approach" || (kind == "intent" && text.Contains("land", StringComparison.OrdinalIgnoreCase));
         if (wantsToLand && plane.State is not (PlaneState.Approach or PlaneState.Holding))
         {
@@ -147,6 +165,7 @@ public sealed class Tower
         plane.Approach = route.Name;
         plane.Number = 1;
         plane.ToldClearedToLand = false;
+        plane.RunwayInSight = false;
         var first = route.Fixes[0];
         Send(now, plane.CallSign, "clearance", string.Create(CultureInfo.InvariantCulture,
             $"{plane.CallSign}, {Name}, cleared {route.Name}. Proceed to {first.Name} at {first.Altitude:0} m, {first.Speed:0} m/s, " +
@@ -167,6 +186,11 @@ public sealed class Tower
             $"{plane.CallSign}, {Name}, number {number}. Hold at {hold.Fix}, {hold.Altitude:0} m, right turns. " +
             $"Expect the approach after {ahead?.CallSign ?? "the traffic"}."), Hold: hold);
     }
+
+    /// <summary>An agent that never calls the runway in sight is cleared this close (m before touchdown).</summary>
+    public const double SightFallback = 2500;
+
+    private bool RunwayOccupied(TowerPlane plane) => _planes.Values.Any(p => p != plane && p.State == PlaneState.Landed);
 
     /// <summary>When the runway is free (no one on approach or still on it), the next holding plane is cleared.</summary>
     private void ClearNext(DateTime now)
