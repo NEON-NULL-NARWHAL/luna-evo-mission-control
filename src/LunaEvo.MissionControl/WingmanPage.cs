@@ -97,6 +97,9 @@ internal sealed class WingmanPage
         {
             _agentHost = value;
             _agentHost.Changed += QueueRefresh;
+            // A stopped agent leaves the tower's sequence at once (the owner saw the tower hold the only plane flying
+            // for one that had gone): its MCP server is killed with it, so it can't say so itself.
+            _agentHost.AgentExited += agent => _host.Tower.Server?.Leaving(agent.Start.CallSign);
             _cards.Clear();
             _agents.Children.Clear();
             _none.IsVisible = true;

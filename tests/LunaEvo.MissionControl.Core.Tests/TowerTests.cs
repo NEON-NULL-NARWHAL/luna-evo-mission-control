@@ -148,6 +148,9 @@ public class TowerTests
         alone.Report(At("Alpha", -500, 40), T0.AddMinutes(4));
         var again = alone.Say("Alpha", "go-around", "going around", T0.AddMinutes(4.1)).Single(m => m.Kind == "clearance");
         Assert.StartsWith("Alpha, KSC tower, roger the go-around, cleared VISUAL 09", again.Text);
+        // The same go-around said again a few seconds later is answered once (the rig's Aeris 4A repeated it every 2-4 s).
+        Assert.Empty(alone.Say("Alpha", "go-around", "going around", T0.AddMinutes(4.1).AddSeconds(3)));
+        Assert.Single(alone.Say("Alpha", "go-around", "going around", T0.AddMinutes(5)), m => m.Kind == "clearance"); // a new one later
 
         // Traffic waiting: to the back of the hold, with traffic information; the next one is cleared.
         var busy = new Tower.Tower();
@@ -162,6 +165,68 @@ public class TowerTests
         Assert.Contains("Traffic: Bravo", held.Text);
         Assert.Equal(PlaneState.Approach, busy.Planes.Single(p => p.CallSign == "Bravo").State);
         Assert.Contains("Traffic: Alpha holding over the runway", busy.Report(At("Bravo", 900, 0), T0.AddMinutes(0.7)).Single(m => m.Kind == "clearance").Text);
+    }
+
+    [Fact]
+    public void A_fast_plane_gets_the_long_approaches_and_a_far_one_waits_its_turn()
+    {
+        // A plane that flies its approach at 115 m/s (the Aeris 4A, from its flight test): never the short visual.
+        var tower = new Tower.Tower();
+        tower.Report(At("Alpha", 2000, -1000) with { ApproachSpeed = 115 }, T0);
+        var cleared = tower.Say("Alpha", "request-approach", "request VISUAL 09", T0).Single(m => m.Kind == "clearance");
+        Assert.Equal("RNAV 09 NORTH", cleared.Route!.Name);
+        tower.Report(At("Alpha", -500, 40) with { ApproachSpeed = 115 }, T0.AddMinutes(4));
+        Assert.DoesNotContain("VISUAL", tower.Say("Alpha", "go-around", "going around", T0.AddMinutes(4.1)).Single(m => m.Kind == "clearance").Text);
+
+        // Bravo waits 46 km out when Alpha goes around over the runway: Alpha tries again first, Bravo keeps holding.
+        var busy = new Tower.Tower();
+        busy.Report(At("Alpha", 2000, -1000), T0);
+        busy.Report(At("Bravo", 2000, 46_000), T0);
+        busy.Say("Alpha", "request-approach", "", T0);
+        Assert.Equal("hold", busy.Say("Bravo", "request-approach", "", T0).Single().Kind);
+        busy.Report(At("Alpha", -500, 40), T0.AddSeconds(40));
+        busy.Report(At("Bravo", 2000, 46_000), T0.AddSeconds(40));
+        var again = busy.Say("Alpha", "go-around", "going around", T0.AddSeconds(45)).Single(m => m.Kind == "clearance");
+        Assert.Contains("roger the go-around, cleared", again.Text);
+        Assert.Equal(PlaneState.Holding, busy.Planes.Single(p => p.CallSign == "Bravo").State);
+    }
+
+    [Theory]
+    [InlineData("SpaceCenter")] // crashed and recovered: the owner saw the tower hold the only plane flying for it
+    [InlineData("Destroyed")]
+    [InlineData("Splashed")]
+    [InlineData("Offline")] // its player left the LMP server
+    public void A_plane_out_of_the_pattern_leaves_the_sequence_at_once(string situation)
+    {
+        var tower = new Tower.Tower();
+        tower.Report(At("Alpha", 2000, -1000), T0);
+        tower.Report(At("Bravo", 3000, 2000), T0);
+        tower.Say("Alpha", "request-approach", "", T0);
+        Assert.Equal("hold", tower.Say("Bravo", "request-approach", "", T0).Single().Kind);
+        tower.Report(At("Alpha", 0, 0, situation: situation, speed: 0), T0.AddSeconds(5));
+        var cleared = Assert.Single(tower.Report(At("Bravo", 2000, 6000), T0.AddSeconds(6)));
+        Assert.Equal("clearance", cleared.Kind);
+        Assert.DoesNotContain("Traffic", cleared.Text); // nobody else around now
+        Assert.Contains(tower.Channel, m => m.Text == $"Alpha {(situation switch { "SpaceCenter" => "back at the Space Center", "Destroyed" => "crashed", "Splashed" => "down in the sea", _ => "left the server" })}: out of the sequence.");
+        // Not asked its intentions while it has no plane in the air; asked again once it's flying.
+        Assert.Empty(tower.Report(At("Alpha", 0, 0, situation: situation, speed: 0), T0.AddSeconds(10)));
+        Assert.Equal("ask-intent", Assert.Single(tower.Report(At("Alpha", 2000, -1000), T0.AddSeconds(60))).Kind);
+    }
+
+    [Fact]
+    public void An_agent_that_stops_leaves_the_sequence_and_the_ones_behind_move_up()
+    {
+        var tower = new Tower.Tower();
+        foreach (var cs in new[] { "Alpha", "Bravo", "Charlie" })
+            tower.Report(At(cs, 2000, -1000), T0);
+        tower.Say("Alpha", "request-approach", "", T0);
+        Assert.Equal(2, tower.Say("Bravo", "request-approach", "", T0).Single().Hold!.Number);
+        Assert.Equal(3, tower.Say("Charlie", "request-approach", "", T0).Single().Hold!.Number);
+        tower.Say("Bravo", "leaving", "leaving the channel", T0.AddSeconds(5)); // number 2 stopped: Charlie is next
+        Assert.Equal(2, tower.Planes.Single(p => p.CallSign == "Charlie").Number);
+        tower.Say("Alpha", "leaving", "leaving the channel", T0.AddSeconds(6)); // and the one on approach: Charlie is cleared
+        Assert.Equal(PlaneState.Approach, tower.Planes.Single(p => p.CallSign == "Charlie").State);
+        Assert.Equal("clearance", Assert.Single(tower.Report(At("Charlie", 2000, 6000), T0.AddSeconds(7))).Kind);
     }
 
     [Fact]

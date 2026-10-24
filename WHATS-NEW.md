@@ -4,6 +4,13 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.17: every plane tested, its own setup
+
+- With KSP Wingman 0.11, agents **test each new plane** on the ground and in the air and fly it with **its own
+  setup** (steering, speeds) from the real numbers, corrected by how its landings go. Planes join the final faster
+  and slow down on it.
+- A plane that crashed, was recovered or left **leaves the tower's sequence at once**, so the others aren't held for it.
+
 ## 2.16: go-arounds back in sequence
 
 - A plane that goes around is put back in the sequence (or cleared again for the short visual), and the tower gives

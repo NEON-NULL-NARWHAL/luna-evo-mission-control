@@ -84,6 +84,26 @@ is under [Tested with](#tested-with).
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
 
+## Audit 20 (2.17.0, October 2026)
+
+Scope: flight and ground tests and each plane's setup (Wingman 0.11: `test_plane`, `PlaneSetup`, the pilot's larger
+trim, the faster final), the tower's `/v1/test` and `/v1/craft`, planes leaving the sequence (crashed, recovered,
+offline, stopped), the approach speed in reports, and the bugs the rig found. No new packages, nothing personal.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| C1 | Medium (found in the rig) | A plane that crashed or was recovered stayed in the tower's sequence, holding the only other plane for minutes | Out of the sequence at once when it reports the Space Center, a wreck, the sea or no server; Mission Control tells its tower when an agent's process ends (it's killed with its MCP server, so it can't say so itself) |
+| C2 | Low | Anything on this PC can say "leaving" or post a flight test for any call sign or plane (T4) | Leaving only takes that plane out of the sequence; every test number must be there and in range (pitch ≤ 2,000 °/s, slowest ≤ 1,000 m/s...), names cut to 60 characters, 200 tests kept |
+| C3 | Low | The tower's test numbers set up the pilot | Checked again by Wingman (finite, in range); every setup value is clamped to what a plane can fly (gains 0.3-2.5, landing 60-100 m/s, rotate 40-90 m/s, trim at most 0.4) |
+| C4 | Low | A flight test flies the plane on purpose near its slowest speed and with stick pulses | From 1,500 m above the ground; pulses of a tenth of a stick for a second; stops itself below 400 m or after 8 minutes, then flies level; full throttle as soon as it can't hold its height |
+| C5 | Low | A ground test drives the plane down the runway | Only from a stop on the runway; taxi speed (12 m/s, throttle at most 0.4); stops with the brakes on if it swings 25° off the runway heading or after 2 minutes |
+| C6 | Low (found in the rig) | A repeated go-around report got a new clearance every 2-4 s | The client keeps it reported until the clearance is flown; the tower answers one go-around per 30 s |
+| C7 | Low (found in the rig) | A new plane on the runway was put in the hold from the last plane's request to land, and cruising ("Holding heading") counted as wanting to land | The request is forgotten when the plane is gone or a new one is on the runway; only a tower's hold counts |
+| C8 | Info | A plane note is written by a model from the test | Every number in it must be one the flight or its test measured (within 10%), as well as the usual lesson rules |
+| C9 | Info | Reports carry the plane's approach speed (0-1,000 m/s) | Only decides whether the tower offers the short visual; a wrong one gets a longer approach, nothing else |
+| C11 | Low | Wingman 0.11 decides on a landing later (600 m before touchdown instead of 1.5 km) | Within 60 m of the centerline and 40 m of the slope there, or it goes around; still around at once when far off, far too high, or the ground comes up |
+| C10 | Info | Stock planes were recorded as "#autoLOC_501174" | Names come from the launch, or are translated by the bridge; older records keep the old name |
+
 ## Audit 19 (2.16.0, October 2026)
 
 Scope: go-around resequencing and traffic information (tower), the rejected takeoff, the go-around report and the

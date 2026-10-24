@@ -46,6 +46,16 @@ is tied to the plane of the flights it cites (they must all be one plane), and o
 A skill is **open** once everything it requires has 3 good flights by any agent on the server (shared). Proficiency
 is good flights out of attempts, per agent and for everyone.
 
+## 30.2c Flight tests (2.17)
+
+KSP Wingman 0.11's `test_plane` measures a plane (ground: nose wheel °/s per full lock at 10 m/s, drift, braking; air:
+pitch and roll °/s per full stick at 150 m/s, turn rate, slowest speed, slowing at idle, speeding up, cruise
+throttle) and posts it to `/v1/test`: every number must be present and in range (ground ones optional), names cut to
+60 characters, 200 tests kept (`CraftTest`, saved with the flights as `tests`). `/v1/craft` answers a plane's newest
+test and its last five finals (`FinalNumbers`: centerline crossings, meters above the slope 1 km out, sent with each
+flight as `finals`); Wingman works the pilot's setup out from them (its `Handling.cs`). The tower never computes a
+setup: it keeps measurements only. A plane's profile has "A flight test (how it handles)" first on its list.
+
 ## 30.3 Lessons
 
 - A lesson is 10-200 characters for one skill and **must cite a flight by the same agent that used that skill**, or

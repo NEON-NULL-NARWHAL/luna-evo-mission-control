@@ -170,7 +170,9 @@ public class FuzzTests
               """{"callSign":"Wingman","kind":"request-approach","text":"land at KSC please"}""",
               """{"callSign":"Wingman","craft":"Aeris 3A","result":"landed","approach":"RNAV 09 SOUTH","goArounds":1,"minutes":8.3,"landing":{"downRunway":1329,"offCenterline":8,"headingError":4},"phases":["TakingOff","Climbing","OnRoute","OnFinal","Stopped"]}""",
               """{"callSign":"Wingman","skill":"land-rnav","text":"Slow to 85 m/s before F09.","evidence":[1,2,3]}""",
-              """{"callSign":"Wingman","fixes":["KSC-DS","KSC-S1","KSC-S2","KSC-S3","F09"]}"""],
+              """{"callSign":"Wingman","fixes":["KSC-DS","KSC-S1","KSC-S2","KSC-S3","F09"]}""",
+              """{"callSign":"Wingman","craft":"Gull","pitchRate":30,"rollRate":90,"turnRate":2.1,"minSpeed":62,"deceleration":1.2,"acceleration":3,"cruiseThrottle":0.3}""",
+              """{"callSign":"Wingman","craft":"Gull","result":"landed","finals":[{"weaves":3,"high":40}]}"""],
             text =>
             {
                 server.Answer("POST", "/v1/report", text);
@@ -180,6 +182,8 @@ public class FuzzTests
                 server.Answer("POST", "/v1/knowledge", text);
                 server.Answer("POST", "/v1/plan", text);
                 server.Answer("POST", "/v1/procedures", text);
+                server.Answer("POST", "/v1/test", text);
+                server.Answer("POST", "/v1/craft", text);
             });
     }
 

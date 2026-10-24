@@ -1,7 +1,8 @@
 // LUNA EVO · LunaEvo.MissionControl.Core/Tower/TowerServer.cs
 // [Core] The tower's channel over HTTP, for KSP Wingman agents on this PC: POST /v1/report and /v1/say with a small
 //        JSON body; the answer is the tower's new messages for that plane. Also the agents' knowledge (Knowledge.cs):
-//        /v1/flight (a finished flight), /v1/lesson (a lesson citing flights), /v1/knowledge (skills and lessons).
+//        /v1/flight (a finished flight), /v1/lesson (a lesson citing flights), /v1/knowledge (skills and lessons),
+//        /v1/test (a plane's flight test) and /v1/craft (a plane's test and last finals, for its setup).
 //        Listens on localhost only.
 // Used by: TowerPage
 // Guide:   Meat and Potatoes/28-Tower.md
@@ -177,7 +178,8 @@ public sealed class TowerServer : IDisposable
                         if (Number(root, "latitude") is not { } lat || Number(root, "longitude") is not { } lon)
                             return (400, Error("needs latitude and longitude"));
                         messages = Tower.Report(new PlaneReport(callSign, lat, lon, Number(root, "altitude") ?? 0, Number(root, "heading") ?? 0,
-                            Number(root, "speed") ?? 0, Text(root, "situation", 20) ?? "", Text(root, "phase", 200) ?? ""), _clock());
+                            Number(root, "speed") ?? 0, Text(root, "situation", 20) ?? "", Text(root, "phase", 200) ?? "",
+                            Math.Clamp(Number(root, "approachSpeed") ?? 0, 0, 1000)), _clock());
                         break;
                     case "/v1/say":
                         if (Text(root, "kind", 30) is not { Length: > 0 } kind)
@@ -193,7 +195,7 @@ public sealed class TowerServer : IDisposable
                             : [];
                         messages = Tower.File(callSign, names, _clock());
                         break;
-                    case "/v1/flight" or "/v1/lesson" or "/v1/knowledge":
+                    case "/v1/flight" or "/v1/lesson" or "/v1/knowledge" or "/v1/test" or "/v1/craft":
                         var answer = Learn(path, callSign, root);
                         if (answer.Status == 200)
                             Changed?.Invoke();
@@ -241,10 +243,14 @@ public sealed class TowerServer : IDisposable
                     var landing = root.TryGetProperty("landing", out var l) && l.ValueKind == JsonValueKind.Object ? l : default;
                     double? FromLanding(string name) => landing.ValueKind == JsonValueKind.Object ? Number(landing, name) : null;
                     var goArounds = (int)Math.Clamp(Number(root, "goArounds") ?? 0, 0, 100);
+                    var finals = root.TryGetProperty("finals", out var fl) && fl.ValueKind == JsonValueKind.Array
+                        ? fl.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.Object).Take(10)
+                            .Select(e => new FinalNumbers((int)Math.Clamp(Number(e, "weaves") ?? 0, 0, 100), Math.Round(Math.Clamp(Number(e, "high") ?? 0, -10_000, 10_000)))).ToList()
+                        : [];
                     var record = Knowledge.AddFlight(callSign, Text(root, "craft", 60) ?? "", result, Text(root, "approach", 40), goArounds,
                         Math.Clamp(Number(root, "minutes") ?? 0, 0, 10_000), FromLanding("downRunway"), FromLanding("offCenterline"),
                         FromLanding("headingError"), phases, now,
-                        Math.Clamp(Number(root, "maxSpeed") ?? 0, 0, 5000), Math.Clamp(Number(root, "maxHeight") ?? 0, 0, 100_000));
+                        Math.Clamp(Number(root, "maxSpeed") ?? 0, 0, 5000), Math.Clamp(Number(root, "maxHeight") ?? 0, 0, 100_000), finals);
                     SaveKnowledge();
                     return (200, JsonSerializer.Serialize(new { flight = new { record.Id, record.Skills } }, Json));
                 }
@@ -259,6 +265,29 @@ public sealed class TowerServer : IDisposable
                         return (422, Error(problem!));
                     SaveKnowledge();
                     return (200, JsonSerializer.Serialize(new { lesson }, Json));
+                }
+                case "/v1/test":
+                {
+                    // A flight test (Wingman 0.11): every number must be there and in a range a plane can have.
+                    if (Text(root, "craft", 60) is not { Length: > 0 } craft)
+                        return (400, Error("needs a craft"));
+                    double? In(string name, double max) => Number(root, name) is { } v && v >= 0 && v <= max ? v : null;
+                    if (In("pitchRate", 2000) is not { } pitch || In("rollRate", 5000) is not { } roll || In("turnRate", 100) is not { } turn ||
+                        In("minSpeed", 1000) is not { } min || In("deceleration", 100) is not { } decel || In("acceleration", 100) is not { } accel ||
+                        In("cruiseThrottle", 1) is not { } throttle)
+                        return (400, Error("a flight test needs every number, each in range"));
+                    // The ground test's numbers are optional (Wingman 0.11 sends them once it has run one).
+                    var drift = Number(root, "drift") is { } d && Math.Abs(d) <= 100 ? d : 0;
+                    var test = Knowledge.AddTest(callSign, craft, pitch, roll, turn, min, decel, accel, throttle, now,
+                        In("steerRate", 1000) ?? 0, drift, In("braking", 100) ?? 0);
+                    SaveKnowledge();
+                    return (200, JsonSerializer.Serialize(new { test }, Json));
+                }
+                case "/v1/craft":
+                {
+                    if (Text(root, "craft", 60) is not { Length: > 0 } craft)
+                        return (400, Error("needs a craft"));
+                    return (200, JsonSerializer.Serialize(new { test = Knowledge.TestOf(craft), finals = Knowledge.FinalsOf(craft) }, Json));
                 }
                 default:
                 {
@@ -278,6 +307,7 @@ public sealed class TowerServer : IDisposable
                         c.Name, c.Flights, c.Landed, c.Crashed, c.TopSpeed, c.TopHeight, c.BestOffCenterline,
                         ToLearn = c.ToLearn.Where(i => !i.Done).Select(i => i.What),
                         Notes = c.Notes.Select(n => n.Text),
+                        Test = c.Test?.Describe(),
                     });
                     return (200, JsonSerializer.Serialize(new { skills, flights, crafts }, Json));
                 }
@@ -297,6 +327,19 @@ public sealed class TowerServer : IDisposable
         {
             // A failing disk loses the update on disk, not the knowledge in memory.
         }
+    }
+
+    /// <summary>An agent stopped (Wingman page): out of the tower's sequence now, and the next plane is cleared.</summary>
+    public void Leaving(string callSign)
+    {
+        lock (Tower)
+        {
+            if (!Tower.Planes.Any(p => p.CallSign.Equals(callSign, StringComparison.OrdinalIgnoreCase)))
+                return;
+            Tower.Say(callSign, "leaving", "leaving the channel", _clock());
+            WriteLog();
+        }
+        Changed?.Invoke();
     }
 
     /// <summary>The host deletes a lesson (Wingman page).</summary>

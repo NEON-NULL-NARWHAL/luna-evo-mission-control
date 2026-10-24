@@ -10,6 +10,7 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
 using LunaEvo.MissionControl.Core.Tests;
+using LunaEvo.MissionControl.Core.Tower;
 using LunaEvo.MissionControl.Core.Wingman;
 
 namespace LunaEvo.MissionControl.Tests;
@@ -184,14 +185,20 @@ public class WingmanPageTests
         Assert.Contains("1 of 1 good", Description(ui, "wingman/skill/land-visual"));
         Assert.Contains("locked until route and land-visual", Description(ui, "wingman/skill/land-rnav"));
         Assert.Contains("1 flight(s) by Wingman1 · 1 landed, 0 crashed", Description(ui, "wingman/craft/Aeris 3A"));
-        Assert.Contains("still to learn: its top speed", Description(ui, "wingman/craft/Aeris 3A"));
+        Assert.Contains("still to learn: a flight test (how it handles), its top speed", Description(ui, "wingman/craft/Aeris 3A"));
         Assert.Contains(Path.Combine(Path.GetDirectoryName(ui.Window.SettingsPath)!, "agents", "knowledge.json"), Description(ui, "wingman/knowledge/where"));
         Assert.True(File.Exists(server.KnowledgePath)); // no server open: next to the settings
         ui.Click(ui.Find<Button>("wingman/lesson/1/delete"));
         Assert.Null(ui.TryFind<Control>("wingman/lesson/1"));
 
+        // On approach when it's stopped: it leaves the tower's sequence at once (its MCP server can't say so, it's killed).
+        server.Answer("POST", "/v1/report", """{"callSign":"Wingman1","latitude":-0.0486,"longitude":-74.70,"altitude":900,"heading":90,"speed":120,"situation":"Flying"}""");
+        server.Answer("POST", "/v1/say", """{"callSign":"Wingman1","kind":"request-approach","text":""}""");
+        Assert.Equal(PlaneState.Approach, server.Tower.Planes.Single(p => p.CallSign == "Wingman1").State);
         ui.Click(ui.Find<Button>("wingman/agent/Wingman1/stop"));
         ui.WaitFor(() => ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.StartsWith("stopped"), "agent stopped");
+        Assert.Equal(PlaneState.Gone, server.Tower.Planes.Single(p => p.CallSign == "Wingman1").State);
+        Assert.Contains(server.Tower.Channel, m => m.Text == "Wingman1 left the channel: out of the sequence.");
         Assert.False(ui.Find<TextBox>("wingman/agent/Wingman1/order").IsEnabled);
         ui.Click(ui.Find<Button>("wingman/agent/Wingman1/stop")); // now "Remove"
         Assert.Null(ui.TryFind<Control>("wingman/agent/Wingman1"));

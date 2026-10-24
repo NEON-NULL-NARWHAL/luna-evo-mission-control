@@ -121,8 +121,15 @@ public sealed class WingmanAgent : IDisposable
             }
             Changed?.Invoke();
         };
-        process.Exited += () => Changed?.Invoke();
+        process.Exited += () =>
+        {
+            Exited?.Invoke();
+            Changed?.Invoke();
+        };
     }
+
+    /// <summary>Its process ended (stopped, or it crashed): the tower takes it out of the sequence (AgentHost.AgentExited).</summary>
+    public event Action? Exited;
 
     public AgentStart Start { get; }
 
@@ -265,6 +272,9 @@ public sealed class AgentHost : IDisposable
 
     public event Action? Changed;
 
+    /// <summary>An agent's process ended (from its process's thread).</summary>
+    public event Action<WingmanAgent>? AgentExited;
+
     /// <summary>The console's command line for an agent: --ipc, the model, the KSP; the tower through its variable.</summary>
     public static ProcessStartInfo StartInfo(WingmanInstall install, AgentStart start)
     {
@@ -327,6 +337,7 @@ public sealed class AgentHost : IDisposable
         var log = _logFolder == null ? null : Path.Combine(_logFolder, $"wingman-{start.CallSign}-{DateTime.Now:yyyy-MM-dd}.jsonl");
         var agent = new WingmanAgent(start, _launch(StartInfo(install, start)), _now, log);
         agent.Changed += () => Changed?.Invoke();
+        agent.Exited += () => AgentExited?.Invoke(agent);
         _agents.Add(agent);
         Changed?.Invoke();
         return agent;

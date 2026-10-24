@@ -27,8 +27,9 @@ public sealed record TowerMessage(int Id, DateTime Time, string From, string To,
     TowerRoute? Route = null, TowerHold? Hold = null);
 
 /// <summary>What an agent reports every few seconds.</summary>
+/// <param name="ApproachSpeed">The plane's own approach speed (m/s, from its flight test; 0: not said).</param>
 public sealed record PlaneReport(string CallSign, double Latitude, double Longitude, double Altitude, double Heading,
-    double Speed, string Situation, string Phase = "");
+    double Speed, string Situation, string Phase = "", double ApproachSpeed = 0);
 
 public enum PlaneState { New, Asked, Local, Approach, Holding, Landed, Gone }
 
@@ -49,6 +50,7 @@ public sealed class TowerPlane(string callSign)
     /// <summary>The approach it asked for, if it named one (granted when nobody else is waiting).</summary>
     public string? Asked { get; internal set; }
     internal int DeliveredId;
+    internal DateTime LastGoAround = DateTime.MinValue;
     internal bool ToldClearedToLand;
 
     /// <summary>It called "runway in sight" on this approach (the tower clears it to land then, the owner's idea).</summary>
@@ -57,6 +59,9 @@ public sealed class TowerPlane(string callSign)
 
 public sealed class Tower
 {
+    /// <summary>A go-around reported again this soon is the same one.</summary>
+    public static readonly TimeSpan GoAroundRepeat = TimeSpan.FromSeconds(30);
+
     /// <summary>A plane that hasn't reported for this long is gone (and gives up its place).</summary>
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
 
@@ -86,12 +91,21 @@ public sealed class Tower
         plane.LastSeen = now;
         // Only planes: an agent still at the Space Center (no vessel) isn't called yet (the owner saw the tower ask
         // intentions before anyone was on the runway).
-        if (plane.State == PlaneState.New && report.Situation is { Length: > 0 } situation &&
-            !situation.Equals("SpaceCenter", StringComparison.OrdinalIgnoreCase) && !situation.Equals("Destroyed", StringComparison.OrdinalIgnoreCase))
+        if (plane.State == PlaneState.New && report.Situation is { Length: > 0 } situation && !OutOfPattern(situation))
         {
             plane.State = PlaneState.Asked;
             Send(now, plane.CallSign, "ask-intent", $"{plane.CallSign}, {Name}, say intentions.");
         }
+        // Out of the pattern (the owner saw a crashed agent sit at the Space Center while the tower held the only other
+        // plane for it): back at the Space Center, wrecked, in the sea, or out of the server. Its place goes to the next.
+        if (report.Situation is { Length: > 0 } where && OutOfPattern(where) && plane.State is PlaneState.Approach or PlaneState.Holding or PlaneState.Local or PlaneState.Asked)
+            Leave(plane, now, where.ToLowerInvariant() switch
+            {
+                "spacecenter" => "back at the Space Center",
+                "destroyed" => "crashed",
+                "splashed" => "down in the sea",
+                _ => "left the server",
+            });
         var flying = report.Situation.Equals("Flying", StringComparison.OrdinalIgnoreCase);
         var stopped = report.Situation.Equals("Landed", StringComparison.OrdinalIgnoreCase) && report.Speed < 2;
         if (plane.State == PlaneState.Approach)
@@ -132,13 +146,28 @@ public sealed class Tower
         var plane = Plane(callSign, now);
         plane.LastSeen = now;
         Log(now, callSign, Name, kind, text);
+        // Leaving (the agent stopped, or its player left the server): out of the sequence now, not after the timeout.
+        if (kind == "leaving")
+        {
+            Leave(plane, now, "left the channel");
+            plane.State = PlaneState.Gone;
+            ClearNext(now);
+            return Undelivered(plane);
+        }
         // A go-around (the owner's idea): back into the sequence. With others waiting it holds at the back and the next
         // one is cleared; alone it's cleared again at once for the short visual from where it is, for another try.
+        // The same go-around again within 30 s is the same one (a client repeating itself): answered once.
+        if (kind == "go-around" && plane.State == PlaneState.Approach && now - plane.LastGoAround < GoAroundRepeat)
+            return Undelivered(plane);
         if (kind == "go-around" && plane.State == PlaneState.Approach)
         {
+            plane.LastGoAround = now;
             plane.ToldClearedToLand = false;
             plane.RunwayInSight = false;
-            if (_planes.Values.Where(p => p != plane && p.State == PlaneState.Holding).OrderBy(p => p.Number).FirstOrDefault() is { } next)
+            // The next one goes first, unless it's still far out (the rig: cleared from 46 km away, it kept the plane that
+            // went around over the runway waiting ten minutes): then this one tries again first.
+            if (_planes.Values.Where(p => p != plane && p.State == PlaneState.Holding).OrderBy(p => p.Number).FirstOrDefault() is { } next &&
+                Distance(next) < NearRunway)
             {
                 // The next one goes first, then this one joins the back of the hold.
                 plane.State = PlaneState.Holding; // counted as traffic in the next one's clearance
@@ -150,8 +179,8 @@ public sealed class Tower
             }
             else
             {
-                plane.Asked = Ksc.VisualName;
-                Clear(plane, now, "roger the go-around, ");
+                plane.Asked = Fast(plane) ? null : Ksc.VisualName;
+                Clear(plane, now, "roger the go-around, ", ignoreHolding: true);
             }
             return Undelivered(plane);
         }
@@ -201,17 +230,40 @@ public sealed class Tower
         return others.Count == 0 ? "" : " Traffic: " + string.Join("; ", others) + ".";
     }
 
-    private void Clear(TowerPlane plane, DateTime now, string intro = "")
+    /// <summary>A plane whose own approach speed is above this (m/s) never gets the short visual (built for 85-100 m/s).</summary>
+    public const double FastApproach = 105;
+
+    /// <summary>Within this far of the runway (m) a waiting plane is near; further, it's still coming in.</summary>
+    public const double NearRunway = 15_000;
+
+    /// <summary>
+    /// Its turns are too wide for the short visual (the rig's Aeris 4A, 116 m/s on final, turned onto it 1-2 km off the
+    /// centerline twice).
+    /// </summary>
+    private static bool Fast(TowerPlane plane) => plane.Last?.ApproachSpeed > FastApproach;
+
+    private static double Distance(TowerPlane plane)
+    {
+        if (plane.Last is not { } r)
+            return double.MaxValue;
+        var (along, cross) = Ksc.Frame(r.Latitude, r.Longitude);
+        return Math.Sqrt(along * along + cross * cross);
+    }
+
+    /// <param name="ignoreHolding">After a go-around with only far-off planes waiting: cleared as if alone.</param>
+    private void Clear(TowerPlane plane, DateTime now, string intro = "", bool ignoreHolding = false)
     {
         var r = plane.Last;
         var (along, cross) = r == null ? (0.0, 0.0) : Ksc.Frame(r.Latitude, r.Longitude);
         // Alone on the runway (nobody holding), it may have what it asked for, or the short visual when that's quicker.
-        var alone = !_planes.Values.Any(p => p != plane && p.State is PlaneState.Holding or PlaneState.Approach or PlaneState.Landed);
+        var alone = !_planes.Values.Any(p => p != plane && (p.State is PlaneState.Approach or PlaneState.Landed || (p.State == PlaneState.Holding && !ignoreHolding)));
+        if (Fast(plane) && plane.Asked == Ksc.VisualName)
+            plane.Asked = null; // the tower's pick instead
         // A filed plan, if it still checks out from where the plane is now.
         var filed = plane.Filed is { } names ? Ksc.Check(names, along, cross).Route : null;
         var route = filed ?? (alone && plane.Asked != null
             ? Ksc.Route(plane.Asked, cross)
-            : Ksc.Pick(along, cross, r?.Heading ?? 90, visualAllowed: alone));
+            : Ksc.Pick(along, cross, r?.Heading ?? 90, visualAllowed: alone && !Fast(plane)));
         plane.Filed = null;
         plane.State = PlaneState.Approach;
         plane.Approach = route.Name;
@@ -289,6 +341,26 @@ public sealed class Tower
             Clear(next, now);
         foreach (var p in _planes.Values.Where(p => p.State == PlaneState.Holding))
             p.Number--;
+    }
+
+    /// <summary>Situations that put a plane out of the pattern (SpaceCenter, Destroyed, Offline are Wingman's own words).</summary>
+    public static bool OutOfPattern(string situation) =>
+        situation.ToLowerInvariant() is "spacecenter" or "destroyed" or "splashed" or "offline";
+
+    /// <summary>
+    /// A plane leaves the sequence: those behind it move up, and (from Report and Say) the next one is cleared when the
+    /// runway is free. It's asked its intentions again when it next has a plane in the air.
+    /// </summary>
+    private void Leave(TowerPlane plane, DateTime now, string why)
+    {
+        var inSequence = plane.State is PlaneState.Approach or PlaneState.Holding;
+        if (plane.State == PlaneState.Holding)
+            foreach (var p in _planes.Values.Where(p => p != plane && p.State == PlaneState.Holding && p.Number > plane.Number))
+                p.Number--;
+        (plane.State, plane.Number, plane.Approach, plane.Filed, plane.Asked) = (PlaneState.New, 0, null, null, null);
+        (plane.ToldClearedToLand, plane.RunwayInSight) = (false, false);
+        if (inSequence)
+            Log(now, Name, "all", "info", $"{plane.CallSign} {why}: out of the sequence.");
     }
 
     private void Expire(DateTime now)

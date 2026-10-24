@@ -116,6 +116,10 @@ server (`LunaEvo/agents/knowledge.json`), so every agent there learns from the o
 makes the agent practise that until it has 3 good flights in a row. With **flight plans** it builds its own route from
 the tower's published fixes and files it, like a pilot from the charts.
 
+**Flight tests** (2.17, KSP Wingman 0.11): training on new planes tests each one on the ground (nose wheel, braking)
+and in the air (how quickly it pitches and rolls, its slowest speed, how it slows down), then flies it with its own
+setup from those numbers. The tests are kept on the server for every agent and shown on the plane's row.
+
 How it works: [chapter 29](../Meat%20and%20Potatoes/29-Wingman.md) and [chapter 30](../Meat%20and%20Potatoes/30-Knowledge.md).
 
 ## The app itself

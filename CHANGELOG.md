@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.17.0 (2026-10-24)
+
+### Added
+- **Flight tests for every plane** (the owner's idea: learn each plane from real tests, not guesses): with KSP Wingman
+  0.11 an agent tests a new plane on the ground (nose wheel, how it veers, brakes) and in the air (elevator and aileron
+  pulses, a turn, its slowest speed, how it slows and speeds up). The tower keeps the results (`/v1/test`), every
+  agent's pilot is set up from them (`/v1/craft`), and the plane's row on the Wingman page shows them, with "a flight
+  test" on its list of things to learn.
+- **Each final's numbers** (how often it crossed the centerline, how high it was 1 km out) are kept with the flight;
+  Wingman corrects the plane's setup from them (softer ailerons after weaving finals, slower before the final after high
+  ones).
+- **Fast planes get the long approaches**: a plane whose approach speed is over 105 m/s isn't offered the short visual.
+
+### Fixed
+- **A crashed or recovered plane stayed in the sequence** (found by the owner): the tower held the only other plane
+  for minutes. A plane at the Space Center, wrecked, in the sea or out of the server now leaves the sequence at once,
+  and an agent stopped in Mission Control leaves it too; the next plane is cleared.
+- After a go-around, a waiting plane more than 15 km out no longer takes the runway from the one that's already there.
+- The same go-around reported again within 30 s gets no new clearance (the rig saw one every 2-4 s).
+- Stock planes were recorded as "#autoLOC_501174" (KSP's name for the Aeris 3A); now by their real names.
+
+### In the test rig
+- With KSP Wingman 0.11, the Aeris 4A, which had never landed (sank, stalled, snaked, ran off the runway), was tested,
+  set up from its numbers, and landed 7 m off the centerline; its tests were kept by the tower and used by the next
+  flights.
+
 ## 2.16.0 (2026-10-24)
 
 ### Added

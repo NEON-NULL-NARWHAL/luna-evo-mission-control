@@ -1,7 +1,7 @@
 // LUNA EVO · LunaEvo.MissionControl.Core/Tower/Knowledge.cs
 // [Core] What the server's AI agents know (the owner's "tech tree", kept on the LMP server): skills graded from their
 //        real flights (KSP Wingman's outcome records), and lessons that must cite those flights. Pure, plus Load/Save.
-// Used by: TowerServer (/v1/flight, /v1/lesson, /v1/knowledge), WingmanPage
+// Used by: TowerServer (/v1/flight, /v1/lesson, /v1/knowledge, /v1/test, /v1/craft), WingmanPage
 // Guide:   Meat and Potatoes/30-Knowledge.md
 
 using System.Text.Json;
@@ -14,7 +14,24 @@ public sealed record Skill(string Id, string Name, string What, IReadOnlyList<st
 /// <summary>One finished flight as the server keeps it: Wingman's outcome, and what it says about each skill it used.</summary>
 public sealed record FlightRecord(long Id, DateTime Time, string CallSign, string Craft, string Result, string? Approach,
     int GoArounds, double Minutes, double? DownRunway, double? OffCenterline, double? HeadingError, IReadOnlyList<string> Phases,
-    IReadOnlyDictionary<string, bool> Skills, double MaxSpeed = 0, double MaxHeight = 0);
+    IReadOnlyDictionary<string, bool> Skills, double MaxSpeed = 0, double MaxHeight = 0, IReadOnlyList<FinalNumbers>? Finals = null);
+
+/// <summary>How one final went: centerline crossings (weaving) and meters above the glide slope 1 km out.</summary>
+public sealed record FinalNumbers(int Weaves, double High);
+
+/// <summary>
+/// A flight test of a plane (KSP Wingman's test card, 2.17): what it measured. Rates in degrees a second for a full stick
+/// at 150 m/s; speeds m/s; accelerations m/s²; the throttle 0-1.
+/// </summary>
+/// <param name="SteerRate">The ground test (0: none): °/s of heading for a full nose wheel at 10 m/s; Drift °/s it veers
+/// with the wheel straight (+ right); Braking m/s².</param>
+public sealed record CraftTest(long Id, DateTime Time, string CallSign, string Craft, double PitchRate, double RollRate, double TurnRate,
+    double MinSpeed, double Deceleration, double Acceleration, double CruiseThrottle, double SteerRate = 0, double Drift = 0, double Braking = 0)
+{
+    public string Describe() => FormattableString.Invariant(
+        $"pitch {PitchRate:0} °/s and roll {RollRate:0} °/s per full stick, turns {TurnRate:0.0} °/s at 30° of bank, slowest {MinSpeed:0} m/s, slows {Deceleration:0.0} m/s² at idle, speeds up {Acceleration:0.0} m/s² at full throttle") +
+        (SteerRate > 0 ? FormattableString.Invariant($"; on the ground: nose wheel {SteerRate:0.0} °/s per full lock at 10 m/s, veers {Math.Abs(Drift):0.0} °/s {(Drift >= 0 ? "right" : "left")} with it straight, brakes {Braking:0.0} m/s²") : "");
+}
 
 /// <summary>One thing to learn about a plane, whether it's been done, and what was found.</summary>
 public sealed record CraftItem(string What, bool Done, string Note = "");
@@ -24,7 +41,8 @@ public sealed record CraftItem(string What, bool Done, string Note = "");
 /// notes about its handling, and the list of what's still to learn about it.
 /// </summary>
 public sealed record CraftProfile(string Name, int Flights, int Landed, int Crashed, int GoodLandings, double? BestOffCenterline,
-    double TopSpeed, double TopHeight, IReadOnlyList<string> FlownBy, IReadOnlyList<CraftItem> ToLearn, IReadOnlyList<Lesson> Notes);
+    double TopSpeed, double TopHeight, IReadOnlyList<string> FlownBy, IReadOnlyList<CraftItem> ToLearn, IReadOnlyList<Lesson> Notes,
+    CraftTest? Test = null);
 
 /// <summary>A short fact an agent learned, with the flights it came from. Confirmed when another flight says it again.</summary>
 /// <param name="Craft">The plane the lesson is about (its handling, speeds), or null for one about flying in general.</param>
@@ -66,6 +84,7 @@ public sealed class Knowledge
     public const int MaxLessons = 300;
     public const int MaxLessonsPerSkill = 20;
     public const int MaxLessonText = 200;
+    public const int MaxTests = 200;
 
     /// <summary>Lessons nobody confirmed are dropped after this long.</summary>
     public static readonly TimeSpan Expiry = TimeSpan.FromDays(14);
@@ -118,7 +137,7 @@ public sealed class Knowledge
 
     public FlightRecord AddFlight(string callSign, string craft, string result, string? approach, int goArounds, double minutes,
         double? downRunway, double? offCenterline, double? headingError, IReadOnlyList<string> phases, DateTime now,
-        double maxSpeed = 0, double maxHeight = 0)
+        double maxSpeed = 0, double maxHeight = 0, IReadOnlyList<FinalNumbers>? finals = null)
     {
         var skills = Grade(result, approach, goArounds, offCenterline, phases, maxSpeed, maxHeight);
         // A plane it hadn't landed well before (the owner's "try different planes"): the landing in it counts once more.
@@ -131,7 +150,7 @@ public sealed class Knowledge
                 skills["new-craft"] = landing.Value;
         }
         var record = new FlightRecord(_nextFlight++, now, callSign, craft, result, approach, goArounds, minutes, downRunway, offCenterline,
-            headingError, phases, skills, maxSpeed, maxHeight);
+            headingError, phases, skills, maxSpeed, maxHeight, finals is { Count: > 0 } ? finals : null);
         _flights.Add(record);
         if (_flights.Count > MaxFlights)
             _flights.RemoveRange(0, _flights.Count - MaxFlights);
@@ -209,6 +228,31 @@ public sealed class Knowledge
         return x.Count + y.Count == 0 ? 0 : (double)x.Intersect(y).Count() / x.Union(y).Count();
     }
 
+    private readonly List<CraftTest> _tests = [];
+    private long _nextTest = 1;
+
+    public IReadOnlyList<CraftTest> Tests => _tests;
+
+    /// <summary>A flight test's numbers (the newest per plane is the one used).</summary>
+    public CraftTest AddTest(string callSign, string craft, double pitchRate, double rollRate, double turnRate, double minSpeed,
+        double deceleration, double acceleration, double cruiseThrottle, DateTime now, double steerRate = 0, double drift = 0, double braking = 0)
+    {
+        var test = new CraftTest(_nextTest++, now, callSign, craft, pitchRate, rollRate, turnRate, minSpeed, deceleration, acceleration, cruiseThrottle,
+            steerRate, drift, braking);
+        _tests.Add(test);
+        if (_tests.Count > MaxTests)
+            _tests.RemoveRange(0, _tests.Count - MaxTests);
+        return test;
+    }
+
+    /// <summary>A plane's newest flight test, or null.</summary>
+    public CraftTest? TestOf(string craft) => _tests.LastOrDefault(t => t.Craft.Equals(craft, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>A plane's last finals (any agent's), oldest first: what its setup is corrected by.</summary>
+    public IReadOnlyList<FinalNumbers> FinalsOf(string craft, int max = 5) => _flights
+        .Where(f => f.Craft.Equals(craft, StringComparison.OrdinalIgnoreCase) && f.Finals != null)
+        .SelectMany(f => f.Finals!).TakeLast(max).ToList();
+
     /// <summary>Every plane flown on the server, most flown first, with what's known and what's still to learn about it.</summary>
     public IReadOnlyList<CraftProfile> Crafts() => _flights.Where(f => f.Craft.Length > 0)
         .GroupBy(f => f.Craft, StringComparer.OrdinalIgnoreCase)
@@ -226,8 +270,10 @@ public sealed class Knowledge
         var topHeight = flights.Select(f => f.MaxHeight).DefaultIfEmpty(0).Max();
         var notes = _lessons.Where(l => string.Equals(l.Craft, name, StringComparison.OrdinalIgnoreCase)).OrderByDescending(l => l.Weight).Take(5).ToList();
         var lastThree = flights.TakeLast(3).ToList();
+        var test = TestOf(name);
         var toLearn = new List<CraftItem>
         {
+            new("A flight test (how it handles)", test != null, test?.Describe() ?? ""),
             new("Take off", flights.Any(f => Good(f, "takeoff"))),
             new("Land it", landed > 0, landed > 0 ? $"{landed} of {flights.Count}" : ""),
             new("A good landing (within 15 m of the centerline)", goodLandings > 0, double.IsNaN(best) ? "" : $"best {best:0} m off"),
@@ -237,7 +283,7 @@ public sealed class Knowledge
             new("Three flights in a row without a crash", lastThree.Count == 3 && lastThree.All(f => f.Result is not ("crashed" or "splashed"))),
         };
         return new CraftProfile(name, flights.Count, landed, crashed, goodLandings, double.IsNaN(best) ? null : best, topSpeed, topHeight,
-            flights.Select(f => f.CallSign).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), toLearn, notes);
+            flights.Select(f => f.CallSign).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), toLearn, notes, test);
     }
 
     public bool Delete(long lessonId) => _lessons.RemoveAll(l => l.Id == lessonId) > 0;
@@ -249,7 +295,8 @@ public sealed class Knowledge
     public IReadOnlyList<Lesson> For(string skill, int max = 5) =>
         _lessons.Where(l => l.Skill == skill).OrderByDescending(l => l.Weight).ThenByDescending(l => l.Confirmed).Take(max).ToList();
 
-    private sealed record Saved(int Version, long NextFlight, long NextLesson, List<FlightRecord> Flights, List<Lesson> Lessons);
+    private sealed record Saved(int Version, long NextFlight, long NextLesson, List<FlightRecord> Flights, List<Lesson> Lessons,
+        List<CraftTest>? Tests = null);
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
@@ -259,7 +306,7 @@ public sealed class Knowledge
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(new Saved(1, _nextFlight, _nextLesson, _flights, _lessons), Json));
+        File.WriteAllText(temp, JsonSerializer.Serialize(new Saved(1, _nextFlight, _nextLesson, _flights, _lessons, _tests), Json));
         File.Move(temp, path, overwrite: true);
     }
 
@@ -277,6 +324,8 @@ public sealed class Knowledge
             knowledge._flights.AddRange((saved.Flights ?? []).Where(f => f is { CallSign: not null, Skills: not null, Phases: not null }).TakeLast(MaxFlights));
             knowledge._lessons.AddRange((saved.Lessons ?? []).Where(l => l is { Text: not null, Skill: not null, Evidence: not null } && Tree.Any(s => s.Id == l.Skill)).Take(MaxLessons));
             knowledge._nextFlight = Math.Max(saved.NextFlight, knowledge._flights.Select(f => f.Id).DefaultIfEmpty(0).Max() + 1);
+            knowledge._tests.AddRange((saved.Tests ?? []).Where(t => t is { Craft: not null, CallSign: not null }).TakeLast(MaxTests));
+            knowledge._nextTest = knowledge._tests.Select(t => t.Id).DefaultIfEmpty(0).Max() + 1;
             knowledge._nextLesson = Math.Max(saved.NextLesson, knowledge._lessons.Select(l => l.Id).DefaultIfEmpty(0).Max() + 1);
         }
         catch (Exception e) when (e is JsonException or NotSupportedException or IOException)

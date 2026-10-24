@@ -125,6 +125,8 @@ public class KnowledgeTests
         Assert.Equal(new Proficiency(2, 2), k.Of("land-rnav", "Alpha"));
         Assert.Equal(new Proficiency(3, 3), k.Of("land-rnav"));
         k.AddLesson("Alpha", "land-rnav", "Slow to 85 m/s before F09 to avoid a go-around.", [1], T0);
+        k.AddTest("Alpha", "Gull", 30, 90, 2.1, 62, 1.2, 3, 0.3, T0);
+        k.AddFlight("Alpha", "Gull", "landed", "VISUAL 09", 0, 5, 1200, 5, 2, ["TakingOff"], T0, finals: [new FinalNumbers(3, 40)]);
 
         var path = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "knowledge-" + Guid.NewGuid().ToString("N"), "knowledge.json");
         k.Save(path);
@@ -132,6 +134,9 @@ public class KnowledgeTests
         Assert.Equal(k.Flights.Count, back.Flights.Count);
         Assert.Equal(k.Of("land-rnav"), back.Of("land-rnav"));
         Assert.Single(back.Lessons);
+        Assert.Equal(62, back.TestOf("Gull")!.MinSpeed); // flight tests and finals are kept too
+        Assert.Equal([new FinalNumbers(3, 40)], back.FinalsOf("Gull"));
+        Assert.Equal(2, back.AddTest("B", "Gull", 1, 1, 1, 1, 1, 1, 1, T0).Id);
         Assert.Equal(k.Flights.Count + 1, back.AddFlight("C", "", "crashed", null, 0, 1, null, null, null, [], T0).Id); // ids go on
 
         File.WriteAllText(path, "{ not json");
@@ -163,6 +168,18 @@ public class KnowledgeTests
         Assert.Equal(id, known.GetProperty("flights")[0].GetProperty("id").GetInt64());
 
         Assert.Equal(400, server.Answer("POST", "/v1/flight", """{"callSign":"Alpha"}""").Status); // no result
+
+        // A plane's flight test and its finals (2.17): kept, checked, and answered for that plane's setup.
+        Assert.Equal(400, server.Answer("POST", "/v1/test", """{"callSign":"Alpha","craft":"Gull","pitchRate":30}""").Status); // numbers missing
+        Assert.Equal(400, server.Answer("POST", "/v1/test", """{"callSign":"Alpha","craft":"Gull","pitchRate":-1,"rollRate":90,"turnRate":2,"minSpeed":62,"deceleration":1,"acceleration":3,"cruiseThrottle":0.3}""").Status);
+        Assert.Equal(200, server.Answer("POST", "/v1/test", """{"callSign":"Alpha","craft":"Gull","pitchRate":30,"rollRate":90,"turnRate":2.1,"minSpeed":62,"deceleration":1.2,"acceleration":3,"cruiseThrottle":0.3,"steerRate":30,"drift":-0.5,"braking":4}""").Status);
+        Assert.Equal(200, server.Answer("POST", "/v1/flight", """{"callSign":"Alpha","craft":"Gull","result":"landed","phases":["TakingOff"],"finals":[{"weaves":3,"high":40},{"weaves":0,"high":-5}]}""").Status);
+        var gull = JsonDocument.Parse(server.Answer("POST", "/v1/craft", """{"callSign":"Bravo","craft":"gull"}""").Body).RootElement;
+        Assert.Equal(62, gull.GetProperty("test").GetProperty("minSpeed").GetDouble());
+        Assert.Equal(3, gull.GetProperty("finals")[0].GetProperty("weaves").GetInt32());
+        Assert.Equal(JsonValueKind.Null, JsonDocument.Parse(server.Answer("POST", "/v1/craft", """{"callSign":"Bravo","craft":"Nothing"}""").Body).RootElement.GetProperty("test").ValueKind);
+        var profile = server.Knowledge.Crafts().Single(c => c.Name == "Gull");
+        Assert.Contains(profile.ToLearn, i => i.What.StartsWith("A flight test") && i.Done && i.Note.Contains("slowest 62 m/s") && i.Note.Contains("veers 0.5 °/s left"));
         Assert.True(server.DeleteLesson(1));
         Assert.Empty(server.Knowledge.Lessons);
     }

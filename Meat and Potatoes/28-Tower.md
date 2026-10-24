@@ -81,6 +81,17 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
   the short visual. Holds and clearances carry **traffic information** (each other plane: on approach, holding over the
   runway, or on the runway, and its altitude).
 
+## 28.3a2 Leaving, fast planes (2.17)
+
+- A plane reporting `SpaceCenter`, `Destroyed`, `Splashed` or `Offline` (no LMP server) leaves the sequence at once
+  (`Leave`: those holding behind it move up, the next is cleared); so does a `leaving` say, which Mission Control
+  sends itself when an agent's process ends (`AgentHost.AgentExited` → `TowerServer.Leaving`). It's asked its
+  intentions again once it has a plane in the air.
+- Reports may carry `approachSpeed` (the plane's own, from its flight test). Over `FastApproach` (105 m/s) the short
+  visual isn't offered, even when asked for or after a go-around: its turns are too wide for it.
+- After a go-around, a holding plane further than `NearRunway` (15 km) doesn't take the turn: the one that went
+  around is cleared again first. A go-around repeated within `GoAroundRepeat` (30 s) gets no new answer.
+
 ## 28.3b The radio (talking on LMP chat)
 
 "Talk on LMP chat" on the page (or `--tower-chat`), with a server open: every channel message is also appended to
