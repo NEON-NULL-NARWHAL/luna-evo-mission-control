@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.13.1 (2026-10-24)
+
+### Changed
+- **The short visual lands on the centerline**: its final is 5.5 km now (was 4.5) with the base turn 8 km out. In the
+  test rig it ended 16-23 m off the centerline before; now 10-11 m, graded good (KSP Wingman 0.7.1 also steers back to
+  the centerline harder on the rollout).
+- The Wingman page suggests **gemma4:e4b** as the planner: in KSP Wingman's planner eval it wrote 6 of 6 usable lessons
+  and picked the weakest skill every time, in about 3 s an answer, against 2 of 6 and 14 s for qwen3:4b; next to two
+  KSPs it takes 0.4 GB of the graphics card.
+
+### Security
+- Audit 16 (see SECURITY.md).
+
 ## 2.13.0 (2026-10-24)
 
 ### Added

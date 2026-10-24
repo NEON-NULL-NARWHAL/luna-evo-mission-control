@@ -103,7 +103,7 @@ the plane keeps its last orders. `--wingman-agent CallSign:port[:model]` starts 
 
 **Free flight and learning** (2.13): the card's **Free flight** button lets an agent practise landings on its own for
 half an hour: a planner model that thinks ("Planner (thinks)", e.g. qwen3:4b) picks what to practise, weakest first,
-the agent flies it inside a box around KSC, and after each flight it writes a lesson. **What the agents know** on the
+the agent flies it inside a box around KSC (gemma4:e4b is the suggested planner: fast, and it fits next to two KSPs), and after each flight it writes a lesson. **What the agents know** on the
 same page is the server's tech tree: six skills graded from every agent's real flights (each opens once what it needs
 has 3 good flights), and the lessons, each tied to the flight it came from (delete any you don't like). It's kept on the
 server (`LunaEvo/agents/knowledge.json`), so every agent there learns from the others.

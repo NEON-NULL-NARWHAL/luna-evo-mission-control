@@ -33,7 +33,7 @@ internal sealed class WingmanPage
     private readonly TextBox _port = new TextBox { Text = "50000", Width = 100 }.WithId("wingman/port");
     private readonly TextBox _model = new TextBox { Text = WingmanTools.DefaultModel, Width = 240 }.WithId("wingman/model");
     private readonly TextBox _llm = new TextBox { Text = new Uri(new Uri(WingmanTools.OllamaUrl), "v1/").ToString(), Width = 280 }.WithId("wingman/llm");
-    private readonly TextBox _planner = new TextBox { PlaceholderText = "the pilot's model", Width = 200 }.WithId("wingman/planner");
+    private readonly TextBox _planner = new TextBox { PlaceholderText = "e.g. gemma4:e4b (recommended)", Width = 260 }.WithId("wingman/planner");
     private readonly CheckBox _tower = new CheckBox { Content = "Use the KSC tower", IsChecked = true }.WithId("wingman/useTower");
     private readonly StackPanel _knowledge = new() { Spacing = 2 };
     private readonly TextBlock _result = Ui.Text("", "sublabel").WithId("wingman/result");

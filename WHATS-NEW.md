@@ -4,6 +4,11 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.13.1: straighter visual landings
+
+- The short visual now ends on the centerline (10-11 m off in the test rig, was 16-23), and the Wingman page suggests
+  gemma4:e4b as the planner (faster and better lessons than qwen3:4b in our eval).
+
 ## 2.13: AI pilots that practise and learn
 
 - **Free flight**: agents practise landings on their own and write lessons; **What the agents know** shows each

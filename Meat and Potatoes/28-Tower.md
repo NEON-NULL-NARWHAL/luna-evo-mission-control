@@ -54,8 +54,9 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
 - **Which approach** (2.13): alone (nobody holding, on approach or on the runway), a plane gets the one it asked for
   ("request RNAV 09 NORTH", "request visual"), or, within 12 km of the touchdown point, the **short visual**: the
   owner saw agents fly far out for an RNAV route. It's the RNAV pattern made smaller: KSC-V1 abeam the touchdown point
-  3 km to the side, KSC-V2 7 km back, a 90° turn to KSC-V3 on the centerline, the final from F09V 4.5 km out (about 16
-  km instead of 25). A first version (diagonal base into a 4 km final) overshot the centerline by 2 km three times in
+  3 km to the side, KSC-V2 8 km back, a 90° turn to KSC-V3 on the centerline, the final from F09V 5.5 km out (about 19
+  km instead of 25). With a 4.5 km final (2.13.0) it swung across the centerline at the threshold and stopped 16-23 m
+  off; at 5.5 km, 10-11 m (2.13.1). A first version (diagonal base into a 4 km final) overshot the centerline by 2 km three times in
   the rig: at 90 m/s the 30° turn is 1.4 km wide. With traffic, it's the published route for its side.
 - A plane silent for 60 s is lost from the channel and gives up its place.
 

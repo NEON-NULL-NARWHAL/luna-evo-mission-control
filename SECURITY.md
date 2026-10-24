@@ -2,7 +2,7 @@
 
 LUNA EVO is made for a private, home-hosted LMP server: run on your own PC, played on your own network, VPN or
 mesh. It isn't hardened as a public internet service. This page covers what it protects against, what it doesn't, and
-what the fifteen security audits (0.4.0 to 2.13.0) found and changed, newest first, and which real
+what the sixteen security audits (0.4.0 to 2.13.1) found and changed, newest first, and which real
 software each version was tested against.
 
 ## Reporting a problem
@@ -83,6 +83,19 @@ is under [Tested with](#tested-with).
 
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
+
+## Audit 16 (2.13.1, October 2026)
+
+Scope: the short visual's new fixes, the debrief's skill-name matching and the flight record's wait for landing
+numbers (KSP Wingman 0.7.1), the planner suggestion, and Wingman's new PlannerEval tool. No new packages, nothing
+personal in the changes.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| Y1 | Info | The debrief now accepts a skill written as a name ("RNAV Landing") | Mapped only onto the skills that flight used, and only when exactly one fits, so a lesson still can't land on a skill the flight didn't show (tested) |
+| Y2 | Info | A landed flight's record now waits up to 5 s for the pilot's landing numbers | Capped at 5 s; the pilot's numbers are cleared when a new landing starts, so an old landing's can't be attached |
+| Y3 | Info | gemma4:e4b is suggested as the planner | A suggestion only: the user downloads it (it comes with its own license), LUNA EVO doesn't ship or fetch it |
+| Y4 | Info | PlannerEval (KSP Wingman's test folder) | A developer tool: reads a local flight file, talks only to the model server it's given, not shipped |
 
 ## Audit 15 (2.13.0, October 2026)
 

@@ -264,7 +264,7 @@ public static class Ksc
         var s = cross < 0 ? -1 : 1;
         return new TowerRoute(VisualName, "KSC 09",
         [
-            At("KSC-V1", 0, s * 3000, 650, 100), At("KSC-V2", -7000, s * 3000, 600, 90), At("KSC-V3", -7000, 0, 520, 85),
+            At("KSC-V1", 0, s * 3000, 650, 100), At("KSC-V2", -8000, s * 3000, 620, 90), At("KSC-V3", -8000, 0, 600, 85),
             At("F09V", -VisualFinal, 0, Math.Round(69 + VisualFinal * Math.Tan(4 * Math.PI / 180)), 85),
         ]);
     }
@@ -272,7 +272,7 @@ public static class Ksc
     public const string VisualName = "VISUAL 09";
 
     /// <summary>Where the short visual's final starts (m before touchdown).</summary>
-    public const double VisualFinal = 4500;
+    public const double VisualFinal = 5500; // 4500 left it swinging across the centerline at the threshold (rig, 2.13)
 
     /// <summary>Within this distance of the touchdown point, the short visual is quicker than any RNAV route.</summary>
     public const double VisualWithin = 12_000;
