@@ -84,6 +84,42 @@ is under [Tested with](#tested-with).
 Blank cells mean nothing new of that kind for that version, not that nothing was checked: every version ran the full
 automated test suite before release.
 
+## Audit 21 (2.18.0, October 2026): all three repos, security and "does it do what it says"
+
+Scope: Mission Control, KSP Wingman (0.12) and our private support tools, end to end: how the apps connect (the
+Wingman page and the console, the console and the MCP server, the MCP server and the tower, the tower and the server
+plugin's radio), the new endpoints and drills (`/v1/place`, flight extras, plane limits; explore, riskier finals,
+fuel), and the docs against the code. Checks that repeat are now one command (AuditKit, below). No new packages,
+none vulnerable, nothing personal in any repo.
+
+| # | Severity | Finding | What was done |
+|---|---|---|---|
+| D1 | Medium (found by the owner) | Changing an agent's training in the Wingman page's menu did nothing while it trained; switching to "different planes" in the air stopped free flight ("still flying") | The card shows the training running and the menu follows it; picking another switches at once; the console lands the plane first before launching a new one |
+| D2 | Medium (found in the rig) | A crash that left a piece without its cockpit still "flying" blocked every new launch | A vessel without a command part is a wreck: recover or launch again |
+| D3 | Low | The radio file (`radio.jsonl`) stopped growing at 1 MB, and the radio went silent for good after ~5,000 lines | It starts a new file (the old one kept as `.old`); the plugin reads a shorter file from the top |
+| D4 | Low | `test_plane`'s ground test would drive a plane parked on the grass beside the runway | Only on the runway, lined up, with 600 m ahead |
+| D5 | Low (found in the rig) | Plane notes kept what a model wrote after its markers ("... \| Aeris 4A") | A lesson ends at its first "\|" |
+| D6 | Info | Training retested planes the server already knew (6 minutes a round) | Skipped when the plane's setup already comes from its tests |
+| D7 | Low | `/v1/place` (anything on this PC can post, T4) | Latitude and longitude in range, ground clamped, biome cut to letters, digits, spaces and dashes (40), places within 1 km merged, 1,000 kept |
+| D8 | Low | Flight extras and plane limits come from agents | Fractions 0-1, style 40 characters, places 0-100; limits all four, in range and in order, or none |
+| D9 | Low | Explore lets a model choose where the plane goes | Legs 1-30 km, within 60 km of KSC, fuel to get there and back with 25% (30 km while the burn isn't known), never under 500 m above the ground below; refused legs go back to the model with why, two and it heads home |
+| D10 | Low | Riskier finals let a model choose the final's speed and slope | Fitted to the plane's limits (from its tests); below a steeper slope it flies level, never climbing to it; the go-around rules are the same |
+| D11 | Info | The audit's own privacy check needs the private names | They live in a file outside every repo, and the report never prints what a private pattern matched |
+| D13 | Low (found in the rig) | A bounce on touchdown graded a perfect landing as "landed off a runway" (no landing skills) | The pilot's "rolling out" counts in the air and on the ground |
+| D14 | Low (found in the rig) | A steep final the plane can't fly went around four times in a row | Stricter slope limits from the measured slowing; a steep final that arrives high caps the plane's slope (finals carry the slope flown, 1-15°) |
+| D15 | Low (found in the rig) | Two agents launching at once were put on the same spot of the runway | The tower clears departures one at a time (none while a plane is cleared to land); launching also waits while another player's plane is on the runway (positions through LMP, via the bridge) |
+| D12 | Info | Docs behind the code: two MCP tools missing from Wingman's README, its banner four versions old, the Features page's skill count | Fixed; AuditKit checks tools and links on every run |
+
+### The audit workflow (from now on)
+
+1. `AuditKit` (support tools; `--tests` to run every suite): privacy, file headers and their guide chapters, version
+   numbers, Markdown links and anchors, MCP tools in the README, vulnerable packages, CI. One table; fix what it lists.
+2. `RigLog --since HH:MM`: a rig session's flights, tests, trainings and what looked wrong, per agent, in a few lines
+   (`--finals`, `--around HH:MM:SS` for one moment).
+3. Read only what changed since the last audit, at the connections first (process, HTTP, files between apps), then
+   the new inputs (every endpoint, file and model answer: where it's checked).
+4. Write the findings here, the next letter; fix, test, rig-check, release.
+
 ## Audit 20 (2.17.0, October 2026)
 
 Scope: flight and ground tests and each plane's setup (Wingman 0.11: `test_plane`, `PlaneSetup`, the pilot's larger

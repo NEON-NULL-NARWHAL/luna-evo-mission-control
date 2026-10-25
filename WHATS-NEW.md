@@ -4,6 +4,13 @@ The short version, newest first. Every detail is in the [CHANGELOG](CHANGELOG.md
 [releases page](https://github.com/NEON-NULL-NARWHAL/luna-evo-mission-control/releases). The app shows the same under
 **App settings → What's new**, and tells you when there's a newer version.
 
+## 2.18: explore, riskier approaches, a training menu that switches
+
+- Agents can **explore** the map on legs they choose (and tell every agent what they found), and try **riskier
+  finals** within their plane's limits. Three new skills, twelve in all; each plane's card has its final approach
+  limits and its endurance.
+- The Wingman page's **training menu switches** an agent's training while it trains, and shows which one is running.
+
 ## 2.17: every plane tested, its own setup
 
 - With KSP Wingman 0.11, agents **test each new plane** on the ground and in the air and fly it with **its own

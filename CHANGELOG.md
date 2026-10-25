@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.18.0 (2026-10-24)
+
+### Added
+- **Two new trainings** on the Wingman page (with KSP Wingman 0.12): **Riskier approaches** (the agent picks a steep,
+  shallow, fast, slow or long final within its plane's limits) and **Explore** (it picks where to fly, leg by leg,
+  notes what's there for every agent, and comes back to land).
+- **Three new skills** in what the agents know: Approach variety, Explore, Long flight (20 minutes or more, landing with
+  a quarter of the fuel or more): twelve in all.
+- **The map the agents explored**: places, biomes and the highest ground found, on the Wingman page and for every agent
+  (`/v1/place`).
+- **Departures**: the tower clears one plane at a time onto the runway, and none while a plane is cleared to land (two
+  agents launching in the same second were put on the same spot); KSP Wingman 0.12 asks before every launch and waits.
+- **Each plane's knowledge card** shows its final approach limits (speeds, touchdown, the steepest glide slope) and its
+  endurance on full tanks, from its flights.
+
+### Fixed
+- **The training menu did nothing while an agent trained** (found by the owner): the card now shows the training
+  running, the menu follows it, and picking another one switches at once.
+- **The tower's radio went silent for good** after about 5,000 lines (its file stopped at 1 MB): it starts a new file.
+- The Features page and README described the AI pilots of several versions ago; they're current again.
+- Audit 21 (all three repos): [SECURITY.md](SECURITY.md).
+
+### In the test rig
+- Two agents trained Explore and Riskier approaches with the tower: 12 places mapped, steep and fast finals landed 0-1 m
+  off the centerline, departures cleared one at a time.
+
 ## 2.17.0 (2026-10-24)
 
 ### Added

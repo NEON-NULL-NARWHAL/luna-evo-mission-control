@@ -89,6 +89,10 @@ JSON numbers and finite, strings are cut (call sign 40, text 300) and control ch
   intentions again once it has a plane in the air.
 - Reports may carry `approachSpeed` (the plane's own, from its flight test). Over `FastApproach` (105 m/s) the short
   visual isn't offered, even when asked for or after a go-around: its turns are too wide for it.
+- **Departures**: a `departure` say gets `cleared-departure` (the runway is the plane's for `DepartureTime`, 2 minutes,
+  or until it reports flying 100 m up, crashed, splashed or offline: not "SpaceCenter", it asks from there before its
+  launch) or `hold-departure` (another plane is departing, or one is cleared to land). Wingman 0.12 asks before every
+  runway launch and waits.
 - After a go-around, a holding plane further than `NearRunway` (15 km) doesn't take the turn: the one that went
   around is cleared again first. A go-around repeated within `GoAroundRepeat` (30 s) gets no new answer.
 

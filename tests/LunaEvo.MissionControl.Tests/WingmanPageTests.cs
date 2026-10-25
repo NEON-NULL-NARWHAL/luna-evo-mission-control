@@ -173,8 +173,17 @@ public class WingmanPageTests
         ui.Find<ComboBox>("wingman/agent/Wingman1/training").SelectedIndex = 1; // Fly fast
         ui.Click(ui.Find<Button>("wingman/agent/Wingman1/train"));
         Assert.Equal("fast", JsonNode.Parse(agent.Sent.Last())!["focus"]!.GetValue<string>());
+        // Training shows on the card, the menu follows it, and picking another one switches (the owner's bug: it did nothing).
+        agent.Say("""{"type":"event","kind":"free","text":"Free flight for 30 minutes: training fly-fast until it's learned (3 good in a row). Any order stops it."}""");
+        ui.WaitFor(() => ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.Contains("· training: fly fast"), "training shown");
+        Assert.Equal(1, ui.Find<ComboBox>("wingman/agent/Wingman1/training").SelectedIndex);
+        var sent = agent.Sent.Count;
+        ui.Find<ComboBox>("wingman/agent/Wingman1/training").SelectedIndex = 3; // Try different planes
+        Assert.Equal(sent + 1, agent.Sent.Count);
+        Assert.Equal("planes", JsonNode.Parse(agent.Sent.Last())!["focus"]!.GetValue<string>());
         agent.Say("""{"type":"event","kind":"free","text":"Free flight stopped for an order."}""");
-        ui.WaitFor(() => !ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.Contains("free flight"), "free flight over");
+        ui.WaitFor(() => !ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.Contains("free flight") &&
+                         !ui.Find<TextBlock>("wingman/agent/Wingman1/summary").Text!.Contains("training"), "free flight over");
 
         // What the agents know: a flight and a lesson through the tower's channel, shown with everyone's numbers; Delete.
         var server = ui.Window.Tower.Server!;

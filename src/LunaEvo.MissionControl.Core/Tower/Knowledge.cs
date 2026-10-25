@@ -1,7 +1,7 @@
 // LUNA EVO · LunaEvo.MissionControl.Core/Tower/Knowledge.cs
 // [Core] What the server's AI agents know (the owner's "tech tree", kept on the LMP server): skills graded from their
 //        real flights (KSP Wingman's outcome records), and lessons that must cite those flights. Pure, plus Load/Save.
-// Used by: TowerServer (/v1/flight, /v1/lesson, /v1/knowledge, /v1/test, /v1/craft), WingmanPage
+// Used by: TowerServer (/v1/flight, /v1/lesson, /v1/knowledge, /v1/test, /v1/craft, /v1/place), WingmanPage
 // Guide:   Meat and Potatoes/30-Knowledge.md
 
 using System.Text.Json;
@@ -14,10 +14,20 @@ public sealed record Skill(string Id, string Name, string What, IReadOnlyList<st
 /// <summary>One finished flight as the server keeps it: Wingman's outcome, and what it says about each skill it used.</summary>
 public sealed record FlightRecord(long Id, DateTime Time, string CallSign, string Craft, string Result, string? Approach,
     int GoArounds, double Minutes, double? DownRunway, double? OffCenterline, double? HeadingError, IReadOnlyList<string> Phases,
-    IReadOnlyDictionary<string, bool> Skills, double MaxSpeed = 0, double MaxHeight = 0, IReadOnlyList<FinalNumbers>? Finals = null);
+    IReadOnlyDictionary<string, bool> Skills, double MaxSpeed = 0, double MaxHeight = 0, IReadOnlyList<FinalNumbers>? Finals = null,
+    FlightExtras? Extras = null);
 
-/// <summary>How one final went: centerline crossings (weaving) and meters above the glide slope 1 km out.</summary>
-public sealed record FinalNumbers(int Weaves, double High);
+/// <summary>
+/// What Wingman 0.12 adds to a flight (2.18): the approach the agent chose ("steep 6°, final 125 m/s"), the fuel it
+/// used and had left (0-1 of its tanks), and the places it explored.
+/// </summary>
+public sealed record FlightExtras(string? Style = null, double? FuelUsed = null, double? FuelLeft = null, int Explored = 0);
+
+/// <summary>A place an agent explored (2.18): where, how high the ground is (m), its biome, and how often agents went there.</summary>
+public sealed record Place(long Id, DateTime Time, string CallSign, double Latitude, double Longitude, double Ground, string Biome, int Visits = 1);
+
+/// <summary>How one final went: centerline crossings (weaving), meters above the glide slope 1 km out, and the slope the agent chose (null: 4°).</summary>
+public sealed record FinalNumbers(int Weaves, double High, double? Slope = null);
 
 /// <summary>
 /// A flight test of a plane (KSP Wingman's test card, 2.17): what it measured. Rates in degrees a second for a full stick
@@ -25,12 +35,16 @@ public sealed record FinalNumbers(int Weaves, double High);
 /// </summary>
 /// <param name="SteerRate">The ground test (0: none): °/s of heading for a full nose wheel at 10 m/s; Drift °/s it veers
 /// with the wheel straight (+ right); Braking m/s².</param>
+/// <param name="FinalMin">Its knowledge card's final approach limits, worked out by Wingman from the test (0: an older
+/// Wingman): final speeds FinalMin-FinalMax m/s, touching down at Touchdown m/s, glide slopes up to MaxSlope degrees.</param>
 public sealed record CraftTest(long Id, DateTime Time, string CallSign, string Craft, double PitchRate, double RollRate, double TurnRate,
-    double MinSpeed, double Deceleration, double Acceleration, double CruiseThrottle, double SteerRate = 0, double Drift = 0, double Braking = 0)
+    double MinSpeed, double Deceleration, double Acceleration, double CruiseThrottle, double SteerRate = 0, double Drift = 0, double Braking = 0,
+    double FinalMin = 0, double FinalMax = 0, double Touchdown = 0, double MaxSlope = 0)
 {
     public string Describe() => FormattableString.Invariant(
         $"pitch {PitchRate:0} °/s and roll {RollRate:0} °/s per full stick, turns {TurnRate:0.0} °/s at 30° of bank, slowest {MinSpeed:0} m/s, slows {Deceleration:0.0} m/s² at idle, speeds up {Acceleration:0.0} m/s² at full throttle") +
-        (SteerRate > 0 ? FormattableString.Invariant($"; on the ground: nose wheel {SteerRate:0.0} °/s per full lock at 10 m/s, veers {Math.Abs(Drift):0.0} °/s {(Drift >= 0 ? "right" : "left")} with it straight, brakes {Braking:0.0} m/s²") : "");
+        (SteerRate > 0 ? FormattableString.Invariant($"; on the ground: nose wheel {SteerRate:0.0} °/s per full lock at 10 m/s, veers {Math.Abs(Drift):0.0} °/s {(Drift >= 0 ? "right" : "left")} with it straight, brakes {Braking:0.0} m/s²") : "") +
+        (FinalMax > 0 ? FormattableString.Invariant($"; final approach {FinalMin:0}-{FinalMax:0} m/s, touchdown {Touchdown:0} m/s, glide slope up to {MaxSlope:0}°") : "");
 }
 
 /// <summary>One thing to learn about a plane, whether it's been done, and what was found.</summary>
@@ -75,7 +89,19 @@ public sealed class Knowledge
         new("fly-fast", "Fly fast", "over 200 m/s, and back down to land", ["takeoff"]),
         new("fly-high", "Fly high", "above 5,000 m over the ground, and back down to land", ["takeoff"]),
         new("new-craft", "A new plane", "a good landing in a plane this agent hadn't landed before", ["land-visual"]),
+        // 2.18 (the owner's ideas): riskier finals, exploring the map, longer flights on the fuel it has.
+        new("approaches", "Approach variety", "a final of its own choosing (steep, shallow, fast or slow), landed well", ["land-visual"]),
+        new("explore", "Explore", "out to three places of its own choosing, noting what's there, and back to land", ["takeoff"]),
+        new("long-flight", "Long flight", "20 minutes or more, landing with a quarter of its fuel or more", ["takeoff"]),
     ];
+
+    /// <summary>A long flight lasts this long (minutes) and lands with this much fuel left (0-1), at least.</summary>
+    public const double LongFlightMinutes = 20, FuelReserve = 0.25;
+
+    /// <summary>Explored places within this far (m) of one already known count as visiting it again.</summary>
+    public const double SamePlace = 1000;
+
+    public const int MaxPlaces = 1000;
 
     /// <summary>Fast enough (m/s) and high enough (m above the ground) for fly-fast and fly-high.</summary>
     public const double FastSpeed = 200, HighHeight = 5000;
@@ -104,7 +130,7 @@ public sealed class Knowledge
     /// ended: a landing counts as good when it stopped on the runway within 15 m of the centerline, first time.
     /// </summary>
     public static Dictionary<string, bool> Grade(string result, string? approach, int goArounds, double? offCenterline, IReadOnlyList<string> phases,
-        double maxSpeed = 0, double maxHeight = 0)
+        double maxSpeed = 0, double maxHeight = 0, FlightExtras? extras = null, double minutes = 0)
     {
         var skills = new Dictionary<string, bool>();
         int At(string phase) => phases.ToList().IndexOf(phase);
@@ -132,14 +158,21 @@ public sealed class Knowledge
             skills["fly-fast"] = maxSpeed >= FastSpeed && result == "landed";
         if (maxHeight >= HighHeight * 0.8)
             skills["fly-high"] = maxHeight >= HighHeight && result == "landed";
+        // 2.18: a final of the agent's own choosing, exploring, and a long flight on the fuel it had.
+        if (Has("OnFinal") && extras?.Style is { Length: > 0 })
+            skills["approaches"] = landedWell;
+        if (extras?.Explored > 0)
+            skills["explore"] = extras.Explored >= 3 && result == "landed";
+        if (minutes >= LongFlightMinutes && extras?.FuelLeft is { } left)
+            skills["long-flight"] = result == "landed" && left >= FuelReserve;
         return skills;
     }
 
     public FlightRecord AddFlight(string callSign, string craft, string result, string? approach, int goArounds, double minutes,
         double? downRunway, double? offCenterline, double? headingError, IReadOnlyList<string> phases, DateTime now,
-        double maxSpeed = 0, double maxHeight = 0, IReadOnlyList<FinalNumbers>? finals = null)
+        double maxSpeed = 0, double maxHeight = 0, IReadOnlyList<FinalNumbers>? finals = null, FlightExtras? extras = null)
     {
-        var skills = Grade(result, approach, goArounds, offCenterline, phases, maxSpeed, maxHeight);
+        var skills = Grade(result, approach, goArounds, offCenterline, phases, maxSpeed, maxHeight, extras, minutes);
         // A plane it hadn't landed well before (the owner's "try different planes"): the landing in it counts once more.
         var landing = skills.FirstOrDefault(s => s.Key.StartsWith("land-", StringComparison.Ordinal));
         if (craft.Length > 0 && landing.Key != null && !_flights.Any(f => f.CallSign.Equals(callSign, StringComparison.OrdinalIgnoreCase) &&
@@ -150,7 +183,8 @@ public sealed class Knowledge
                 skills["new-craft"] = landing.Value;
         }
         var record = new FlightRecord(_nextFlight++, now, callSign, craft, result, approach, goArounds, minutes, downRunway, offCenterline,
-            headingError, phases, skills, maxSpeed, maxHeight, finals is { Count: > 0 } ? finals : null);
+            headingError, phases, skills, maxSpeed, maxHeight, finals is { Count: > 0 } ? finals : null,
+            extras is { Style: not null } or { FuelUsed: not null } or { FuelLeft: not null } or { Explored: > 0 } ? extras : null);
         _flights.Add(record);
         if (_flights.Count > MaxFlights)
             _flights.RemoveRange(0, _flights.Count - MaxFlights);
@@ -235,10 +269,12 @@ public sealed class Knowledge
 
     /// <summary>A flight test's numbers (the newest per plane is the one used).</summary>
     public CraftTest AddTest(string callSign, string craft, double pitchRate, double rollRate, double turnRate, double minSpeed,
-        double deceleration, double acceleration, double cruiseThrottle, DateTime now, double steerRate = 0, double drift = 0, double braking = 0)
+        double deceleration, double acceleration, double cruiseThrottle, DateTime now, double steerRate = 0, double drift = 0, double braking = 0,
+        (double Min, double Max, double Touchdown, double Slope)? limits = null)
     {
+        var l = limits ?? (0, 0, 0, 0);
         var test = new CraftTest(_nextTest++, now, callSign, craft, pitchRate, rollRate, turnRate, minSpeed, deceleration, acceleration, cruiseThrottle,
-            steerRate, drift, braking);
+            steerRate, drift, braking, l.Min, l.Max, l.Touchdown, l.Slope);
         _tests.Add(test);
         if (_tests.Count > MaxTests)
             _tests.RemoveRange(0, _tests.Count - MaxTests);
@@ -281,9 +317,52 @@ public sealed class Knowledge
             new("Its ceiling", topHeight >= HighHeight * 0.8, topHeight > 0 ? $"highest so far {topHeight:0} m above the ground" : ""),
             new("Notes on how it handles", notes.Count > 0, notes.Count > 0 ? $"{notes.Count} note(s)" : ""),
             new("Three flights in a row without a crash", lastThree.Count == 3 && lastThree.All(f => f.Result is not ("crashed" or "splashed"))),
+            // 2.18: its endurance (from the fuel its flights used), and finals of the agents' own choosing.
+            new("Its endurance (fuel)", Endurance(flights) != null, Endurance(flights) is { } e ? $"about {e:0} min on full tanks" : ""),
+            new("A final of its own choosing", flights.Any(f => Good(f, "approaches")),
+                string.Join(", ", flights.Where(f => f.Extras?.Style != null && Good(f, "approaches")).Select(f => f.Extras!.Style!).Distinct().Take(4))),
         };
         return new CraftProfile(name, flights.Count, landed, crashed, goodLandings, double.IsNaN(best) ? null : best, topSpeed, topHeight,
             flights.Select(f => f.CallSign).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), toLearn, notes, test);
+    }
+
+    /// <summary>Minutes on full tanks, from the fuel its flights used (flights of 3 minutes or more), or null.</summary>
+    private static double? Endurance(List<FlightRecord> flights)
+    {
+        var burns = flights.Where(f => f.Extras?.FuelUsed is > 0.01 && f.Minutes >= 3).Select(f => f.Extras!.FuelUsed!.Value / f.Minutes).ToList();
+        return burns.Count == 0 ? null : 1 / burns.Average();
+    }
+
+    private readonly List<Place> _places = [];
+    private long _nextPlace = 1;
+
+    public IReadOnlyList<Place> Places => _places;
+
+    /// <summary>
+    /// An explored place (2.18): a new one, or a visit to one already known within <see cref="SamePlace"/> (its count
+    /// goes up). Returns it and whether it was new.
+    /// </summary>
+    public (Place Place, bool New) AddPlace(string callSign, double latitude, double longitude, double ground, string biome, DateTime now)
+    {
+        // Kerbin's radius is close enough for "the same place".
+        const double radius = 600_000;
+        var near = _places.FirstOrDefault(p =>
+        {
+            var north = (p.Latitude - latitude) * Math.PI / 180 * radius;
+            var east = (p.Longitude - longitude) * Math.PI / 180 * radius * Math.Cos(latitude * Math.PI / 180);
+            return Math.Sqrt(north * north + east * east) < SamePlace;
+        });
+        if (near != null)
+        {
+            var again = near with { Visits = near.Visits + 1 };
+            _places[_places.IndexOf(near)] = again;
+            return (again, false);
+        }
+        var place = new Place(_nextPlace++, now, callSign, latitude, longitude, ground, biome);
+        _places.Add(place);
+        if (_places.Count > MaxPlaces)
+            _places.RemoveRange(0, _places.Count - MaxPlaces);
+        return (place, true);
     }
 
     public bool Delete(long lessonId) => _lessons.RemoveAll(l => l.Id == lessonId) > 0;
@@ -296,7 +375,7 @@ public sealed class Knowledge
         _lessons.Where(l => l.Skill == skill).OrderByDescending(l => l.Weight).ThenByDescending(l => l.Confirmed).Take(max).ToList();
 
     private sealed record Saved(int Version, long NextFlight, long NextLesson, List<FlightRecord> Flights, List<Lesson> Lessons,
-        List<CraftTest>? Tests = null);
+        List<CraftTest>? Tests = null, List<Place>? Places = null);
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
@@ -306,7 +385,7 @@ public sealed class Knowledge
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(new Saved(1, _nextFlight, _nextLesson, _flights, _lessons, _tests), Json));
+        File.WriteAllText(temp, JsonSerializer.Serialize(new Saved(1, _nextFlight, _nextLesson, _flights, _lessons, _tests, _places), Json));
         File.Move(temp, path, overwrite: true);
     }
 
@@ -326,6 +405,8 @@ public sealed class Knowledge
             knowledge._nextFlight = Math.Max(saved.NextFlight, knowledge._flights.Select(f => f.Id).DefaultIfEmpty(0).Max() + 1);
             knowledge._tests.AddRange((saved.Tests ?? []).Where(t => t is { Craft: not null, CallSign: not null }).TakeLast(MaxTests));
             knowledge._nextTest = knowledge._tests.Select(t => t.Id).DefaultIfEmpty(0).Max() + 1;
+            knowledge._places.AddRange((saved.Places ?? []).Where(p => p is { CallSign: not null, Biome: not null }).TakeLast(MaxPlaces));
+            knowledge._nextPlace = knowledge._places.Select(p => p.Id).DefaultIfEmpty(0).Max() + 1;
             knowledge._nextLesson = Math.Max(saved.NextLesson, knowledge._lessons.Select(l => l.Id).DefaultIfEmpty(0).Max() + 1);
         }
         catch (Exception e) when (e is JsonException or NotSupportedException or IOException)

@@ -56,6 +56,18 @@ test and its last five finals (`FinalNumbers`: centerline crossings, meters abov
 flight as `finals`); Wingman works the pilot's setup out from them (its `Handling.cs`). The tower never computes a
 setup: it keeps measurements only. A plane's profile has "A flight test (how it handles)" first on its list.
 
+## 30.2d Riskier finals, explore, long flights, the map (2.18)
+
+- Three skills: **approaches** (an `OnFinal` flight with a `style`, landed well), **explore** (`explored` places: good at
+  3 and landed), **long-flight** (20 minutes or more: good when landed with `fuelLeft` ≥ 0.25). `FlightExtras` keeps
+  the style, fuel used and left, and places explored with the flight (all optional; fractions 0-1, style cut to 40).
+- `/v1/test` takes the plane's final approach limits (`finalMin`, `finalMax`, `touchdown`, `maxSlope`: all four, in
+  range and in order, or none); `CraftTest.Describe` shows them. A plane's profile adds its endurance (minutes on full
+  tanks, from its flights' fuel use) and "a final of its own choosing".
+- `/v1/place` (latitude, longitude, ground, biome: letters, digits, spaces and dashes, 40 characters): `AddPlace`
+  merges places within 1 km (a visit more), keeps 1,000. `/v1/knowledge` answers `places`: count, biomes, the highest
+  ground, the last eight. The Wingman page shows an "Explored" row.
+
 ## 30.3 Lessons
 
 - A lesson is 10-200 characters for one skill and **must cite a flight by the same agent that used that skill**, or

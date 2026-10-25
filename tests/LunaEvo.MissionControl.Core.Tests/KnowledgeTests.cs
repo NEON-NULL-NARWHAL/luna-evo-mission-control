@@ -54,7 +54,50 @@ public class KnowledgeTests
         Assert.False(k.AddFlight("Alpha", "Aeris 3A", "landed", "VISUAL 09", 0, 5, 1000, 5, 1, visual, T0).Skills.ContainsKey("new-craft")); // its first plane
         Assert.True(k.AddFlight("Alpha", "Stearwing A300", "landed", "VISUAL 09", 0, 5, 1000, 8, 1, visual, T0).Skills["new-craft"]);
         Assert.False(k.AddFlight("Alpha", "Stearwing A300", "landed", "VISUAL 09", 0, 5, 1000, 8, 1, visual, T0).Skills.ContainsKey("new-craft")); // not new now
-        Assert.Equal(9, Knowledge.Tree.Count);
+        Assert.Equal(12, Knowledge.Tree.Count);
+    }
+
+    [Fact]
+    public void A_chosen_final_exploring_and_long_flights_are_graded_and_places_are_mapped()
+    {
+        string[] visual = ["TakingOff", "Climbing", "OnRoute", "OnFinal", "Stopped"];
+        var k = new Knowledge();
+        // A steep final of its own choosing, landed 5 m off: approaches good. The same without a style: not graded.
+        var steep = k.AddFlight("Alpha", "Aeris 4A", "landed", "VISUAL 09", 0, 6, 1000, 5, 1, visual, T0, extras: new FlightExtras("steep 6°", 0.2, 0.7));
+        Assert.True(steep.Skills["approaches"]);
+        Assert.False(k.AddFlight("Alpha", "Aeris 4A", "landed", "VISUAL 09", 0, 6, 1000, 5, 1, visual, T0).Skills.ContainsKey("approaches"));
+        // Three places and back: explore good; two: not yet. 24 minutes, landing with 55% fuel: a long flight.
+        var trip = k.AddFlight("Alpha", "Aeris 4A", "landed", null, 0, 24, 1000, 20, 1, visual, T0, extras: new FlightExtras(null, 0.4, 0.55, 3));
+        Assert.True(trip.Skills["explore"] && trip.Skills["long-flight"]);
+        Assert.False(k.AddFlight("Alpha", "Aeris 4A", "landed", null, 0, 25, 1000, 20, 1, visual, T0, extras: new FlightExtras(null, 0.85, 0.1, 2)).Skills["long-flight"]);
+        // The plane's endurance from the fuel its flights used: 0.2 in 6 min, 0.4 in 24, 0.85 in 25 → about 45 min on full tanks.
+        Assert.Contains(k.Crafts().Single().ToLearn, i => i.What.StartsWith("Its endurance") && i.Done && i.Note.StartsWith("about "));
+        Assert.Contains(k.Crafts().Single().ToLearn, i => i.What == "A final of its own choosing" && i.Done && i.Note == "steep 6°");
+
+        // Places: a new one, then one within 1 km is a second visit.
+        var (first, isNew) = k.AddPlace("Alpha", 0.1, -74.5, 420, "Highlands", T0);
+        Assert.True(isNew);
+        var (again, second) = k.AddPlace("Bravo", 0.105, -74.5, 430, "Highlands", T0);
+        Assert.False(second);
+        Assert.Equal((first.Id, 2), (again.Id, again.Visits));
+        Assert.True(k.AddPlace("Bravo", 0.3, -74.5, 900, "Mountains", T0).New);
+
+        var path = Path.Combine(Path.GetTempPath(), "LunaEvoTests", "knowledge-" + Guid.NewGuid().ToString("N"), "knowledge.json");
+        k.Save(path);
+        var back = Knowledge.Load(path);
+        Assert.Equal(2, back.Places.Count);
+        Assert.Equal("steep 6°", back.Flights[0].Extras!.Style);
+
+        // Through the tower: a place, a flight with extras, a test with its limits; the knowledge answer maps them.
+        using var server = new TowerServer(0, () => T0);
+        Assert.Equal(400, server.Answer("POST", "/v1/place", """{"callSign":"Alpha","latitude":95,"longitude":0}""").Status);
+        Assert.Equal(200, server.Answer("POST", "/v1/place", """{"callSign":"Alpha","latitude":0.3,"longitude":-74.5,"ground":900,"biome":"Mountains<script>"}""").Status);
+        Assert.Equal("Mountainsscript", server.Knowledge.Places.Single().Biome); // only letters, digits, spaces, dashes
+        Assert.Equal(200, server.Answer("POST", "/v1/test", """{"callSign":"Alpha","craft":"Gull","pitchRate":30,"rollRate":90,"turnRate":2.1,"minSpeed":62,"deceleration":1.2,"acceleration":3,"cruiseThrottle":0.3,"finalMin":84,"finalMax":119,"touchdown":84,"maxSlope":5}""").Status);
+        Assert.Contains("final approach 84-119 m/s, touchdown 84 m/s, glide slope up to 5°", server.Knowledge.TestOf("Gull")!.Describe());
+        var known = JsonDocument.Parse(server.Answer("POST", "/v1/knowledge", """{"callSign":"Alpha"}""").Body).RootElement;
+        Assert.Equal(1, known.GetProperty("places").GetProperty("count").GetInt32());
+        Assert.Equal("Mountainsscript", known.GetProperty("places").GetProperty("highest").GetProperty("biome").GetString());
     }
 
     [Fact]

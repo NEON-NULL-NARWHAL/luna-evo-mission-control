@@ -27,6 +27,13 @@ public class RadioTests
         var lines = File.ReadAllLines(radio).Select(l => JsonDocument.Parse(l).RootElement).ToList();
         Assert.Equal(["Alpha", "KSC tower"], lines.Select(l => l.GetProperty("from").GetString()));
         Assert.StartsWith("Alpha, KSC tower, cleared", lines[1].GetProperty("text").GetString());
+
+        // Full, it starts a new file instead of going silent for good (audit 21, D3).
+        File.WriteAllText(radio, new string('x', (int)TowerServer.MaxRadioBytes));
+        server.Answer("POST", "/v1/say", """{"callSign":"Alpha","kind":"intent","text":"local flight"}""");
+        Assert.True(new FileInfo(radio).Length < 1000);
+        Assert.Contains("local flight", File.ReadAllText(radio));
+        Assert.True(File.Exists(radio + ".old"));
     }
 
     [Fact]

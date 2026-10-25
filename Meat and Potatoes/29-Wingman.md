@@ -61,6 +61,19 @@ plane from the SPH it hasn't flown this session; one that won't take off is skip
 flight plan from the tower's table, code checks it with the tower's rules, files it, once more with the reason if it's
 refused). Free flight without a focus offers all of them.
 
+## 29.2d Switching training, the free-will drills (2.18, Wingman 0.12)
+
+- `WingmanAgent.Training` is the training running, read from the console's "Free flight for N minutes: training
+  <skills> until..." line (`TrainingOf`); the card shows it ("· training: explore"), the menu follows it, and picking
+  another one while it trains switches at once (the owner found the menu did nothing mid-training). The console lands
+  a plane in the air before a "new plane" training launches one.
+- Two more trainings: **Riskier approaches** (`approaches`) and **Explore** (`explore`). Their side in Wingman:
+  its Meat and Potatoes chapter 07 (Explore and fuel).
+- When an agent's process ends, `AgentHost.AgentExited` → `TowerServer.Leaving`: the tower takes it out of the sequence.
+
+Wingman's own maintainer guide (the pilot, landing, tests, learning) is its
+[Meat and Potatoes](https://github.com/NEON-NULL-NARWHAL/ksp-wingman/tree/main/Meat%20and%20Potatoes).
+
 ## 29.3 Rules
 
 - **Downloads**: only a release asset named `KspWingman-<version>.zip` with a GitHub SHA-256, through

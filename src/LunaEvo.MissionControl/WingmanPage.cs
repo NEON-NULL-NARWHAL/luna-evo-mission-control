@@ -235,6 +235,15 @@ internal sealed class WingmanPage
                 _knowledge.Children.Add(Ui.Row(skill.Name, $"{skill.What} · {all}" +
                     (open ? "" : $" · locked until {string.Join(" and ", skill.Requires)} have {Knowledge.UnlockAfter} good flights"), null).WithId($"wingman/skill/{skill.Id}"));
             }
+            // The map the agents explored (2.18): places, biomes, the highest ground found.
+            if (k.Places.Count > 0)
+            {
+                var biomes = k.Places.GroupBy(p => p.Biome).OrderByDescending(g => g.Count()).Select(g => $"{g.Key} ({g.Count()})");
+                var highest = k.Places.MaxBy(p => p.Ground)!;
+                _knowledge.Children.Add(Ui.Row("Explored", string.Create(CultureInfo.InvariantCulture,
+                    $"{k.Places.Count} place(s) · {string.Join(", ", biomes)} · highest ground {highest.Ground:0} m ({highest.Biome}, found by {highest.CallSign})"),
+                    null).WithId("wingman/explored"));
+            }
             // The planes (the owner's idea): what each has done, what's still to learn about it, and its handling notes.
             foreach (var craft in k.Crafts())
             {
@@ -280,6 +289,8 @@ internal sealed class WingmanPage
         private readonly Button _stop;
         private readonly Button _free;
         private readonly ComboBox _training;
+        private readonly Button _train;
+        private bool _updating;
         private int _shown = -1;
 
         public AgentCard(WingmanPage page, WingmanAgent agent)
@@ -312,6 +323,14 @@ internal sealed class WingmanPage
             var train = Ui.Button("Train", "text").WithId(id + "/train");
             ToolTip.SetTip(train, "Practise one ability on its own until it goes well (3 good flights in a row) or 30 minutes are up, learning as it goes. Any order stops it.");
             train.Click += (_, _) => _agent.Train(WingmanAgent.Trainings[Math.Max(0, _training.SelectedIndex)].Focus);
+            // While it trains, picking another one switches to it (the owner found the menu did nothing mid-training).
+            _training.SelectionChanged += (_, _) =>
+            {
+                if (!_updating && _agent.Running && _agent.Training != null && _training.SelectedIndex >= 0 &&
+                    WingmanAgent.Trainings[_training.SelectedIndex].Focus != _agent.Training)
+                    _agent.Train(WingmanAgent.Trainings[_training.SelectedIndex].Focus);
+            };
+            _train = train;
             var status = Ui.Button("Status", "text").WithId(id + "/askStatus");
             status.Click += (_, _) => _agent.AskStatus();
             _stop = Ui.Button("Stop", "text").WithId(id + "/stop");
@@ -364,7 +383,20 @@ internal sealed class WingmanPage
             var s = _agent.Start;
             _free.Content = Ui.IconAndText(_agent.FreeFlying ? "Stop free flight" : "Free flight", null);
             _free.IsEnabled = _agent.Running;
-            _summary.Text = $"{(_agent.Running ? Ui.Humanize(_agent.Phase).ToLowerInvariant() : "stopped")}{(_agent.FreeFlying ? " · free flight" : "")} · kRPC port {s.KrpcPort} · {s.Model}" +
+            // The menu shows the training running, and the button says what it does.
+            var current = _agent.Training is { } t ? WingmanAgent.Trainings.ToList().FindIndex(x => x.Focus == t) : -1;
+            if (current >= 0 && _training.SelectedIndex != current)
+            {
+                _updating = true;
+                _training.SelectedIndex = current;
+                _updating = false;
+            }
+            _train.Content = Ui.IconAndText(_agent.Training != null ? "Switch" : "Train", null);
+            _train.IsEnabled = _agent.Running;
+            _training.IsEnabled = _agent.Running;
+            var doing = _agent.Training is { } tr ? " · training: " + WingmanAgent.Trainings.First(x => x.Focus == tr).Label.ToLowerInvariant()
+                : _agent.FreeFlying ? " · free flight" : "";
+            _summary.Text = $"{(_agent.Running ? Ui.Humanize(_agent.Phase).ToLowerInvariant() : "stopped")}{doing} · kRPC port {s.KrpcPort} · {s.Model}" +
                             (s.PlannerModel != null ? $" (planner {s.PlannerModel})" : "") +
                             (s.TowerUrl != null ? " · with the tower" : "") + (_agent.LastOutcome is { } last ? " · last flight: " + last : "");
             _status.Text = _agent.Status ?? "";

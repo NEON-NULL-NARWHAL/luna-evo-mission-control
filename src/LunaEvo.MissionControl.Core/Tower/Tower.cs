@@ -51,6 +51,9 @@ public sealed class TowerPlane(string callSign)
     public string? Asked { get; internal set; }
     internal int DeliveredId;
     internal DateTime LastGoAround = DateTime.MinValue;
+
+    /// <summary>Cleared for departure until then (or until it's 100 m up): the runway is its.</summary>
+    internal DateTime DepartureUntil = DateTime.MinValue;
     internal bool ToldClearedToLand;
 
     /// <summary>It called "runway in sight" on this approach (the tower clears it to land then, the owner's idea).</summary>
@@ -61,6 +64,9 @@ public sealed class Tower
 {
     /// <summary>A go-around reported again this soon is the same one.</summary>
     public static readonly TimeSpan GoAroundRepeat = TimeSpan.FromSeconds(30);
+
+    /// <summary>A departure clearance holds the runway this long at most (a takeoff roll and climb-out take about a minute).</summary>
+    public static readonly TimeSpan DepartureTime = TimeSpan.FromSeconds(120);
 
     /// <summary>A plane that hasn't reported for this long is gone (and gives up its place).</summary>
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
@@ -108,6 +114,10 @@ public sealed class Tower
             });
         var flying = report.Situation.Equals("Flying", StringComparison.OrdinalIgnoreCase);
         var stopped = report.Situation.Equals("Landed", StringComparison.OrdinalIgnoreCase) && report.Speed < 2;
+        // A departure is over once it's flying 100 m up, or crashed, splashed or offline (not at the Space Center: it asks from
+        // there, before its launch), or after DepartureTime: the next one may go.
+        if (plane.DepartureUntil > now && ((flying && report.Altitude > Ksc.RunwayAltitude + 100) || (report.Situation is { Length: > 0 } s2 && OutOfPattern(s2) && !s2.Equals("SpaceCenter", StringComparison.OrdinalIgnoreCase))))
+            plane.DepartureUntil = DateTime.MinValue;
         if (plane.State == PlaneState.Approach)
         {
             var (along, cross) = Ksc.Frame(report.Latitude, report.Longitude);
@@ -146,6 +156,23 @@ public sealed class Tower
         var plane = Plane(callSign, now);
         plane.LastSeen = now;
         Log(now, callSign, Name, kind, text);
+        // Departures, one at a time (two agents launching in the same second were put on the same spot in the rig), and
+        // none while a plane is cleared to land.
+        if (kind == "departure")
+        {
+            var busy = _planes.Values.FirstOrDefault(p => p != plane && p.DepartureUntil > now && p.State != PlaneState.Gone);
+            var landing = _planes.Values.FirstOrDefault(p => p != plane && p.State == PlaneState.Approach && p.ToldClearedToLand);
+            if (busy != null || landing != null)
+                Send(now, plane.CallSign, "hold-departure", busy != null
+                    ? $"{plane.CallSign}, {Name}, hold for departure: {busy.CallSign} is departing."
+                    : $"{plane.CallSign}, {Name}, hold for departure: {landing!.CallSign} is landing.");
+            else
+            {
+                plane.DepartureUntil = now + DepartureTime;
+                Send(now, plane.CallSign, "cleared-departure", $"{plane.CallSign}, {Name}, runway 09, cleared for departure.");
+            }
+            return Undelivered(plane);
+        }
         // Leaving (the agent stopped, or its player left the server): out of the sequence now, not after the timeout.
         if (kind == "leaving")
         {
@@ -358,7 +385,7 @@ public sealed class Tower
             foreach (var p in _planes.Values.Where(p => p != plane && p.State == PlaneState.Holding && p.Number > plane.Number))
                 p.Number--;
         (plane.State, plane.Number, plane.Approach, plane.Filed, plane.Asked) = (PlaneState.New, 0, null, null, null);
-        (plane.ToldClearedToLand, plane.RunwayInSight) = (false, false);
+        (plane.ToldClearedToLand, plane.RunwayInSight, plane.DepartureUntil) = (false, false, DateTime.MinValue);
         if (inSequence)
             Log(now, Name, "all", "info", $"{plane.CallSign} {why}: out of the sequence.");
     }
@@ -408,6 +435,9 @@ public sealed class Tower
 public static class Ksc
 {
     public const double ThresholdLatitude = -0.0486, ThresholdLongitude = -74.7244, Heading = 90, TouchdownAfterThreshold = 300;
+
+    /// <summary>The runway's height above sea level (m).</summary>
+    public const double RunwayAltitude = 69;
     public const double KerbinRadius = 600_000;
     private const double MetersPerDegree = KerbinRadius * Math.PI / 180;
 

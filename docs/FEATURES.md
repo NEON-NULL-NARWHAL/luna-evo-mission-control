@@ -72,17 +72,27 @@ How each was found and measured: [the LUNA EVO patches](../Meat%20and%20Potatoes
 
 ## AI pilots: the KSC tower
 
-**KSC tower** (2.11, rail: Play → KSC tower): a traffic controller for AI pilots
-([KSP Wingman](https://github.com/NEON-NULL-NARWHAL/ksp-wingman) 0.5). It asks each agent's intentions, clears one at
-a time for a published RNAV approach to KSC's runway 09 with the whole route, holds the next plane (stacked 300 m
-apart), says "cleared to land" on final, and tells a landed plane to vacate the runway; then it clears the next one.
-The page shows the planes (their number, approach, height, speed) and the whole conversation, on the tower's own
-channel, not LMP's chat. Every message is also kept as data (`logs/tower-<date>.jsonl`). Start it on the page, or
-start LUNA EVO with `--tower`; agents connect to `http://localhost:8920/`. Close in with nobody waiting, it clears a
-**short visual** instead of a long RNAV route (2.13). **Talk on LMP chat** says its lines and the agents' calls in the
-server's chat as "KSC tower" (with the LUNA EVO server plugin), so everyone hears the traffic, and players with the
-LUNA EVO patches see it on a strip at the top of KSP's screen (2.15). The tower holds planes over the runway and gives
-directs, and agents can file their own flight plans from its published fixes.
+**KSC tower** (rail: Play → KSC tower): a traffic controller for AI pilots
+([KSP Wingman](https://github.com/NEON-NULL-NARWHAL/ksp-wingman)) at KSC's runway 09. Start it on the page, or start
+LUNA EVO with `--tower`; agents connect to `http://localhost:8920/` (this PC only). What it does:
+
+- **Sequencing**: it asks each agent's intentions once it has a plane in the air, clears one plane at a time with the
+  whole route (a published RNAV approach, the short visual when close in and alone, or a **direct** to the final fix
+  for a plane west of the runway and facing it), and holds the others **over the runway** from 1,500 m, numbered.
+- **Clearances to land** when an agent calls "runway in sight", **vacate** after landing, then the next one is cleared.
+- **Departures**, one plane at a time, and none while a plane is cleared to land: an agent asks before it launches onto
+  the runway and holds until it's cleared.
+- **Flight plans of the agents' own**: the tower publishes its table (fixes, legs, final fixes); an agent files a plan
+  from it and is cleared "as filed" when it checks out.
+- **Go-arounds are resequenced**: to the back of the hold with traffic information ("Traffic: RigViewer holding over
+  the runway at 1,500 m"), or, with nobody waiting (or only planes still far out), cleared again at once.
+- **Planes that are gone leave the sequence at once**: crashed, recovered, in the sea, out of the server, or an agent
+  stopped in LUNA EVO; the next plane is cleared. Fast planes (approach over 105 m/s) get the long approaches.
+- **The radio**: "Talk on LMP chat" says its lines and the agents' calls in the server's chat as "KSC tower" (with the
+  LUNA EVO server plugin), and players with the LUNA EVO patches see them on a strip at the top of KSP's screen.
+
+The page shows the planes (number, approach, height, speed) and the whole conversation; every message is kept as data
+(`logs/tower-<date>.jsonl`).
 
 ![The KSC tower's radio in KSP: "RigPilot, welcome. Vacate the runway." and "RigViewer, KSC tower, cleared as filed..."](screenshots/radio.png)
 
@@ -92,33 +102,38 @@ How it works: [chapter 28](../Meat%20and%20Potatoes/28-Tower.md).
 
 ## AI pilots: KSP Wingman
 
-**Tools (for AI pilots)** (2.12, on LUNA EVO patches): installs [KSP Wingman](https://github.com/NEON-NULL-NARWHAL/ksp-wingman)
-from its GitHub releases (checked against GitHub's checksum) and keeps it up to date, puts its mod into your KSP (the
-folder from Join; KSP must be closed), checks that kRPC is there (Wingman flies through it; get it on the CKAN page),
-and finds [Ollama](https://ollama.com) on this PC, with a button to download the model Wingman is tested with.
+**Tools (for AI pilots)** (on LUNA EVO patches): installs [KSP Wingman](https://github.com/NEON-NULL-NARWHAL/ksp-wingman)
+from its GitHub releases (checked against GitHub's checksum) and keeps it up to date, puts its mod into your KSP (KSP
+must be closed), checks that kRPC is there (Wingman flies through it; get it on the CKAN page), and finds
+[Ollama](https://ollama.com) on this PC, with a button to download the model Wingman is tested with (gemma4:e4b).
 
-**Wingman** (rail: Play → Wingman, once it's installed): start an AI pilot for a KSP (its kRPC port), with a model and,
-if it's on, the KSC tower. Each agent has a card: its flight phase, its last flight (landed, and where on the runway it
-stopped), the plane's height and speed, everything it does (your orders, its tool calls and answers, the tower's
-messages), and a box for orders in plain words ("take off and fly east at 1000 m", "land at KSC"). Stop asks it to quit;
-the plane keeps its last orders. `--wingman-agent CallSign:port[:model]` starts agents with LUNA EVO.
+**Wingman** (rail: Play → Wingman, once it's installed): start an AI pilot for a KSP (its kRPC port), with a model, a
+planner model (gemma4:e4b is the suggested one: fast, and it fits next to two KSPs) and, if it's on, the KSC tower.
+Each agent has a card: its flight phase, what it's training, its last flight (landed, and where on the runway it
+stopped), the plane's height, speed, setup and fuel, everything it does (your orders, its tool calls and answers, the
+tower's messages), and a box for orders in plain words ("take off and fly east at 1000 m", "land at KSC", "go explore
+north"). Stop asks it to quit. `--wingman-agent CallSign:port[:model]` starts agents with LUNA EVO.
 
 ![The Wingman page: two agents in the test rig, parked beside the runway after landing, with their status and events](screenshots/wingman.png)
 
-**Free flight and learning** (2.13): the card's **Free flight** button lets an agent practise landings on its own for
-half an hour: a planner model that thinks ("Planner (thinks)", e.g. qwen3:4b) picks what to practise, weakest first,
-the agent flies it inside a box around KSC (gemma4:e4b is the suggested planner: fast, and it fits next to two KSPs), and after each flight it writes a lesson. **What the agents know** on the
-same page is the server's tech tree: six skills graded from every agent's real flights (each opens once what it needs
-has 3 good flights), and the lessons, each tied to the flight it came from (delete any you don't like). It's kept on the
-server (`LunaEvo/agents/knowledge.json`), so every agent there learns from the others.
+**Free flight and training**: **Free flight** lets an agent practise on its own for half an hour: its planner picks
+what to practise, weakest first, the agent flies it inside a box around KSC, and after each flight it writes a lesson.
+The **Train** menu makes it practise one thing until it has 3 good flights in a row: landings, fly fast, fly high,
+different planes, flight plans of its own, **riskier approaches** (a steep, shallow, fast, slow or long final of its own
+choosing, within the plane's limits) or **explore** (it picks where to fly, leg by leg, notes what's there, and comes
+back to land). Pick another training while one runs and it switches.
 
-**Training** (2.15): the card's Train menu (work on landings, fly fast, fly high, try different planes, flight plans)
-makes the agent practise that until it has 3 good flights in a row. With **flight plans** it builds its own route from
-the tower's published fixes and files it, like a pilot from the charts.
+**Every plane tested** (KSP Wingman 0.11+): training on a new plane tests it on the ground (nose wheel, how it veers,
+brakes) and in the air (how quickly it pitches and rolls, its slowest speed, how it slows and speeds up), and the agent
+flies it with **its own setup** from those numbers, corrected by how its landings go. Each plane's **knowledge card**
+has its final approach limits (speeds, touchdown, the steepest glide slope it can take), so an agent may come in faster
+or steeper when its plane allows.
 
-**Flight tests** (2.17, KSP Wingman 0.11): training on new planes tests each one on the ground (nose wheel, braking)
-and in the air (how quickly it pitches and rolls, its slowest speed, how it slows down), then flies it with its own
-setup from those numbers. The tests are kept on the server for every agent and shown on the plane's row.
+**What the agents know** (on the same page) is the server's tech tree: twelve skills graded from every agent's real
+flights (each opens once what it needs has 3 good flights), each plane's profile (flights, tests, limits, endurance,
+notes on how it handles, what's still to learn), the **map the agents explored** (places, biomes, the highest ground),
+and the lessons, each tied to the flight it came from (delete any you don't like). It's kept on the server
+(`LunaEvo/agents/knowledge.json`), so every agent there learns from the others.
 
 How it works: [chapter 29](../Meat%20and%20Potatoes/29-Wingman.md) and [chapter 30](../Meat%20and%20Potatoes/30-Knowledge.md).
 

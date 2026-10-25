@@ -2,7 +2,8 @@
 // [Core] The tower's channel over HTTP, for KSP Wingman agents on this PC: POST /v1/report and /v1/say with a small
 //        JSON body; the answer is the tower's new messages for that plane. Also the agents' knowledge (Knowledge.cs):
 //        /v1/flight (a finished flight), /v1/lesson (a lesson citing flights), /v1/knowledge (skills and lessons),
-//        /v1/test (a plane's flight test) and /v1/craft (a plane's test and last finals, for its setup).
+//        /v1/test (a plane's flight test), /v1/craft (a plane's test and last finals, for its setup) and /v1/place (an
+//        explored place).
 //        Listens on localhost only.
 // Used by: TowerPage
 // Guide:   Meat and Potatoes/28-Tower.md
@@ -195,7 +196,7 @@ public sealed class TowerServer : IDisposable
                             : [];
                         messages = Tower.File(callSign, names, _clock());
                         break;
-                    case "/v1/flight" or "/v1/lesson" or "/v1/knowledge" or "/v1/test" or "/v1/craft":
+                    case "/v1/flight" or "/v1/lesson" or "/v1/knowledge" or "/v1/test" or "/v1/craft" or "/v1/place":
                         var answer = Learn(path, callSign, root);
                         if (answer.Status == 200)
                             Changed?.Invoke();
@@ -245,12 +246,17 @@ public sealed class TowerServer : IDisposable
                     var goArounds = (int)Math.Clamp(Number(root, "goArounds") ?? 0, 0, 100);
                     var finals = root.TryGetProperty("finals", out var fl) && fl.ValueKind == JsonValueKind.Array
                         ? fl.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.Object).Take(10)
-                            .Select(e => new FinalNumbers((int)Math.Clamp(Number(e, "weaves") ?? 0, 0, 100), Math.Round(Math.Clamp(Number(e, "high") ?? 0, -10_000, 10_000)))).ToList()
+                            .Select(e => new FinalNumbers((int)Math.Clamp(Number(e, "weaves") ?? 0, 0, 100), Math.Round(Math.Clamp(Number(e, "high") ?? 0, -10_000, 10_000)),
+                                Number(e, "slope") is { } sl && sl is >= 1 and <= 15 ? sl : null)).ToList()
                         : [];
+                    // Wingman 0.12's extras: its chosen final, its fuel, the places it explored (each optional, each checked).
+                    double? Fraction(string name) => Number(root, name) is { } f && f is >= 0 and <= 1 ? f : null;
+                    var extras = new FlightExtras(Text(root, "style", 40), Fraction("fuelUsed"), Fraction("fuelLeft"),
+                        (int)Math.Clamp(Number(root, "explored") ?? 0, 0, 100));
                     var record = Knowledge.AddFlight(callSign, Text(root, "craft", 60) ?? "", result, Text(root, "approach", 40), goArounds,
                         Math.Clamp(Number(root, "minutes") ?? 0, 0, 10_000), FromLanding("downRunway"), FromLanding("offCenterline"),
                         FromLanding("headingError"), phases, now,
-                        Math.Clamp(Number(root, "maxSpeed") ?? 0, 0, 5000), Math.Clamp(Number(root, "maxHeight") ?? 0, 0, 100_000), finals);
+                        Math.Clamp(Number(root, "maxSpeed") ?? 0, 0, 5000), Math.Clamp(Number(root, "maxHeight") ?? 0, 0, 100_000), finals, extras);
                     SaveKnowledge();
                     return (200, JsonSerializer.Serialize(new { flight = new { record.Id, record.Skills } }, Json));
                 }
@@ -278,10 +284,24 @@ public sealed class TowerServer : IDisposable
                         return (400, Error("a flight test needs every number, each in range"));
                     // The ground test's numbers are optional (Wingman 0.11 sends them once it has run one).
                     var drift = Number(root, "drift") is { } d && Math.Abs(d) <= 100 ? d : 0;
+                    // Its final approach limits (Wingman 0.12): all four, in range and in order, or none.
+                    var limits = In("finalMin", 1000) is { } fMin && In("finalMax", 1000) is { } fMax && In("touchdown", 1000) is { } td &&
+                                 In("maxSlope", 20) is { } slope && fMin <= fMax ? (fMin, fMax, td, slope) : ((double, double, double, double)?)null;
                     var test = Knowledge.AddTest(callSign, craft, pitch, roll, turn, min, decel, accel, throttle, now,
-                        In("steerRate", 1000) ?? 0, drift, In("braking", 100) ?? 0);
+                        In("steerRate", 1000) ?? 0, drift, In("braking", 100) ?? 0, limits);
                     SaveKnowledge();
                     return (200, JsonSerializer.Serialize(new { test }, Json));
+                }
+                case "/v1/place":
+                {
+                    // An explored place (Wingman 0.12): on Kerbin's map, with a ground height and a biome name.
+                    if (Number(root, "latitude") is not { } lat || lat is < -90 or > 90 || Number(root, "longitude") is not { } lon || lon is < -180 or > 180)
+                        return (400, Error("needs a latitude and a longitude"));
+                    var biome = new string((Text(root, "biome", 40) ?? "").Where(c => char.IsLetterOrDigit(c) || c is ' ' or '\'' or '-').ToArray()).Trim();
+                    var (place, isNew) = Knowledge.AddPlace(callSign, Math.Round(lat, 4), Math.Round(lon, 4),
+                        Math.Round(Math.Clamp(Number(root, "ground") ?? 0, -5000, 20_000)), biome.Length > 0 ? biome : "unknown", now);
+                    SaveKnowledge();
+                    return (200, JsonSerializer.Serialize(new { place, @new = isNew, known = Knowledge.Places.Count }, Json));
                 }
                 case "/v1/craft":
                 {
@@ -309,7 +329,15 @@ public sealed class TowerServer : IDisposable
                         Notes = c.Notes.Select(n => n.Text),
                         Test = c.Test?.Describe(),
                     });
-                    return (200, JsonSerializer.Serialize(new { skills, flights, crafts }, Json));
+                    // The map so far: how many places, which biomes, the highest ground, the last few found.
+                    var places = new
+                    {
+                        Count = Knowledge.Places.Count,
+                        Biomes = Knowledge.Places.GroupBy(x => x.Biome).OrderByDescending(g => g.Count()).Select(g => new { Biome = g.Key, Places = g.Count() }),
+                        Highest = Knowledge.Places.OrderByDescending(x => x.Ground).FirstOrDefault(),
+                        Recent = Knowledge.Places.TakeLast(8),
+                    };
+                    return (200, JsonSerializer.Serialize(new { skills, flights, crafts, places }, Json));
                 }
             }
         }
@@ -371,8 +399,11 @@ public sealed class TowerServer : IDisposable
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(radio)!);
-                if (!File.Exists(radio) || new FileInfo(radio).Length < MaxRadioBytes)
-                    File.AppendAllLines(radio, fresh.Select(m => JsonSerializer.Serialize(new { m.Id, m.Time, m.From, m.To, m.Text }, Json)));
+                // Full: start a new one (the plugin reads a shorter file from the top). Stopping there went silent for good
+                // after ~5,000 lines (audit 21, D3).
+                if (File.Exists(radio) && new FileInfo(radio).Length >= MaxRadioBytes)
+                    File.Move(radio, radio + ".old", overwrite: true);
+                File.AppendAllLines(radio, fresh.Select(m => JsonSerializer.Serialize(new { m.Id, m.Time, m.From, m.To, m.Text }, Json)));
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {

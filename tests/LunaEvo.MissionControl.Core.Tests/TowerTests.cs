@@ -168,6 +168,31 @@ public class TowerTests
     }
 
     [Fact]
+    public void Departures_go_one_at_a_time_and_not_while_a_plane_is_cleared_to_land()
+    {
+        // Two agents launching in the same second in the rig were put on the same spot of the runway.
+        var tower = new Tower.Tower();
+        Assert.Equal("cleared-departure", Assert.Single(tower.Say("Alpha", "departure", "ready", T0)).Kind);
+        var held = Assert.Single(tower.Say("Bravo", "departure", "ready", T0.AddSeconds(1)));
+        Assert.Equal("hold-departure", held.Kind);
+        Assert.Contains("Alpha is departing", held.Text);
+        // Alpha still at the Space Center (launching): still its runway. Then 100 m up: Bravo's turn.
+        tower.Report(At("Alpha", 0, 0, situation: "SpaceCenter"), T0.AddSeconds(5));
+        Assert.Equal("hold-departure", Assert.Single(tower.Say("Bravo", "departure", "ready", T0.AddSeconds(6))).Kind);
+        tower.Report(At("Alpha", 2000, 0), T0.AddSeconds(60)); // flying at 900 m
+        tower.Say("Alpha", "intent", "local flight", T0.AddSeconds(61));
+        Assert.Contains(tower.Say("Bravo", "departure", "ready", T0.AddSeconds(62)), m => m.Kind == "cleared-departure");
+
+        // A plane cleared to land: no departures until it's down.
+        var busy = new Tower.Tower();
+        busy.Report(At("Alpha", 2000, -1000), T0);
+        busy.Say("Alpha", "request-approach", "", T0);
+        busy.Say("Alpha", "runway-in-sight", "runway in sight", T0.AddSeconds(30));
+        busy.Report(At("Alpha", -2000, 0), T0.AddSeconds(31));
+        Assert.Contains("Alpha is landing", Assert.Single(busy.Say("Bravo", "departure", "ready", T0.AddSeconds(32))).Text);
+    }
+
+    [Fact]
     public void A_fast_plane_gets_the_long_approaches_and_a_far_one_waits_its_turn()
     {
         // A plane that flies its approach at 115 m/s (the Aeris 4A, from its flight test): never the short visual.

@@ -112,8 +112,15 @@ public sealed class WingmanAgent : IDisposable
                     if (e.Kind == "flight")
                         LastOutcome = e.Text;
                     if (e.Kind == "free")
+                    {
                         // "Free flight for 30 minutes..." starts it; "Free flight over/stopped..." ends it; the rest is on the way.
                         FreeFlying = e.Text.StartsWith("Free flight for", StringComparison.Ordinal) || (FreeFlying && !e.Text.StartsWith("Free flight", StringComparison.Ordinal));
+                        // "...: training fly-fast until it's learned": which training (null: plain free flight, or none).
+                        if (e.Text.StartsWith("Free flight for", StringComparison.Ordinal))
+                            Training = TrainingOf(e.Text);
+                        else if (!FreeFlying)
+                            Training = null;
+                    }
                     _events.Add(e);
                     if (_events.Count > MaxEvents)
                         _events.RemoveRange(0, _events.Count - MaxEvents);
@@ -160,6 +167,30 @@ public sealed class WingmanAgent : IDisposable
 
     /// <summary>In free flight (from the console's own "free" lines).</summary>
     public bool FreeFlying { get; private set; }
+
+    /// <summary>The training running (a <see cref="Trainings"/> focus), or null.</summary>
+    public string? Training { get; private set; }
+
+    /// <summary>Which training a console's "Free flight for N minutes: training ... until" line is (null: none).</summary>
+    public static string? TrainingOf(string text)
+    {
+        var i = text.IndexOf(": training ", StringComparison.Ordinal);
+        var end = text.IndexOf(" until", StringComparison.Ordinal);
+        if (i < 0 || end <= i)
+            return null;
+        var skills = text[(i + 11)..end];
+        return skills switch
+        {
+            _ when skills.Contains("fly-fast", StringComparison.Ordinal) => "fast",
+            _ when skills.Contains("fly-high", StringComparison.Ordinal) => "high",
+            _ when skills.Contains("new-craft", StringComparison.Ordinal) => "planes",
+            _ when skills.Contains("explore", StringComparison.Ordinal) => "explore",
+            _ when skills.Contains("approach", StringComparison.Ordinal) => "approaches",
+            _ when skills.Contains("land-", StringComparison.Ordinal) => "landings",
+            _ when skills.Contains("route", StringComparison.Ordinal) => "plans",
+            _ => null,
+        };
+    }
     public bool Running => !_process.HasExited;
 
     /// <summary>Something new to show (an event, or the process ended). Raised on the process's thread.</summary>
@@ -216,7 +247,8 @@ public sealed class WingmanAgent : IDisposable
 
     /// <summary>What training can focus on (the console's words), with a label for people.</summary>
     public static readonly IReadOnlyList<(string Focus, string Label)> Trainings =
-        [("landings", "Work on landings"), ("fast", "Fly fast"), ("high", "Fly high"), ("planes", "Try different planes"), ("plans", "Flight plans")];
+        [("landings", "Work on landings"), ("fast", "Fly fast"), ("high", "Fly high"), ("planes", "Try different planes"), ("plans", "Flight plans"),
+         ("approaches", "Riskier approaches"), ("explore", "Explore")];
 
     /// <summary>Training (the owner's idea): free flight on one ability until it's learned (3 good in a row) or the time's up.</summary>
     public void Train(string focus, double minutes = 30)
